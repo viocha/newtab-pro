@@ -19,8 +19,7 @@ import { createFaviconUrl } from '../utils';
 type BookmarkTreeDialogProps = {
   open: boolean;
   targetLabel?: string;
-  onOpenChange: (next: boolean) => void;
-  onAddBookmark: (bookmark: { title: string; url: string; icon?: string }) => void;
+  onAddBookmark: (bookmark: { title: string; url: string }) => void;
 };
 
 type TreeNode = Browser.bookmarks.BookmarkTreeNode;
@@ -165,7 +164,6 @@ export function BookmarkTreeDialog({ open, targetLabel, onOpenChange, onAddBookm
                 onAddBookmark({
                   title: node.title || node.url || '未命名',
                   url: node.url,
-                  icon: createFaviconUrl(node.url),
                 });
               }
             }}

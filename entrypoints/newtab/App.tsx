@@ -55,7 +55,6 @@ type BookmarkFormState = {
   bookmarkId?: string;
   initialTitle?: string;
   initialUrl?: string;
-  initialIcon?: string;
 };
 
 type DeleteState =
@@ -106,7 +105,7 @@ const DragOverlayContent = () => {
     const item = activeData.type === 'tab' ? activeData.tab : activeData.bookmark;
     return (
       <div style={widthStyle} className="grid grid-cols-[16px_1fr] items-center gap-2 rounded-md px-2 py-1 text-[13px] bg-card border border-border/50 shadow-lg">
-        <img src={item.icon || createFaviconUrl(item.url)} className="size-3.5 rounded-[3px]" />
+        <img src={createFaviconUrl(item.url)} className="size-3.5 rounded-[3px]" />
         <span className="truncate text-foreground">{item.title}</span>
       </div>
     );
@@ -586,7 +585,7 @@ export default function App() {
         moveBookmark(source, targetObj, insertIndex);
       }
     } else if (activeData.type === 'tab' && (overData.type === 'bookmark' || overData.type === 'bookmark-end')) {
-      const tabData = activeData.tab as { title: string; url: string; icon?: string };
+      const tabData = activeData.tab as { title: string; url: string };
       const targetObj = overData.target;
       if (overData.type === 'bookmark-end') {
         const group = board.groups.find(g => g.id === targetObj.groupId);
@@ -876,7 +875,6 @@ export default function App() {
                         bookmarkId: bookmark.id,
                         initialTitle: bookmark.title,
                         initialUrl: bookmark.url,
-                        initialIcon: bookmark.icon,
                       });
                     }}
                     onDeleteBookmark={(target, bookmarkId) => {

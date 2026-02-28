@@ -50,7 +50,7 @@ type GroupCardProps = {
   ) => void;
   onDropExternalBookmark: (
     target: BookmarkContainerTarget,
-    payload: { title: string; url: string; icon?: string },
+    payload: { title: string; url: string },
     insertIndex?: number,
   ) => void;
   autoFocusEdit?: boolean;
@@ -89,7 +89,6 @@ function readExternalBookmarkFromDrop(event: DragEvent) {
   return {
     title: normalizedUrl,
     url: normalizedUrl,
-    icon: createFaviconUrl(normalizedUrl),
   };
 }
 
@@ -126,9 +125,7 @@ function GroupEmptyZone({
 }: {
   groupId: string;
   onDropExternalBookmark: (
-    target: BookmarkContainerTarget,
-    payload: { title: string; url: string; icon?: string },
-    insertIndex?: number,
+    payload: { title: string; url: string },
   ) => void;
 }) {
   const target: BookmarkContainerTarget = useMemo(() => ({ groupId, subgroupId: undefined }), [groupId]);

@@ -26,10 +26,19 @@ export function tryNormalizeUrl(input: string) {
   }
 }
 
+import { browser } from 'wxt/browser';
+
 export function createFaviconUrl(url: string) {
   try {
-    const hostname = new URL(url).hostname;
-    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=64`;
+    const parsed = new URL(url);
+    if (typeof browser !== 'undefined' && browser.runtime?.getURL) {
+      const result = new URL(browser.runtime.getURL('/_favicon/'));
+      result.searchParams.set('pageUrl', url);
+      result.searchParams.set('size', '64');
+      return result.toString();
+    }
+    // Fallback to Google Favicon service if not in an extension context
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(parsed.hostname)}&sz=64`;
   } catch {
     return undefined;
   }

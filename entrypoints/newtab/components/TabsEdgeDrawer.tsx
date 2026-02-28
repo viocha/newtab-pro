@@ -24,7 +24,7 @@ function TabDraggableItem({ tab, expanded }: { tab: BrowserTab; expanded: boolea
     id: dndId,
     data: {
       type: 'tab',
-      tab: { title, url: tab.url!, icon: favicon },
+      tab: { title, url: tab.url! },
     },
   });
 

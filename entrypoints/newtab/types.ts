@@ -2,7 +2,6 @@ export type BookmarkItem = {
   id: string;
   title: string;
   url: string;
-  icon?: string;
 };
 
 export type BookmarkSubgroup = {
@@ -42,7 +41,6 @@ export type InsertTarget = {
 export type TabDragPayload = {
   title: string;
   url: string;
-  icon?: string;
 };
 
 export type SortDragPayload =

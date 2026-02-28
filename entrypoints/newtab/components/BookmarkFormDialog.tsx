@@ -81,7 +81,7 @@ export function BookmarkFormDialog({
                 id="bookmark-title"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                placeholder="例如：ChatGPT"
+                placeholder="例如：Google"
                 autoFocus
               />
             </div>
@@ -98,7 +98,7 @@ export function BookmarkFormDialog({
                     setError('');
                   }
                 }}
-                placeholder="https://example.com"
+                placeholder="https://google.com"
               />
               {error && <p className="text-xs text-destructive">{error}</p>}
             </div>

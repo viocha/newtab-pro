@@ -40,7 +40,7 @@ type SubgroupPanelProps = {
   ) => void;
   onDropExternalBookmark: (
     target: BookmarkContainerTarget,
-    payload: { title: string; url: string; icon?: string },
+    payload: { title: string; url: string },
     insertIndex?: number,
   ) => void;
   autoFocusEdit?: boolean;

@@ -30,7 +30,7 @@ type BookmarkRowsProps = {
   ) => void;
   onDropExternalBookmark: (
     target: BookmarkContainerTarget,
-    payload: { title: string; url: string; icon?: string },
+    payload: { title: string; url: string },
     insertIndex?: number,
   ) => void;
 };
@@ -54,7 +54,6 @@ function readExternalBookmarkFromDrop(event: DragEvent) {
   return {
     title: normalizedUrl,
     url: normalizedUrl,
-    icon: createFaviconUrl(normalizedUrl),
   };
 }
 
@@ -121,7 +120,7 @@ function BookmarkItemNode({
             {...attributes}
           >
             <img
-              src={bookmark.icon || createFaviconUrl(bookmark.url)}
+              src={createFaviconUrl(bookmark.url)}
               alt=""
               className="size-3.5 rounded-[3px]"
               loading="lazy"

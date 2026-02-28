@@ -98,7 +98,6 @@ function sanitizeBookmarkList(raw: unknown): BookmarkItem[] {
         id: toText(item.id, createId()),
         title: toText(item.title, url || '未命名'),
         url,
-        icon: typeof item.icon === 'string' ? item.icon : createFaviconUrl(url),
       };
     })
     .filter((item) => item.url.length > 0);
@@ -223,12 +222,11 @@ async function persistSpaceStore(store: SpaceStore) {
 
 // ── internal refs ────────────────────────────────────────────────────
 
-function normalizeInputBookmark(input: { title?: string; url: string; icon?: string }) {
+function normalizeInputBookmark(input: { title?: string; url: string }) {
   const normalizedUrl = normalizeUrl(input.url);
   return {
     title: input.title?.trim() || normalizedUrl,
     url: normalizedUrl,
-    icon: input.icon || createFaviconUrl(normalizedUrl),
   };
 }
 
@@ -295,7 +293,7 @@ export function useBoardStore() {
   useEffect(() => {
     if (hasChromeStorage()) {
       const handleChromeStorageChanged = (
-        changes: Record<string, chrome.storage.StorageChange>,
+        changes: Record<string, any>,
         area: string,
       ) => {
         if (area !== 'local') return;
@@ -653,7 +651,7 @@ export function useBoardStore() {
   const insertBookmark = useCallback(
     (
       target: BookmarkContainerTarget,
-      input: { id?: string; title?: string; url: string; icon?: string },
+      input: { id?: string; title?: string; url: string },
       index?: number,
     ) => {
       const normalized = normalizeInputBookmark(input);
@@ -675,7 +673,7 @@ export function useBoardStore() {
   );
 
   const addBookmark = useCallback(
-    (target: BookmarkContainerTarget, input: { title?: string; url: string; icon?: string }) => {
+    (target: BookmarkContainerTarget, input: { title?: string; url: string }) => {
       insertBookmark(target, input);
     },
     [insertBookmark],
@@ -685,7 +683,7 @@ export function useBoardStore() {
     (
       target: BookmarkContainerTarget,
       bookmarkId: string,
-      input: { title?: string; url: string; icon?: string },
+      input: { title?: string; url: string },
     ) => {
       const normalized = normalizeInputBookmark(input);
       commit((draft) => {
@@ -696,7 +694,6 @@ export function useBoardStore() {
         if (!bookmark) return;
         bookmark.title = normalized.title;
         bookmark.url = normalized.url;
-        bookmark.icon = normalized.icon;
       });
     },
     [commit],
