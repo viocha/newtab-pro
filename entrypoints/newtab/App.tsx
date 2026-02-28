@@ -721,7 +721,8 @@ export default function App() {
                   </DropdownMenuSub>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={() => {
-                    const json = JSON.stringify(spaceStore, null, 2);
+                    const exportData = { ...spaceStore, version: 1 };
+                    const json = JSON.stringify(exportData, null, 2);
                     const blob = new Blob([json], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -753,6 +754,10 @@ export default function App() {
                   reader.onload = () => {
                     try {
                       const raw = JSON.parse(reader.result as string);
+                      if (raw.version !== 1) {
+                        toast('导入失败', { description: '版本不匹配或文件格式错误' });
+                        return;
+                      }
                       importSpaceStore(raw);
                       toast('导入成功', { description: file.name });
                     } catch {
