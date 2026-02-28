@@ -46,6 +46,7 @@ import { useDndUIStore } from './drag';
 import { createFaviconUrl } from './utils';
 import type { BookmarkContainerTarget } from './types';
 import { useBoardStore } from './use-board-store';
+import type { DndIndicator } from './drag';
 
 type BookmarkFormState = {
   open: boolean;
@@ -403,9 +404,8 @@ export default function App() {
       },
     })
   );
-
   const { activeId, activeData, setActiveDrag, setDropIndicator } = useDndUIStore();
-  const dropIndicatorRef = useRef<{ id: string; zone: 'before' | 'after'; type: any } | null>(null);
+  const dropIndicatorRef = useRef<DndIndicator>(null);
   const pointerRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -435,6 +435,11 @@ export default function App() {
     setActiveDrag(String(event.active.id), data, width);
     dropIndicatorRef.current = null;
     document.body.classList.add('dragging');
+    if (data?.type === 'bookmark' || data?.type === 'tab' || data?.type === 'space') {
+      document.body.classList.add('dragging-pointer');
+    } else if (data?.type === 'group' || data?.type === 'subgroup') {
+      document.body.classList.add('dragging-grab');
+    }
   };
 
   const handleDragMove = (event: DragMoveEvent) => {
@@ -514,7 +519,7 @@ export default function App() {
     setActiveDrag(null, null);
     setDropIndicator(null);
     dropIndicatorRef.current = null;
-    document.body.classList.remove('dragging');
+    document.body.classList.remove('dragging', 'dragging-pointer', 'dragging-grab');
   };
 
   const handleDragCancel = () => {
@@ -556,11 +561,11 @@ export default function App() {
             if (targetIndex === group.subgroups.length - 1) {
               moveSubgroupToEnd(source, targetGrpId);
             } else {
-              moveSubgroupBefore(source, targetGrpId, group.subgroups[targetIndex + 1].id);
+              moveSubgroupBefore(source, { groupId: targetGrpId, subgroupId: group.subgroups[targetIndex + 1].id });
             }
           }
         } else {
-          moveSubgroupBefore(source, targetGrpId, overData.target.subgroupId);
+          moveSubgroupBefore(source, { groupId: targetGrpId, subgroupId: overData.target.subgroupId });
         }
       }
     } else if (activeData.type === 'bookmark' && (overData.type === 'bookmark' || overData.type === 'bookmark-end')) {
@@ -842,8 +847,6 @@ export default function App() {
                         title: subgroup.title,
                       });
                     }}
-                    onMoveSubgroupBefore={moveSubgroupBefore}
-                    onMoveSubgroupToEnd={moveSubgroupToEnd}
                     autoFocusEdit={autoEditGroupId === group.id}
                     autoFocusSubgroupId={autoEditSubgroupId}
                     onClearAutoFocus={() => {

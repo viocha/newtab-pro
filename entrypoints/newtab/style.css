@@ -83,7 +83,12 @@
 }
 
 /* Prevent dnd-kit from overriding cursor during drag */
-body.dragging,
-body.dragging * {
-  cursor: inherit !important;
+body.dragging-pointer,
+body.dragging-pointer * {
+  cursor: pointer !important;
+}
+
+body.dragging-grab,
+body.dragging-grab * {
+  cursor: grabbing !important;
 }

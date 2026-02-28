@@ -39,12 +39,6 @@ type GroupCardProps = {
   onToggleSubgroup: (target: InsertTarget) => void;
   onRenameSubgroup: (target: InsertTarget, nextTitle: string) => void;
   onDeleteSubgroup: (target: InsertTarget) => void;
-  onMoveSubgroupBefore: (
-    source: InsertTarget,
-    targetGroupId: string,
-    targetSubgroupId: string,
-  ) => void;
-  onMoveSubgroupToEnd: (source: InsertTarget, targetGroupId: string) => void;
   onOpenManualAdd: (target: BookmarkContainerTarget) => void;
   onOpenImportAdd: (target: BookmarkContainerTarget) => void;
   onOpenEditBookmark: (target: BookmarkContainerTarget, bookmark: BookmarkItem) => void;
@@ -212,8 +206,6 @@ export function GroupCard({
   onToggleSubgroup,
   onRenameSubgroup,
   onDeleteSubgroup,
-  onMoveSubgroupBefore,
-  onMoveSubgroupToEnd,
   onOpenManualAdd,
   onOpenImportAdd,
   onOpenEditBookmark,
