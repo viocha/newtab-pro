@@ -1,0 +1,212 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowDownUp } from 'lucide-react';
+import { useDraggable } from '@dnd-kit/core';
+import { browser, type Browser } from 'wxt/browser';
+
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+import { createFaviconUrl } from '../utils';
+import { useDndUIStore } from '../drag';
+
+type BrowserTab = Browser.tabs.Tab;
+
+const COLLAPSED_W = 44;
+const EXPANDED_W = 280;
+const TABS_REVERSED_KEY = 'newtab-pro-tabs-reversed';
+
+function TabDraggableItem({ tab, expanded }: { tab: BrowserTab; expanded: boolean }) {
+  const favicon = tab.favIconUrl || createFaviconUrl(tab.url || '');
+  const title = tab.title || tab.url || '未命名';
+
+  const dndId = `tab|${tab.id}`;
+  const { setNodeRef, listeners, attributes } = useDraggable({
+    id: dndId,
+    data: {
+      type: 'tab',
+      tab: { title, url: tab.url!, icon: favicon },
+    },
+  });
+
+  const { activeId } = useDndUIStore();
+  const isDragging = activeId === dndId;
+
+  return (
+    <button
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      type="button"
+      title={`${title}\n${tab.url}`}
+      className={cn(
+        'group flex w-full shrink-0 items-center gap-2.5 rounded-lg py-1.5',
+        'text-left transition-colors duration-100',
+        'hover:bg-accent/80 active:bg-accent',
+        'cursor-grab active:cursor-grabbing',
+        isDragging && 'opacity-40',
+      )}
+      style={{ paddingLeft: expanded ? 6 : 0, paddingRight: expanded ? 6 : 0 }}
+    >
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-background/60 shadow-sm">
+        <img
+          src={favicon}
+          alt=""
+          className="size-4 rounded-[3px] object-contain"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).style.display = 'none';
+          }}
+        />
+      </span>
+      <span
+        className={cn(
+          'min-w-0 flex-1 truncate text-[12px] text-foreground/85 transition-opacity duration-150 whitespace-nowrap',
+          expanded ? 'opacity-100' : 'opacity-0',
+        )}
+      >
+        {title}
+      </span>
+    </button>
+  );
+}
+
+export function TabsEdgeDrawer() {
+  const [manualExpanded, setManualExpanded] = useState(false);
+  const [tabs, setTabs] = useState<BrowserTab[]>([]);
+  const [reversed, setReversed] = useState(() => {
+    try {
+      return localStorage.getItem(TABS_REVERSED_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const closeTimer = useRef<number | null>(null);
+
+  const { activeId } = useDndUIStore();
+  const isDraggingTab = activeId?.startsWith('tab|') ?? false;
+  const expanded = isDraggingTab ? false : manualExpanded;
+
+  const loadTabs = useCallback(async () => {
+    try {
+      const all = await browser.tabs.query({});
+      const filtered = all
+        .filter((t) => !!t.url && !t.url.startsWith('chrome://newtab'))
+        .sort((a, b) => {
+          if ((a.windowId ?? 0) !== (b.windowId ?? 0))
+            return (a.windowId ?? 0) - (b.windowId ?? 0);
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          return (a.index ?? 0) - (b.index ?? 0);
+        });
+      setTabs(filtered);
+    } catch { }
+  }, []);
+
+  useEffect(() => {
+    void loadTabs();
+    const handler = () => void loadTabs();
+    browser.tabs.onUpdated.addListener(handler);
+    browser.tabs.onRemoved.addListener(handler);
+    browser.tabs.onCreated.addListener(handler);
+    return () => {
+      browser.tabs.onUpdated.removeListener(handler);
+      browser.tabs.onRemoved.removeListener(handler);
+      browser.tabs.onCreated.removeListener(handler);
+    };
+  }, [loadTabs]);
+
+  const clearTimer = () => {
+    if (closeTimer.current) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+
+  const handleMouseEnter = () => {
+    clearTimer();
+    setManualExpanded(true);
+  };
+
+  const handleMouseLeave = () => {
+    clearTimer();
+    closeTimer.current = window.setTimeout(() => setManualExpanded(false), 180);
+  };
+
+  const displayTabs = reversed ? [...tabs].reverse() : tabs;
+
+  return (
+    <aside
+      className={cn(
+        'fixed inset-y-0 left-0 z-50 flex flex-col',
+        'bg-card/92 backdrop-blur-md',
+        'border-r border-border/60',
+        'shadow-[2px_0_16px_rgba(0,0,0,0.06)]',
+        'transition-[width] duration-200 ease-out overflow-hidden',
+      )}
+      style={{ width: expanded ? EXPANDED_W : COLLAPSED_W }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {/* 顶部标题 */}
+      <div
+        className="flex h-10 shrink-0 items-center justify-between border-b border-border/50 px-3"
+        style={{ width: EXPANDED_W }}
+      >
+        <span
+          className={cn(
+            'whitespace-nowrap text-xs font-semibold text-muted-foreground tracking-wide transition-opacity duration-150',
+            expanded ? 'opacity-100' : 'opacity-0',
+          )}
+        >
+          打开的标签页
+        </span>
+        <Button
+          size="icon"
+          variant="ghost"
+          className={cn(
+            'size-6 transition-opacity duration-150',
+            expanded ? 'opacity-100' : 'opacity-0 pointer-events-none',
+            reversed
+              ? 'bg-primary/15 text-primary hover:bg-primary/25'
+              : 'text-muted-foreground hover:text-foreground',
+          )}
+          onClick={() => setReversed((prev) => {
+            const next = !prev;
+            try { localStorage.setItem(TABS_REVERSED_KEY, String(next)); } catch { }
+            return next;
+          })}
+          title={reversed ? '已颠倒顺序（点击恢复）' : '颠倒顺序'}
+        >
+          <ArrowDownUp className="size-3.5" />
+        </Button>
+      </div>
+
+      {/* 标签列表 */}
+      <div
+        className="flex flex-col gap-0.5 overflow-y-auto overflow-x-hidden py-2 flex-1"
+        style={{ paddingLeft: expanded ? 6 : 'calc((44px - 28px) / 2)', paddingRight: expanded ? 6 : 'calc((44px - 28px) / 2)' }}
+      >
+        {displayTabs.length === 0 && (
+          <div className="flex items-center justify-center py-6 text-[11px] text-muted-foreground">
+            …
+          </div>
+        )}
+        {displayTabs.map((tab) => (
+          <TabDraggableItem key={tab.id} tab={tab} expanded={expanded} />
+        ))}
+      </div>
+
+      {/* 底部提示 */}
+      <div
+        className={cn(
+          'flex shrink-0 items-center border-t border-border/50 px-3 py-1.5',
+          'text-[10px] text-muted-foreground/70 whitespace-nowrap',
+          'transition-opacity duration-150',
+          expanded ? 'opacity-100' : 'opacity-0 pointer-events-none',
+        )}
+        style={{ width: EXPANDED_W }}
+      >
+        拖拽标签页到右侧，快速添加书签
+      </div>
+    </aside>
+  );
+}
