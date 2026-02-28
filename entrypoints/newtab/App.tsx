@@ -43,10 +43,10 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import { GroupCard } from './components/GroupCard';
 import { TabsEdgeDrawer } from './components/TabsEdgeDrawer';
 import { useDndUIStore } from './drag';
-import { createFaviconUrl } from './utils';
 import type { BookmarkContainerTarget } from './types';
 import { useBoardStore } from './use-board-store';
 import type { DndIndicator } from './drag';
+import { FaviconImage } from './components/FaviconImage';
 
 type BookmarkFormState = {
   open: boolean;
@@ -105,7 +105,7 @@ const DragOverlayContent = () => {
     const item = activeData.type === 'tab' ? activeData.tab : activeData.bookmark;
     return (
       <div style={widthStyle} className="grid grid-cols-[16px_1fr] items-center gap-2 rounded-md px-2 py-1 text-[13px] bg-card border border-border/50 shadow-lg">
-        <img src={createFaviconUrl(item.url)} className="size-3.5 rounded-[3px]" />
+        <FaviconImage url={item.url} className="size-3.5 rounded-[3px]" />
         <span className="truncate text-foreground">{item.title}</span>
       </div>
     );
@@ -935,7 +935,6 @@ export default function App() {
                 editBookmark(formState.target, formState.bookmarkId, {
                   title,
                   url,
-                  icon: formState.initialIcon,
                 });
               }
             } catch (error) {

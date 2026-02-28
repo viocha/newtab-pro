@@ -14,11 +14,12 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 
-import { createFaviconUrl } from '../utils';
+import { FaviconImage } from './FaviconImage';
 
 type BookmarkTreeDialogProps = {
   open: boolean;
   targetLabel?: string;
+  onOpenChange: (next: boolean) => void;
   onAddBookmark: (bookmark: { title: string; url: string }) => void;
 };
 
@@ -171,9 +172,8 @@ export function BookmarkTreeDialog({ open, targetLabel, onOpenChange, onAddBookm
             <span className="inline-flex size-4 items-center justify-center" />
 
             <span className="inline-flex size-4 items-center justify-center text-muted-foreground">
-              <img
-                src={createFaviconUrl(node.url || '')}
-                alt=""
+              <FaviconImage
+                url={node.url || ''}
                 className="size-3.5 rounded-sm"
                 loading="lazy"
               />

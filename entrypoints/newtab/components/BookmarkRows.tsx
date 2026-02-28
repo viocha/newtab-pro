@@ -14,8 +14,9 @@ import {
 import { cn } from '@/lib/utils';
 
 import type { BookmarkContainerTarget, BookmarkItem, BookmarkNodeTarget } from '../types';
-import { createFaviconUrl, tryNormalizeUrl } from '../utils';
+import { tryNormalizeUrl } from '../utils';
 import { useDndUIStore, readTabDragPayload } from '../drag';
+import { FaviconImage } from './FaviconImage';
 
 type BookmarkRowsProps = {
   bookmarks: BookmarkItem[];
@@ -119,9 +120,8 @@ function BookmarkItemNode({
             {...listeners}
             {...attributes}
           >
-            <img
-              src={createFaviconUrl(bookmark.url)}
-              alt=""
+            <FaviconImage
+              url={bookmark.url}
               className="size-3.5 rounded-[3px]"
               loading="lazy"
             />

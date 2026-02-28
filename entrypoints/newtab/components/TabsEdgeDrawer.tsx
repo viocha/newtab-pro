@@ -6,8 +6,8 @@ import { browser, type Browser } from 'wxt/browser';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-import { createFaviconUrl } from '../utils';
 import { useDndUIStore } from '../drag';
+import { FaviconImage } from './FaviconImage';
 
 type BrowserTab = Browser.tabs.Tab;
 
@@ -16,7 +16,6 @@ const EXPANDED_W = 280;
 const TABS_REVERSED_KEY = 'newtab-pro-tabs-reversed';
 
 function TabDraggableItem({ tab, expanded }: { tab: BrowserTab; expanded: boolean }) {
-  const favicon = tab.favIconUrl || createFaviconUrl(tab.url || '');
   const title = tab.title || tab.url || '未命名';
 
   const dndId = `tab|${tab.id}`;
@@ -48,12 +47,12 @@ function TabDraggableItem({ tab, expanded }: { tab: BrowserTab; expanded: boolea
       style={{ paddingLeft: expanded ? 6 : 0, paddingRight: expanded ? 6 : 0 }}
     >
       <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-background/60 shadow-sm">
-        <img
-          src={favicon}
-          alt=""
+        <FaviconImage
+          url={tab.url || ''}
+          tabIconUrl={tab.favIconUrl}
           className="size-4 rounded-[3px] object-contain"
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).style.display = 'none';
+          onError={(e: any) => {
+            e.currentTarget.style.display = 'none';
           }}
         />
       </span>
