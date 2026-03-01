@@ -45,7 +45,7 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import { GroupCard } from './components/GroupCard';
 import { TabsEdgeDrawer } from './components/TabsEdgeDrawer';
 import { useDndUIStore } from './drag';
-import type { BookmarkContainerTarget } from './types';
+import type { BookmarkContainerTarget, BookmarkNodeTarget } from './types';
 import { useBoardStore } from './use-board-store';
 import type { DndIndicator } from './drag';
 import { FaviconImage } from './components/FaviconImage';
@@ -590,9 +590,34 @@ export default function App() {
 
     if (activeData.type === 'bookmark' || activeData.type === 'tab') {
       if (overData.type === 'bookmark-container') {
-        // Pointer is in a gap between items — over.rect is the container's own bounding rect
+        // Pointer is over the container div — either in a gap between items or in the
+        // empty trailing cells of the last row (grid not fully filled).
+        // Always resolve the indicator to "after last bookmark" so that moving from
+        // right-to-left into the empty area also shows the drop line.
         const containerWidth = Math.round(over.rect.width);
         setOverContainerData({ isIconGrid: !!overData.isIconGrid, iconSize: overData.iconSize, containerWidth });
+
+        if (overData.isIconGrid) {
+          // Parse "bookmark-container|groupId|subgroupId" from over.id
+          const cParts = String(over.id).split('|');
+          const cGroupId = cParts[1] ?? '';
+          const cRawSg = cParts[2] ?? '';
+          const cSubgroupId = (cRawSg === 'undefined' || cRawSg === '') ? undefined : cRawSg;
+
+          const cGroup = board.groups.find(g => g.id === cGroupId);
+          const cBms = cGroup
+            ? (cSubgroupId ? cGroup.subgroups.find(s => s.id === cSubgroupId)?.bookmarks : cGroup.bookmarks)
+            : undefined;
+
+          if (cBms && cBms.length > 0) {
+            const lastBm = cBms[cBms.length - 1];
+            const lastDndId = `bookmark|${cGroupId}|${cRawSg}|${lastBm.id}`;
+            setDropIndicator((dropIndicatorRef.current = { id: lastDndId, zone: 'after', type: 'bookmark' }));
+          } else {
+            // Empty grid — clear indicator (the empty-zone droppable will handle it)
+            setDropIndicator((dropIndicatorRef.current = null));
+          }
+        }
         return;
       }
       if (overData.type !== 'bookmark' && overData.type !== 'bookmark-end') {
@@ -679,7 +704,69 @@ export default function App() {
     const dropInd = dropIndicatorRef.current;
     cleanupDragState();
 
-    if (!over || active.id === over.id || !dropInd) return;
+    if (!dropInd) return;
+
+    // ── bookmark / tab drops ─────────────────────────────────────────
+    // dropInd contains everything needed (target group, subgroup, item, zone).
+    // Do NOT rely on `over` at all — it may be null (pointer released over empty
+    // trailing cells of a grid), or be the container div rather than a specific
+    // item.  Using dropInd exclusively is the only reliable path.
+    if ((activeData.type === 'bookmark' || activeData.type === 'tab') && dropInd.type === 'bookmark') {
+      // dropInd.id is one of:
+      //   "bookmark|<groupId>|<subgroupId>|<bookmarkId>"
+      //   "bookmark-end|<groupId>|<subgroupId>"
+      // subgroupId may be the literal string "undefined" when the bookmark lives
+      // directly inside a group (subgroupId is optional on BookmarkContainerTarget).
+      const parts = dropInd.id.split('|');
+      let indGroupId: string;
+      let rawSgId: string;
+      let indBookmarkId: string | undefined;
+      let insertAtEnd: boolean;
+
+      if (parts[0] === 'bookmark' && parts.length >= 4) {
+        [, indGroupId, rawSgId, indBookmarkId] = parts;
+        insertAtEnd = false;
+      } else if (parts[0] === 'bookmark-end' && parts.length >= 3) {
+        [, indGroupId, rawSgId] = parts;
+        insertAtEnd = true;
+      } else {
+        return;
+      }
+
+      // Normalise: treat the string "undefined" or "" as no subgroup
+      const indSubgroupId = (rawSgId === 'undefined' || rawSgId === '') ? undefined : rawSgId;
+
+      const group = board.groups.find(g => g.id === indGroupId);
+      if (!group) return;
+      const bms = indSubgroupId
+        ? group.subgroups.find(s => s.id === indSubgroupId)?.bookmarks
+        : group.bookmarks;
+      if (!bms) return;
+
+      const targetObj: BookmarkContainerTarget = { groupId: indGroupId, subgroupId: indSubgroupId };
+      const insertIndex = insertAtEnd
+        ? bms.length
+        : (() => {
+            const i = bms.findIndex(b => b.id === indBookmarkId);
+            return i === -1 ? bms.length : i + (dropInd.zone === 'after' ? 1 : 0);
+          })();
+
+      if (activeData.type === 'bookmark') {
+        const src: BookmarkNodeTarget = {
+          groupId: activeData.target.groupId,
+          subgroupId: activeData.target.subgroupId,
+          bookmarkId: activeData.bookmark.id,
+        };
+        moveBookmark(src, targetObj, insertIndex);
+      } else {
+        const tabData = activeData.tab as { title: string; url: string };
+        insertBookmark(targetObj, tabData, insertIndex);
+      }
+      return;
+    }
+
+    // ── all other drag types need `over` ─────────────────────────────
+    if (!over || active.id === over.id) return;
 
     const overData = over.data.current;
     if (!overData) return;
@@ -715,40 +802,6 @@ export default function App() {
         } else {
           moveSubgroupBefore(source, { groupId: targetGrpId, subgroupId: overData.target.subgroupId });
         }
-      }
-    } else if (activeData.type === 'bookmark' && (overData.type === 'bookmark' || overData.type === 'bookmark-end')) {
-      const source = { groupId: activeData.target.groupId, subgroupId: activeData.target.subgroupId, bookmarkId: activeData.bookmark.id };
-      const targetObj = overData.target;
-      if (overData.type === 'bookmark-end') {
-        const group = board.groups.find(g => g.id === targetObj.groupId);
-        if (group) {
-          if (targetObj.subgroupId) {
-            const sg = group.subgroups.find(s => s.id === targetObj.subgroupId);
-            if (sg) moveBookmark(source, targetObj, sg.bookmarks.length);
-          } else {
-            moveBookmark(source, targetObj, group.bookmarks.length);
-          }
-        }
-      } else {
-        const insertIndex = overData.index + (dropInd.zone === 'after' ? 1 : 0);
-        moveBookmark(source, targetObj, insertIndex);
-      }
-    } else if (activeData.type === 'tab' && (overData.type === 'bookmark' || overData.type === 'bookmark-end')) {
-      const tabData = activeData.tab as { title: string; url: string };
-      const targetObj = overData.target;
-      if (overData.type === 'bookmark-end') {
-        const group = board.groups.find(g => g.id === targetObj.groupId);
-        if (group) {
-          if (targetObj.subgroupId) {
-            const sg = group.subgroups.find(s => s.id === targetObj.subgroupId);
-            if (sg) insertBookmark(targetObj, tabData, sg.bookmarks.length);
-          } else {
-            insertBookmark(targetObj, tabData, group.bookmarks.length);
-          }
-        }
-      } else {
-        const idx = overData.index + (dropInd.zone === 'after' ? 1 : 0);
-        insertBookmark(targetObj, tabData, idx);
       }
     } else if (activeData.type === 'space' && overData.type === 'space') {
       if (dropInd.zone === 'after') {
