@@ -636,11 +636,7 @@ export default function App() {
   }, [spaces, deleteSpace]);
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-page text-sm text-muted-foreground">
-        正在加载数据...
-      </div>
-    );
+    return <div className="min-h-screen bg-page" />;
   }
 
   return (
