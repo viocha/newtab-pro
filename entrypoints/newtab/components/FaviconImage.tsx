@@ -57,6 +57,10 @@ function buildGoogleFavUrl(hostname: string) {
 }
 
 // ── main resolver ─────────────────────────────────────────────────────
+// Resolution order:
+//   1. Chrome /_favicon/ — fetch + placeholder-size check
+//   2. Google S2          — fetch + placeholder-size check
+//   3. Fall back to Chrome /_favicon/ URL (best-effort, onError handles remainder)
 export async function resolveFaviconUrl(url: string): Promise<string> {
   if (faviconCache.has(url)) return faviconCache.get(url)!;
 
@@ -70,7 +74,6 @@ export async function resolveFaviconUrl(url: string): Promise<string> {
   const isHttp = parsed.protocol === 'http:' || parsed.protocol === 'https:';
   const chromeFavUrl = buildChromeFavUrl(url);
 
-  // Non-HTTP or no chrome API → directly use whichever is available
   if (!isHttp || !chromeFavUrl) {
     const finalUrl = chromeFavUrl || buildGoogleFavUrl(parsed.hostname);
     faviconCache.set(url, finalUrl);
@@ -83,7 +86,6 @@ export async function resolveFaviconUrl(url: string): Promise<string> {
     const blob = await res.blob();
 
     if (blob.size !== pSize) {
-      // Chrome has a real icon ✓
       faviconCache.set(url, chromeFavUrl);
       return chromeFavUrl;
     }
@@ -98,21 +100,18 @@ export async function resolveFaviconUrl(url: string): Promise<string> {
       const googleBlob = await googleRes.blob();
 
       if (gpSize !== 0 && googleBlob.size === gpSize) {
-        // Google also returned placeholder → fall back to Chrome URL (best effort)
+        // Google also placeholder → fall back to Chrome URL (best effort)
         faviconCache.set(url, chromeFavUrl);
         return chromeFavUrl;
       }
 
-      // Google has a real icon ✓
       faviconCache.set(url, googleUrl);
       return googleUrl;
     } catch {
-      // Google fetch failed → fall back to Chrome URL
       faviconCache.set(url, chromeFavUrl);
       return chromeFavUrl;
     }
   } catch {
-    // Chrome fetch failed → try Google
     const googleUrl = buildGoogleFavUrl(parsed.hostname);
     faviconCache.set(url, googleUrl);
     return googleUrl;
