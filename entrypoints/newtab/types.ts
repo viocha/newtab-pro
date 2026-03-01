@@ -4,11 +4,16 @@ export type BookmarkItem = {
   url: string;
 };
 
+export type BookmarkViewMode = 'list' | 'icon';
+export type IconSize = 'sm' | 'md' | 'lg';
+
 export type BookmarkSubgroup = {
   id: string;
   title: string;
   collapsed: boolean;
   bookmarks: BookmarkItem[];
+  viewMode: BookmarkViewMode;
+  iconSize: IconSize;
 };
 
 export type BookmarkGroup = {
@@ -18,6 +23,8 @@ export type BookmarkGroup = {
   collapsed: boolean;
   bookmarks: BookmarkItem[];
   subgroups: BookmarkSubgroup[];
+  viewMode: BookmarkViewMode;
+  iconSize: IconSize;
 };
 
 export type BookmarkBoard = {

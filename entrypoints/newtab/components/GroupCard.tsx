@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DragEvent } from 'react';
-import { Check, GripHorizontal, MoreHorizontal, FolderTree, FolderPlus, Palette, Plus, Trash2, ExternalLink, AppWindow, EyeOff } from 'lucide-react';
+import { Check, GripHorizontal, LayoutGrid, LayoutList, MoreHorizontal, FolderTree, FolderPlus, Palette, Plus, Trash2, ExternalLink, AppWindow, EyeOff } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { browser } from 'wxt/browser';
 
@@ -9,6 +9,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -22,10 +23,13 @@ import type {
   BookmarkGroup,
   BookmarkItem,
   BookmarkNodeTarget,
+  BookmarkViewMode,
+  IconSize,
   InsertTarget,
 } from '../types';
 import { useDndUIStore, readTabDragPayload } from '../drag';
 import { BookmarkRows } from './BookmarkRows';
+import { BookmarkIconGrid } from './BookmarkIconGrid';
 import { SubgroupPanel } from './SubgroupPanel';
 import { tryNormalizeUrl, createFaviconUrl } from '../utils';
 
@@ -53,6 +57,10 @@ type GroupCardProps = {
     payload: { title: string; url: string },
     insertIndex?: number,
   ) => void;
+  onSetViewMode: (mode: BookmarkViewMode) => void;
+  onSetIconSize: (size: IconSize) => void;
+  onSetSubgroupViewMode: (subgroupId: string, mode: BookmarkViewMode) => void;
+  onSetSubgroupIconSize: (subgroupId: string, size: IconSize) => void;
   autoFocusEdit?: boolean;
   autoFocusSubgroupId?: string | null;
   onClearAutoFocus?: () => void;
@@ -209,6 +217,10 @@ export function GroupCard({
   onDeleteBookmark,
   onMoveBookmark,
   onDropExternalBookmark,
+  onSetViewMode,
+  onSetIconSize,
+  onSetSubgroupViewMode,
+  onSetSubgroupIconSize,
   autoFocusEdit,
   autoFocusSubgroupId,
   onClearAutoFocus,
@@ -394,7 +406,52 @@ export function GroupCard({
                   <MoreHorizontal className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuContent align="end" className="w-52">
+                {/* View mode segmented */}
+                <DropdownMenuLabel className="pb-1 text-xs font-medium text-muted-foreground">视图模式</DropdownMenuLabel>
+                <div className="px-2 pb-2">
+                  <div className="flex items-center rounded-md bg-muted p-0.5">
+                    {([['list', <LayoutList className="size-3.5" />, '列表'], ['icon', <LayoutGrid className="size-3.5" />, '图标']] as const).map(([val, icon, label]) => (
+                      <button
+                        key={val}
+                        className={cn(
+                          'flex flex-1 items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-medium transition-all',
+                          group.viewMode === val
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground',
+                        )}
+                        onClick={() => onSetViewMode(val as BookmarkViewMode)}
+                      >
+                        {icon}{label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Icon size segmented – only in icon mode */}
+                {group.viewMode === 'icon' && (
+                  <>
+                    <DropdownMenuLabel className="pb-1 text-xs font-medium text-muted-foreground">图标尺寸</DropdownMenuLabel>
+                    <div className="px-2 pb-2">
+                      <div className="flex items-center rounded-md bg-muted p-0.5">
+                        {([['sm', '小'], ['md', '中'], ['lg', '大']] as const).map(([val, label]) => (
+                          <button
+                            key={val}
+                            className={cn(
+                              'flex flex-1 items-center justify-center rounded py-1 text-xs font-medium transition-all',
+                              group.iconSize === val
+                                ? 'bg-background text-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground',
+                            )}
+                            onClick={() => onSetIconSize(val as IconSize)}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => onAddSubgroup(group.id)}>
                   <FolderPlus className="mr-2 size-3.5" />
                   添加小组
@@ -468,15 +525,28 @@ export function GroupCard({
               />
             ) : (
               <>
-                <BookmarkRows
-                  bookmarks={group.bookmarks}
-                  target={groupRootTarget}
-                  emptyHint=""
-                  onEditBookmark={onOpenEditBookmark}
-                  onDeleteBookmark={onDeleteBookmark}
-                  onMoveBookmark={onMoveBookmark}
-                  onDropExternalBookmark={onDropExternalBookmark}
-                />
+                {group.viewMode === 'icon' ? (
+                  <BookmarkIconGrid
+                    bookmarks={group.bookmarks}
+                    target={groupRootTarget}
+                    iconSize={group.iconSize}
+                    emptyHint=""
+                    onEditBookmark={onOpenEditBookmark}
+                    onDeleteBookmark={onDeleteBookmark}
+                    onMoveBookmark={onMoveBookmark}
+                    onDropExternalBookmark={onDropExternalBookmark}
+                  />
+                ) : (
+                  <BookmarkRows
+                    bookmarks={group.bookmarks}
+                    target={groupRootTarget}
+                    emptyHint=""
+                    onEditBookmark={onOpenEditBookmark}
+                    onDeleteBookmark={onDeleteBookmark}
+                    onMoveBookmark={onMoveBookmark}
+                    onDropExternalBookmark={onDropExternalBookmark}
+                  />
+                )}
 
                 <div className={cn('flex flex-col gap-2 empty:hidden', group.bookmarks.length > 0 && 'mt-2')}>
                   {group.subgroups.map((subgroup) => (
@@ -493,6 +563,8 @@ export function GroupCard({
                         onDeleteBookmark={onDeleteBookmark}
                         onMoveBookmark={onMoveBookmark}
                         onDropExternalBookmark={onDropExternalBookmark}
+                        onSetViewMode={(mode) => onSetSubgroupViewMode(subgroup.id, mode)}
+                        onSetIconSize={(size) => onSetSubgroupIconSize(subgroup.id, size)}
                         autoFocusEdit={autoFocusSubgroupId === subgroup.id}
                         onClearAutoFocus={onClearAutoFocus}
                       />

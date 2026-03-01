@@ -9,9 +9,11 @@ import type {
   BookmarkItem,
   BookmarkNodeTarget,
   BookmarkSubgroup,
+  BookmarkViewMode,
   DeletedBookmarkSnapshot,
   DeletedGroupSnapshot,
   DeletedSubgroupSnapshot,
+  IconSize,
   InsertTarget,
   Space,
   SpaceStore,
@@ -26,6 +28,8 @@ function createEmptySubgroup(title = '未分组'): BookmarkSubgroup {
     title,
     collapsed: false,
     bookmarks: [],
+    viewMode: 'list',
+    iconSize: 'md',
   };
 }
 
@@ -37,6 +41,8 @@ function createEmptyGroup(index: number, title = `分组 ${index + 1}`): Bookmar
     collapsed: false,
     bookmarks: [],
     subgroups: [],
+    viewMode: 'list',
+    iconSize: 'md',
   };
 }
 
@@ -50,6 +56,8 @@ function createDefaultBoard(): BookmarkBoard {
         collapsed: false,
         bookmarks: [],
         subgroups: [],
+        viewMode: 'list',
+        iconSize: 'md',
       },
     ],
   };
@@ -85,6 +93,14 @@ function toText(value: unknown, fallback: string) {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback;
 }
 
+function toViewMode(value: unknown): BookmarkViewMode {
+  return value === 'icon' ? 'icon' : 'list';
+}
+
+function toIconSize(value: unknown): IconSize {
+  return value === 'sm' || value === 'lg' ? value : 'md';
+}
+
 function sanitizeBookmarkList(raw: unknown): BookmarkItem[] {
   if (!Array.isArray(raw)) {
     return [];
@@ -117,6 +133,8 @@ function sanitizeBoard(raw: unknown): BookmarkBoard {
         title: toText(subgroup.title, '小组'),
         collapsed: toBoolean(subgroup.collapsed),
         bookmarks: sanitizeBookmarkList(subgroup.bookmarks),
+        viewMode: toViewMode(subgroup.viewMode),
+        iconSize: toIconSize(subgroup.iconSize),
       }));
 
       return {
@@ -126,6 +144,8 @@ function sanitizeBoard(raw: unknown): BookmarkBoard {
         collapsed: toBoolean(group.collapsed),
         bookmarks: sanitizeBookmarkList(group.bookmarks),
         subgroups,
+        viewMode: toViewMode(group.viewMode),
+        iconSize: toIconSize(group.iconSize),
       };
     });
 
@@ -530,6 +550,28 @@ export function useBoardStore() {
     [commit],
   );
 
+  const setGroupViewMode = useCallback(
+    (groupId: string, mode: BookmarkViewMode) => {
+      commit((draft) => {
+        const board = getActiveBoard(draft);
+        const group = board.groups.find((item) => item.id === groupId);
+        if (group) group.viewMode = mode;
+      });
+    },
+    [commit],
+  );
+
+  const setGroupIconSize = useCallback(
+    (groupId: string, size: IconSize) => {
+      commit((draft) => {
+        const board = getActiveBoard(draft);
+        const group = board.groups.find((item) => item.id === groupId);
+        if (group) group.iconSize = size;
+      });
+    },
+    [commit],
+  );
+
   // ── subgroup operations ────────────────────────────────────────────
 
   const addSubgroup = useCallback(
@@ -641,6 +683,32 @@ export function useBoardStore() {
         if (subgroup) {
           subgroup.collapsed = !subgroup.collapsed;
         }
+      });
+    },
+    [commit],
+  );
+
+  const setSubgroupViewMode = useCallback(
+    (groupId: string, subgroupId: string, mode: BookmarkViewMode) => {
+      commit((draft) => {
+        const board = getActiveBoard(draft);
+        const group = board.groups.find((item) => item.id === groupId);
+        if (!group) return;
+        const subgroup = group.subgroups.find((item) => item.id === subgroupId);
+        if (subgroup) subgroup.viewMode = mode;
+      });
+    },
+    [commit],
+  );
+
+  const setSubgroupIconSize = useCallback(
+    (groupId: string, subgroupId: string, size: IconSize) => {
+      commit((draft) => {
+        const board = getActiveBoard(draft);
+        const group = board.groups.find((item) => item.id === groupId);
+        if (!group) return;
+        const subgroup = group.subgroups.find((item) => item.id === subgroupId);
+        if (subgroup) subgroup.iconSize = size;
       });
     },
     [commit],
@@ -830,6 +898,8 @@ export function useBoardStore() {
     moveGroupBefore,
     moveGroupToEnd,
     toggleGroup,
+    setGroupViewMode,
+    setGroupIconSize,
     // subgroup ops
     addSubgroup,
     renameSubgroup,
@@ -838,6 +908,8 @@ export function useBoardStore() {
     moveSubgroupBefore,
     moveSubgroupToEnd,
     toggleSubgroup,
+    setSubgroupViewMode,
+    setSubgroupIconSize,
     // bookmark ops
     addBookmark,
     insertBookmark,

@@ -12,6 +12,7 @@ import {
   DragEndEvent,
   DragMoveEvent,
   DragOverlay,
+  pointerWithin,
 } from '@dnd-kit/core';
 
 import {
@@ -101,12 +102,46 @@ const DragOverlayContent = () => {
   if (!activeData) return null;
   const widthStyle = overlayWidth ? { width: overlayWidth } : undefined;
 
-  if (activeData.type === 'bookmark' || activeData.type === 'tab') {
-    const item = activeData.type === 'tab' ? activeData.tab : activeData.bookmark;
+  if (activeData.type === 'tab') {
+    const tab = activeData.tab;
+    return (
+      <div className="flex shrink-0 items-center gap-2.5 rounded-lg py-1.5 px-1.5 bg-card border border-border/40 shadow-lg">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted shadow-sm">
+          <FaviconImage url={tab.url} className="size-4 rounded-[3px] object-contain" />
+        </span>
+        <span className="min-w-0 truncate text-[12px] text-foreground/85 whitespace-nowrap pr-1">
+          {tab.title}
+        </span>
+      </div>
+    );
+  }
+
+  if (activeData.type === 'bookmark') {
+    const bm = activeData.bookmark;
+    if (activeData.isIconGrid) {
+      const iconSize = activeData.iconSize ?? 'md';
+      const iconCls = iconSize === 'sm' ? 'size-4' : iconSize === 'md' ? 'size-6' : 'size-8';
+      const showLabel = iconSize !== 'sm';
+      const textCls = iconSize === 'md' ? 'text-[8px]' : 'text-[10px]';
+      const minW = iconSize === 'sm' ? 32 : iconSize === 'md' ? 56 : 64;
+      return (
+        <div
+          className="flex flex-col items-center gap-1 rounded-md p-1.5 bg-card border border-border/50 shadow-lg"
+          style={{ minWidth: minW }}
+        >
+          <FaviconImage url={bm.url} className={cn(iconCls, 'shrink-0 rounded-[4px]')} />
+          {showLabel && (
+            <span className={cn('w-full truncate text-center text-foreground leading-tight', textCls)}>
+              {bm.title}
+            </span>
+          )}
+        </div>
+      );
+    }
     return (
       <div style={widthStyle} className="grid grid-cols-[16px_1fr] items-center gap-2 rounded-md px-2 py-1 text-[13px] bg-card border border-border/50 shadow-lg">
-        <FaviconImage url={item.url} className="size-3.5 rounded-[3px]" />
-        <span className="truncate text-foreground">{item.title}</span>
+        <FaviconImage url={bm.url} className="size-3.5 rounded-[3px]" />
+        <span className="truncate text-foreground">{bm.title}</span>
       </div>
     );
   }
@@ -114,8 +149,8 @@ const DragOverlayContent = () => {
   if (activeData.type === 'subgroup') {
     const subgroup = activeData.subgroup;
     return (
-      <div style={widthStyle} className="rounded-lg border border-border/70 bg-card/70 p-2 shadow-lg">
-        <div className="flex items-center gap-1 px-1">
+      <div style={widthStyle} className="rounded-lg border border-border/70 bg-card px-1.5 py-1 shadow-lg">
+        <div className="flex min-h-6 items-center gap-0.5 px-0.5">
           <span className="inline-flex size-5 items-center justify-center text-muted-foreground">
             <GripVertical className="size-3.5" />
           </span>
@@ -360,6 +395,8 @@ export default function App() {
     moveGroupBefore,
     moveGroupToEnd,
     toggleGroup,
+    setGroupViewMode,
+    setGroupIconSize,
     addSubgroup,
     renameSubgroup,
     deleteSubgroup,
@@ -367,6 +404,8 @@ export default function App() {
     moveSubgroupBefore,
     moveSubgroupToEnd,
     toggleSubgroup,
+    setSubgroupViewMode,
+    setSubgroupIconSize,
     addBookmark,
     insertBookmark,
     editBookmark,
@@ -469,8 +508,11 @@ export default function App() {
       const el = document.getElementById(`dnd-${over.id}`);
       if (el) {
         const rect = el.getBoundingClientRect();
-        const y = pointerRef.current.y;
-        const isAfter = y > rect.top + rect.height / 2;
+        // Use X-axis for icon-grid items, Y-axis for list items
+        const isIconGrid = !!(overData as any).isIconGrid;
+        const isAfter = isIconGrid
+          ? pointerRef.current.x > rect.left + rect.width / 2
+          : pointerRef.current.y > rect.top + rect.height / 2;
         setDropIndicator((dropIndicatorRef.current = { id: String(over.id), zone: isAfter ? 'after' : 'before', type: 'bookmark' }));
       }
     } else if (activeData.type === 'subgroup') {
@@ -642,6 +684,7 @@ export default function App() {
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
@@ -849,6 +892,10 @@ export default function App() {
                         title: subgroup.title,
                       });
                     }}
+                    onSetViewMode={(mode) => setGroupViewMode(group.id, mode)}
+                    onSetIconSize={(size) => setGroupIconSize(group.id, size)}
+                    onSetSubgroupViewMode={(subgroupId, mode) => setSubgroupViewMode(group.id, subgroupId, mode)}
+                    onSetSubgroupIconSize={(subgroupId, size) => setSubgroupIconSize(group.id, subgroupId, size)}
                     autoFocusEdit={autoEditGroupId === group.id}
                     autoFocusSubgroupId={autoEditSubgroupId}
                     onClearAutoFocus={() => {

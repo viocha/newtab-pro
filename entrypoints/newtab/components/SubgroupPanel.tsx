@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, FolderTree, GripVertical, MoreHorizontal, Plus, Trash2, ExternalLink, AppWindow, EyeOff } from 'lucide-react';
+import { ChevronDown, ChevronRight, FolderTree, GripVertical, LayoutGrid, LayoutList, MoreHorizontal, Plus, Trash2, ExternalLink, AppWindow, EyeOff } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { browser } from 'wxt/browser';
 
@@ -8,6 +8,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -18,10 +19,13 @@ import type {
   BookmarkItem,
   BookmarkNodeTarget,
   BookmarkSubgroup,
+  BookmarkViewMode,
+  IconSize,
   InsertTarget,
 } from '../types';
 import { useDndUIStore } from '../drag';
 import { BookmarkRows } from './BookmarkRows';
+import { BookmarkIconGrid } from './BookmarkIconGrid';
 
 type SubgroupPanelProps = {
   groupId: string;
@@ -43,6 +47,8 @@ type SubgroupPanelProps = {
     payload: { title: string; url: string },
     insertIndex?: number,
   ) => void;
+  onSetViewMode: (mode: BookmarkViewMode) => void;
+  onSetIconSize: (size: IconSize) => void;
   autoFocusEdit?: boolean;
   onClearAutoFocus?: () => void;
 };
@@ -59,6 +65,8 @@ export function SubgroupPanel({
   onDeleteBookmark,
   onMoveBookmark,
   onDropExternalBookmark,
+  onSetViewMode,
+  onSetIconSize,
   autoFocusEdit,
   onClearAutoFocus,
 }: SubgroupPanelProps) {
@@ -130,10 +138,7 @@ export function SubgroupPanel({
       <section
         ref={setDropRef}
         id={`dnd-${dndId}`}
-        className={cn(
-          "rounded-lg border border-border/70 bg-card/70 px-1.5 py-1 shadow-sm transition-opacity",
-          isDragging && "opacity-50"
-        )}
+        className="rounded-lg border border-border/70 bg-card/70 px-1.5 py-1 shadow-sm"
       >
         <header className="group flex items-center gap-0.5 px-0.5">
           <span
@@ -200,7 +205,52 @@ export function SubgroupPanel({
                   <MoreHorizontal className="size-3.5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuContent align="end" className="w-52">
+                {/* View mode segmented */}
+                <DropdownMenuLabel className="pb-1 text-xs font-medium text-muted-foreground">视图模式</DropdownMenuLabel>
+                <div className="px-2 pb-2">
+                  <div className="flex items-center rounded-md bg-muted p-0.5">
+                    {([['list', <LayoutList className="size-3.5" />, '列表'], ['icon', <LayoutGrid className="size-3.5" />, '图标']] as const).map(([val, icon, label]) => (
+                      <button
+                        key={val}
+                        className={cn(
+                          'flex flex-1 items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-medium transition-all',
+                          subgroup.viewMode === val
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground',
+                        )}
+                        onClick={() => onSetViewMode(val as BookmarkViewMode)}
+                      >
+                        {icon}{label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Icon size segmented – only in icon mode */}
+                {subgroup.viewMode === 'icon' && (
+                  <>
+                    <DropdownMenuLabel className="pb-1 text-xs font-medium text-muted-foreground">图标尺寸</DropdownMenuLabel>
+                    <div className="px-2 pb-2">
+                      <div className="flex items-center rounded-md bg-muted p-0.5">
+                        {([['sm', '小'], ['md', '中'], ['lg', '大']] as const).map(([val, label]) => (
+                          <button
+                            key={val}
+                            className={cn(
+                              'flex flex-1 items-center justify-center rounded py-1 text-xs font-medium transition-all',
+                              subgroup.iconSize === val
+                                ? 'bg-background text-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground',
+                            )}
+                            onClick={() => onSetIconSize(val as IconSize)}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   disabled={subgroup.bookmarks.length === 0}
                   onSelect={() => {
@@ -236,15 +286,28 @@ export function SubgroupPanel({
 
         {!subgroup.collapsed && (
           <div className="mt-1">
-            <BookmarkRows
-              bookmarks={subgroup.bookmarks}
-              target={bookmarkTarget}
-              emptyHint="暂无书签"
-              onEditBookmark={onOpenEditBookmark}
-              onDeleteBookmark={onDeleteBookmark}
-              onMoveBookmark={onMoveBookmark}
-              onDropExternalBookmark={onDropExternalBookmark}
-            />
+            {subgroup.viewMode === 'icon' ? (
+              <BookmarkIconGrid
+                bookmarks={subgroup.bookmarks}
+                target={bookmarkTarget}
+                iconSize={subgroup.iconSize}
+                emptyHint="暂无书签"
+                onEditBookmark={onOpenEditBookmark}
+                onDeleteBookmark={onDeleteBookmark}
+                onMoveBookmark={onMoveBookmark}
+                onDropExternalBookmark={onDropExternalBookmark}
+              />
+            ) : (
+              <BookmarkRows
+                bookmarks={subgroup.bookmarks}
+                target={bookmarkTarget}
+                emptyHint="暂无书签"
+                onEditBookmark={onOpenEditBookmark}
+                onDeleteBookmark={onDeleteBookmark}
+                onMoveBookmark={onMoveBookmark}
+                onDropExternalBookmark={onDropExternalBookmark}
+              />
+            )}
           </div>
         )}
       </section>
