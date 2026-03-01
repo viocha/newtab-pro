@@ -88,7 +88,12 @@ export function TabsEdgeDrawer() {
     try {
       const all = await browser.tabs.query({});
       const filtered = all
-        .filter((t) => !!t.url && !t.url.startsWith('chrome://newtab'))
+        .filter(
+          (t) =>
+            !!t.url &&
+            !t.url.startsWith('chrome://newtab') &&
+            !t.url.startsWith('edge://newtab'),
+        )
         .sort((a, b) => {
           if ((a.windowId ?? 0) !== (b.windowId ?? 0))
             return (a.windowId ?? 0) - (b.windowId ?? 0);

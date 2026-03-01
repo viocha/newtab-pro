@@ -190,6 +190,7 @@ function SpaceTab({
 }) {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(title);
+  const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const blurTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -261,7 +262,7 @@ function SpaceTab({
   }, []);
 
   return (
-    <ContextMenu>
+    <ContextMenu onOpenChange={setContextMenuOpen}>
       <ContextMenuTrigger asChild>
         <button
           ref={mergedRef}
@@ -269,6 +270,7 @@ function SpaceTab({
           {...listeners}
           id={`dnd-space|${id}`}
           type="button"
+          title={!editing ? '双击重命名' : undefined}
           onClick={() => {
             if (!editing) onSwitch(id);
           }}
@@ -279,7 +281,9 @@ function SpaceTab({
             'relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors select-none whitespace-nowrap',
             active
               ? 'bg-primary/12 text-primary'
-              : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+              : contextMenuOpen
+                ? 'bg-muted/60 text-foreground'
+                : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
             isDragging && 'opacity-40',
           )}
         >
@@ -322,11 +326,9 @@ function SpaceTab({
           <Pencil className="mr-2 size-3.5" />
           重命名
         </ContextMenuItem>
-        <ContextMenuSeparator />
         <ContextMenuItem
           disabled={isOnly}
           onSelect={() => onDelete(id)}
-          className="text-destructive focus:text-destructive"
         >
           <Trash2 className="mr-2 size-3.5" />
           删除
