@@ -60,9 +60,16 @@ function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
 export function BookmarkTreeDialog({ open, targetLabel, onOpenChange, onAddBookmark }: BookmarkTreeDialogProps) {
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  // Debounce the query so filterTree only runs after typing pauses
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
 
   useEffect(() => {
     if (!open) {
@@ -102,7 +109,16 @@ export function BookmarkTreeDialog({ open, targetLabel, onOpenChange, onAddBookm
     };
   }, [open]);
 
-  const normalizedQuery = query.trim().toLowerCase();
+  // Reset search when dialog is closed
+  useEffect(() => {
+    if (!open) {
+      setQuery('');
+      setDebouncedQuery('');
+    }
+  }, [open]);
+
+  const normalizedQuery = debouncedQuery.trim().toLowerCase();
+  // forceExpanded tracks the debounced value so the tree layout follows the filter result
   const forceExpanded = normalizedQuery.length > 0;
   const visibleTree = useMemo(() => filterTree(tree, normalizedQuery), [tree, normalizedQuery]);
 
