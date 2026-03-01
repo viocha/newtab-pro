@@ -72,7 +72,7 @@ function IconBookmarkItemNode({
   // isIconGrid flag lets App.tsx use X-axis for drop zone determination
   const { setNodeRef: setDropRef } = useDroppable({
     id: dndId,
-    data: { type: 'bookmark', target, bookmark, index, isIconGrid: true },
+    data: { type: 'bookmark', target, bookmark, index, isIconGrid: true, iconSize },
   });
 
   const setNodeRef = (node: HTMLElement | null) => {
@@ -199,14 +199,16 @@ function IconBookmarkItemNode({
 function IconBookmarkEndNode({
   target,
   index,
+  iconSize,
 }: {
   target: BookmarkContainerTarget;
   index: number;
+  iconSize: IconSize;
 }) {
   const dndId = `bookmark-end|${target.groupId}|${target.subgroupId}`;
   const { setNodeRef } = useDroppable({
     id: dndId,
-    data: { type: 'bookmark-end', target, index },
+    data: { type: 'bookmark-end', target, index, isIconGrid: true, iconSize },
   });
   const { dropIndicator } = useDndUIStore();
   const isTarget = dropIndicator?.id === dndId && dropIndicator.type === 'bookmark';
@@ -261,10 +263,16 @@ export function BookmarkIconGrid({
     return null;
   };
 
+  const containerId = `bookmark-container|${target.groupId}|${target.subgroupId}`;
+  const { setNodeRef: setContainerDropRef } = useDroppable({
+    id: containerId,
+    data: { type: 'bookmark-container', isIconGrid: true, iconSize },
+  });
+
   const EmptyZoneId = `bookmark-end|${target.groupId}|${target.subgroupId}`;
   const { setNodeRef: setEmptyDropRef } = useDroppable({
     id: EmptyZoneId,
-    data: { type: 'bookmark-end', target, index: 0 },
+    data: { type: 'bookmark-end', target, index: 0, isIconGrid: true, iconSize },
   });
   const { dropIndicator } = useDndUIStore();
   const isEmptyTarget = dropIndicator?.id === EmptyZoneId;
@@ -300,6 +308,8 @@ export function BookmarkIconGrid({
 
   return (
     <div
+      ref={setContainerDropRef}
+      id={containerId}
       className="grid gap-0.5"
       style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${cfg.minW}px, 1fr))` }}
       onDragOver={(event) => {
@@ -328,7 +338,7 @@ export function BookmarkIconGrid({
           onDeleteBookmark={onDeleteBookmark}
         />
       ))}
-      <IconBookmarkEndNode target={target} index={bookmarks.length} />
+      <IconBookmarkEndNode target={target} index={bookmarks.length} iconSize={iconSize} />
     </div>
   );
 }

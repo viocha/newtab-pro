@@ -10,8 +10,11 @@ type DndUIState = {
   activeData: any | null;
   overlayWidth: number | null;
   dropIndicator: DndIndicator;
+  /** style info of the bookmark container currently under pointer — stays stable across item gaps */
+  overContainerData: { isIconGrid: boolean; iconSize?: string; containerWidth?: number | null } | null;
   setActiveDrag: (id: string | null, data: any | null, width?: number | null) => void;
   setDropIndicator: (ind: DndIndicator) => void;
+  setOverContainerData: (data: { isIconGrid: boolean; iconSize?: string; containerWidth?: number | null } | null) => void;
 };
 
 export const useDndUIStore = create<DndUIState>((set) => ({
@@ -19,8 +22,10 @@ export const useDndUIStore = create<DndUIState>((set) => ({
   activeData: null,
   overlayWidth: null,
   dropIndicator: null,
+  overContainerData: null,
   setActiveDrag: (id, data, width) => set({ activeId: id, activeData: data, overlayWidth: width ?? null }),
   setDropIndicator: (ind) => set({ dropIndicator: ind }),
+  setOverContainerData: (data) => set({ overContainerData: data }),
 }));
 
 function safeParseJson<T>(value: string): T | null {

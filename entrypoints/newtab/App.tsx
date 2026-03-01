@@ -13,6 +13,7 @@ import {
   DragMoveEvent,
   DragOverlay,
   pointerWithin,
+  type Modifier,
 } from '@dnd-kit/core';
 
 import {
@@ -97,49 +98,138 @@ function getTargetLabel(
   return `${group.title} / ${subgroup.title}`;
 }
 
+/** Wrapper that passes correct size to DragOverlay depending on target container style */
+const SmartDragOverlay = () => {
+  const { overContainerData, activeData } = useDndUIStore();
+  const wantsIconGrid = overContainerData != null
+    ? overContainerData.isIconGrid
+    : !!(activeData?.isIconGrid);
+
+  // Refs let the modifier closure always read the latest values without recreating on every render
+  const wantsIconGridRef = useRef(false);
+  wantsIconGridRef.current = wantsIconGrid;
+  const iconSizeRef = useRef<string>('md');
+  iconSizeRef.current = overContainerData?.iconSize ?? (activeData?.iconSize as string | undefined) ?? 'md';
+  const overContainerDataRef = useRef(overContainerData);
+  overContainerDataRef.current = overContainerData;
+  const activeDataRef = useRef(activeData);
+  activeDataRef.current = activeData;
+
+  // Re-anchor overlay center under cursor whenever the overlay morphs to a different size/shape.
+  // dnd-kit keeps the original grab offset (cursor at grabX, grabY from source top-left).
+  // After morphing, that offset is wrong because the new element has different dimensions.
+  const anchorModifier: Modifier = useCallback(
+    ({ transform, activatorEvent, activeNodeRect }) => {
+      const ev = activatorEvent as MouseEvent | null;
+      if (!ev || !('clientX' in ev) || !activeNodeRect) return transform;
+      const grabX = ev.clientX - activeNodeRect.left;
+      const grabY = ev.clientY - activeNodeRect.top;
+
+      if (wantsIconGridRef.current) {
+        // Morphed to icon grid: center cursor on the small icon cell
+        const sz = iconSizeRef.current;
+        const halfW = sz === 'sm' ? 16 : sz === 'md' ? 28 : 32;  // (32|56|64) / 2
+        const halfH = sz === 'sm' ? 14 : sz === 'md' ? 27 : 33;  // approx height / 2
+        return { ...transform, x: transform.x + grabX - halfW, y: transform.y + grabY - halfH };
+      }
+
+      const ocd = overContainerDataRef.current;
+      if (ocd != null && !ocd.isIconGrid) {
+        const ad = activeDataRef.current;
+        // Row → Row: same geometry, no re-anchoring needed
+        if (ad?.isIconGrid === false) return transform;
+        // Icon → Row: anchor both X (center across row width) and Y
+        if (ad?.isIconGrid === true) {
+          const halfW = (ocd.containerWidth ?? activeNodeRect.width) / 2;
+          const halfH = 12;
+          return { ...transform, x: transform.x + grabX - halfW, y: transform.y + grabY - halfH };
+        }
+        // Sidebar (tab) → Row: anchor Y only, X is already reasonable
+        const halfH = 12;
+        return { ...transform, y: transform.y + grabY - halfH };
+      }
+
+      return transform;
+    },
+    [],
+  );
+
+  return (
+    // width/height auto: release dnd-kit's locked source-element size so content controls its own dimensions
+    <DragOverlay dropAnimation={null} style={{ width: 'auto', height: 'auto' }} modifiers={[anchorModifier]}>
+      <DragOverlayContent />
+    </DragOverlay>
+  );
+};
+
 const DragOverlayContent = () => {
-  const { activeData, overlayWidth } = useDndUIStore();
+  const { activeData, overlayWidth, overContainerData } = useDndUIStore();
   if (!activeData) return null;
   const widthStyle = overlayWidth ? { width: overlayWidth } : undefined;
 
   if (activeData.type === 'tab') {
     const tab = activeData.tab;
+    // Hovering over an icon-grid container → morph to icon style
+    if (overContainerData?.isIconGrid) {
+      const sz = overContainerData.iconSize ?? 'md';
+      const iconCls = sz === 'sm' ? 'size-4' : sz === 'md' ? 'size-6' : 'size-8';
+      const showLabel = sz !== 'sm';
+      const textCls = sz === 'md' ? 'text-[8px]' : 'text-[10px]';
+      const w = sz === 'sm' ? 32 : sz === 'md' ? 56 : 64;
+      return (
+        <div className="overflow-hidden flex flex-col items-center gap-1 rounded-md p-1.5 bg-card border border-border/50 shadow-lg" style={{ width: w }}>
+          <FaviconImage url={tab.url} className={cn(iconCls, 'shrink-0 rounded-[4px]')} />
+          {showLabel && (
+            <span className={cn('w-full truncate text-center text-foreground leading-tight', textCls)}>{tab.title}</span>
+          )}
+        </div>
+      );
+    }
+    // Hovering over a row-list container → morph to row-bookmark style
+    if (overContainerData != null && !overContainerData.isIconGrid) {
+      const w = overContainerData.containerWidth ?? overlayWidth ?? undefined;
+      return (
+        <div style={{ width: w }} className="grid grid-cols-[16px_1fr] items-center gap-2 rounded-md px-2 py-1 text-[13px] bg-card border border-border/50 shadow-lg">
+          <FaviconImage url={tab.url} className="size-3.5 rounded-[3px]" />
+          <span className="truncate text-foreground">{tab.title}</span>
+        </div>
+      );
+    }
     return (
       <div className="flex shrink-0 items-center gap-2.5 rounded-lg py-1.5 px-1.5 bg-card border border-border/40 shadow-lg">
         <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted shadow-sm">
           <FaviconImage url={tab.url} className="size-4 rounded-[3px] object-contain" />
         </span>
-        <span className="min-w-0 truncate text-[12px] text-foreground/85 whitespace-nowrap pr-1">
-          {tab.title}
-        </span>
+        <span className="min-w-0 truncate text-[12px] text-foreground/85 whitespace-nowrap pr-1">{tab.title}</span>
       </div>
     );
   }
 
   if (activeData.type === 'bookmark') {
     const bm = activeData.bookmark;
-    if (activeData.isIconGrid) {
-      const iconSize = activeData.iconSize ?? 'md';
-      const iconCls = iconSize === 'sm' ? 'size-4' : iconSize === 'md' ? 'size-6' : 'size-8';
-      const showLabel = iconSize !== 'sm';
-      const textCls = iconSize === 'md' ? 'text-[8px]' : 'text-[10px]';
-      const minW = iconSize === 'sm' ? 32 : iconSize === 'md' ? 56 : 64;
+    // Target container drives the appearance; fall back to source if not hovering any container
+    const targetIsIconGrid = overContainerData != null ? overContainerData.isIconGrid : !!(activeData.isIconGrid);
+    const targetIconSize: string = (overContainerData?.iconSize) ?? activeData.iconSize ?? 'md';
+
+    if (targetIsIconGrid) {
+      const iconCls = targetIconSize === 'sm' ? 'size-4' : targetIconSize === 'md' ? 'size-6' : 'size-8';
+      const showLabel = targetIconSize !== 'sm';
+      const textCls = targetIconSize === 'md' ? 'text-[8px]' : 'text-[10px]';
+      // Fixed width = exact icon cell size → parent bounded so truncate works on long titles
+      const w = targetIconSize === 'sm' ? 32 : targetIconSize === 'md' ? 56 : 64;
       return (
-        <div
-          className="flex flex-col items-center gap-1 rounded-md p-1.5 bg-card border border-border/50 shadow-lg"
-          style={{ minWidth: minW }}
-        >
+        <div className="overflow-hidden flex flex-col items-center gap-1 rounded-md p-1.5 bg-card border border-border/50 shadow-lg" style={{ width: w }}>
           <FaviconImage url={bm.url} className={cn(iconCls, 'shrink-0 rounded-[4px]')} />
           {showLabel && (
-            <span className={cn('w-full truncate text-center text-foreground leading-tight', textCls)}>
-              {bm.title}
-            </span>
+            <span className={cn('w-full truncate text-center text-foreground leading-tight', textCls)}>{bm.title}</span>
           )}
         </div>
       );
     }
+    // Row style: use target container's measured width, fall back to source element width
+    const rowWidth = overContainerData?.containerWidth ?? overlayWidth ?? undefined;
     return (
-      <div style={widthStyle} className="grid grid-cols-[16px_1fr] items-center gap-2 rounded-md px-2 py-1 text-[13px] bg-card border border-border/50 shadow-lg">
+      <div style={{ width: rowWidth }} className="grid grid-cols-[16px_1fr] items-center gap-2 rounded-md px-2 py-1 text-[13px] bg-card border border-border/50 shadow-lg">
         <FaviconImage url={bm.url} className="size-3.5 rounded-[3px]" />
         <span className="truncate text-foreground">{bm.title}</span>
       </div>
@@ -444,7 +534,7 @@ export default function App() {
       },
     })
   );
-  const { activeId, activeData, setActiveDrag, setDropIndicator } = useDndUIStore();
+  const { activeId, activeData, setActiveDrag, setDropIndicator, setOverContainerData } = useDndUIStore();
   const dropIndicatorRef = useRef<DndIndicator>(null);
   const pointerRef = useRef({ x: 0, y: 0 });
 
@@ -486,10 +576,12 @@ export default function App() {
     const { active, over } = event;
     if (!over || !activeData) {
       setDropIndicator((dropIndicatorRef.current = null));
+      setOverContainerData(null);
       return;
     }
     if (active.id === over.id) {
       setDropIndicator((dropIndicatorRef.current = null));
+      // Stay in same container — don't clear container style
       return;
     }
 
@@ -497,10 +589,23 @@ export default function App() {
     if (!overData) return;
 
     if (activeData.type === 'bookmark' || activeData.type === 'tab') {
-      if (overData.type !== 'bookmark' && overData.type !== 'bookmark-end') {
-        setDropIndicator((dropIndicatorRef.current = null));
+      if (overData.type === 'bookmark-container') {
+        // Pointer is in a gap between items — over.rect is the container's own bounding rect
+        const containerWidth = Math.round(over.rect.width);
+        setOverContainerData({ isIconGrid: !!overData.isIconGrid, iconSize: overData.iconSize, containerWidth });
         return;
       }
+      if (overData.type !== 'bookmark' && overData.type !== 'bookmark-end') {
+        setDropIndicator((dropIndicatorRef.current = null));
+        setOverContainerData(null);
+        return;
+      }
+      // Pointer is on an item — look up the container div by its ID to get its width
+      const ovTarget = overData.target as { groupId: string; subgroupId: string };
+      const containerDomId = `bookmark-container|${ovTarget.groupId}|${ovTarget.subgroupId}`;
+      const containerWidth = document.getElementById(containerDomId)?.offsetWidth ?? null;
+      setOverContainerData({ isIconGrid: !!overData.isIconGrid, iconSize: overData.iconSize, containerWidth });
+
       if (overData.type === 'bookmark-end') {
         setDropIndicator((dropIndicatorRef.current = { id: String(over.id), zone: 'after', type: 'bookmark' }));
         return;
@@ -508,7 +613,6 @@ export default function App() {
       const el = document.getElementById(`dnd-${over.id}`);
       if (el) {
         const rect = el.getBoundingClientRect();
-        // Use X-axis for icon-grid items, Y-axis for list items
         const isIconGrid = !!(overData as any).isIconGrid;
         const isAfter = isIconGrid
           ? pointerRef.current.x > rect.left + rect.width / 2
@@ -561,6 +665,7 @@ export default function App() {
   const cleanupDragState = () => {
     setActiveDrag(null, null);
     setDropIndicator(null);
+    setOverContainerData(null);
     dropIndicatorRef.current = null;
     document.body.classList.remove('dragging', 'dragging-pointer', 'dragging-grab');
   };
@@ -1070,9 +1175,7 @@ export default function App() {
         <Toaster />
       </div>
 
-      <DragOverlay dropAnimation={null}>
-        <DragOverlayContent />
-      </DragOverlay>
+      <SmartDragOverlay />
     </DndContext>
   );
 }

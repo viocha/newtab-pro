@@ -80,12 +80,12 @@ function BookmarkItemNode({
 
   const { setNodeRef: setDragRef, attributes, listeners } = useDraggable({
     id: dndId,
-    data: { type: 'bookmark', target, bookmark, index },
+    data: { type: 'bookmark', target, bookmark, index, isIconGrid: false },
   });
 
   const { setNodeRef: setDropRef } = useDroppable({
     id: dndId,
-    data: { type: 'bookmark', target, bookmark, index },
+    data: { type: 'bookmark', target, bookmark, index, isIconGrid: false },
   });
 
   const setNodeRef = (node: HTMLElement | null) => {
@@ -212,7 +212,7 @@ function BookmarkEndNode({ target, index }: { target: BookmarkContainerTarget; i
   const dndId = `bookmark-end|${target.groupId}|${target.subgroupId}`;
   const { setNodeRef } = useDroppable({
     id: dndId,
-    data: { type: 'bookmark-end', target, index },
+    data: { type: 'bookmark-end', target, index, isIconGrid: false },
   });
   const { dropIndicator } = useDndUIStore();
   const isTarget = dropIndicator?.id === dndId && dropIndicator.type === 'bookmark';
@@ -257,10 +257,16 @@ export function BookmarkRows({
     onDropExternalBookmark(target, externalPayload, insertIndex);
   };
 
+  const containerId = `bookmark-container|${target.groupId}|${target.subgroupId}`;
+  const { setNodeRef: setContainerDropRef } = useDroppable({
+    id: containerId,
+    data: { type: 'bookmark-container', isIconGrid: false },
+  });
+
   const EmptyZoneId = `bookmark-end|${target.groupId}|${target.subgroupId}`;
   const { setNodeRef: setEmptyDropRef } = useDroppable({
     id: EmptyZoneId,
-    data: { type: 'bookmark-end', target, index: 0 },
+    data: { type: 'bookmark-end', target, index: 0, isIconGrid: false },
   });
   const { dropIndicator } = useDndUIStore();
   const isEmptyTarget = dropIndicator?.id === EmptyZoneId;
@@ -296,6 +302,8 @@ export function BookmarkRows({
 
   return (
     <div
+      ref={setContainerDropRef}
+      id={containerId}
       className="grid gap-0.5"
       onDragOver={(event) => {
         const dropKind = resolveDropKind(event);
