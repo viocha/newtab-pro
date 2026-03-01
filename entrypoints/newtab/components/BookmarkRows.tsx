@@ -1,6 +1,6 @@
 import type { DragEvent } from 'react';
 import { useState } from 'react';
-import { Edit3, ExternalLink, AppWindow, EyeOff, Trash2 } from 'lucide-react';
+import { Edit3, ExternalLink, AppWindow, EyeOff, Trash2, Link as LinkIcon } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { browser } from 'wxt/browser';
 
@@ -117,6 +117,49 @@ function BookmarkItemNode({
               contextOpenBookmarkId === bookmark.id && 'bg-accent/75',
             )}
             title={`${bookmark.title}\n${bookmark.url}`}
+            onClick={(e) => {
+              const url = bookmark.url;
+              if (
+                url.startsWith('edge://') ||
+                url.startsWith('chrome://') ||
+                url.startsWith('about:')
+              ) {
+                e.preventDefault();
+                if (e.altKey) {
+                  // Alt+click → 静默，不做任何事
+                } else if (e.ctrlKey && e.shiftKey) {
+                  // Ctrl+Shift+click → 前台新标签页
+                  browser.tabs.create({ url, active: true });
+                } else if (e.ctrlKey || e.metaKey) {
+                  // Ctrl/Cmd+click → 后台新标签页
+                  browser.tabs.create({ url, active: false });
+                } else if (e.shiftKey) {
+                  // Shift+click → 新窗口
+                  browser.windows.create({ url });
+                } else {
+                  // 普通单击 → 当前标签页
+                  browser.tabs.update({ url });
+                }
+              }
+            }}
+            onAuxClick={(e) => {
+              const url = bookmark.url;
+              if (
+                e.button === 1 &&
+                (url.startsWith('edge://') ||
+                  url.startsWith('chrome://') ||
+                  url.startsWith('about:'))
+              ) {
+                e.preventDefault();
+                if (e.shiftKey) {
+                  // Shift+中键 → 前台新标签页
+                  browser.tabs.create({ url, active: true });
+                } else {
+                  // 中键 → 后台新标签页
+                  browser.tabs.create({ url, active: false });
+                }
+              }
+            }}
             {...listeners}
             {...attributes}
           >
@@ -140,6 +183,11 @@ function BookmarkItemNode({
           <ContextMenuItem onSelect={() => browser.windows.create({ url: bookmark.url, incognito: true })}>
             <EyeOff className="mr-2 size-3.5" />
             在隐私窗口打开
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem onSelect={() => navigator.clipboard.writeText(bookmark.url)}>
+            <LinkIcon className="mr-2 size-3.5" />
+            复制链接
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem onSelect={() => onEditBookmark(target, bookmark)}>
