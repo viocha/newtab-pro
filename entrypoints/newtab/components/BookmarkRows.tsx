@@ -104,7 +104,7 @@ function BookmarkItemNode({
       style={{ opacity: isDragging ? 0.35 : 1 }}
     >
       {isTarget && dropIndicator.zone === 'before' ? (
-        <div className="pointer-events-none absolute -top-[1px] left-1 right-1 z-20 h-[2px] rounded-full bg-primary" />
+        <div className="pointer-events-none absolute -top-[2px] left-1 right-1 z-20 h-[2px] rounded-full bg-primary" />
       ) : null}
 
       <ContextMenu onOpenChange={(open) => setContextOpenBookmarkId(open ? bookmark.id : null)}>
@@ -202,7 +202,7 @@ function BookmarkItemNode({
       </ContextMenu>
 
       {isTarget && dropIndicator.zone === 'after' ? (
-        <div className="pointer-events-none absolute -bottom-[1px] left-1 right-1 z-20 h-[2px] rounded-full bg-primary" />
+        <div className="pointer-events-none absolute -bottom-[2px] left-1 right-1 z-20 h-[2px] rounded-full bg-primary" />
       ) : null}
     </div>
   );

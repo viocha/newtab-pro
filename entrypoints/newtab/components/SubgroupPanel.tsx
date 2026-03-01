@@ -132,7 +132,7 @@ export function SubgroupPanel({
   return (
     <div className="relative">
       {isTarget && dropIndicator.zone === 'before' ? (
-        <div className="pointer-events-none absolute -top-1.5 left-0 right-0 z-20 h-[2px] rounded-full bg-primary" />
+        <div className="pointer-events-none absolute -top-[5px] left-0 right-0 z-20 h-[2px] rounded-full bg-primary" />
       ) : null}
 
       <section
@@ -313,7 +313,7 @@ export function SubgroupPanel({
       </section>
 
       {isTarget && dropIndicator.zone === 'after' ? (
-        <div className="pointer-events-none absolute -bottom-1.5 left-0 right-0 z-20 h-[2px] rounded-full bg-primary" />
+        <div className="pointer-events-none absolute -bottom-[5px] left-0 right-0 z-20 h-[2px] rounded-full bg-primary" />
       ) : null}
     </div>
   );

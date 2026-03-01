@@ -93,7 +93,7 @@ function IconBookmarkItemNode({
     >
       {/* Drop indicator – vertical line on left/right */}
       {isTarget && dropIndicator.zone === 'before' ? (
-        <div className="pointer-events-none absolute -left-px top-1 bottom-1 z-20 w-[2px] rounded-full bg-primary" />
+        <div className="pointer-events-none absolute -left-[2px] top-1 bottom-1 z-20 w-[2px] rounded-full bg-primary" />
       ) : null}
 
       <ContextMenu onOpenChange={(open) => setContextOpenBookmarkId(open ? bookmark.id : null)}>
@@ -188,7 +188,7 @@ function IconBookmarkItemNode({
       </ContextMenu>
 
       {isTarget && dropIndicator.zone === 'after' ? (
-        <div className="pointer-events-none absolute -right-px top-1 bottom-1 z-20 w-[2px] rounded-full bg-primary" />
+        <div className="pointer-events-none absolute -right-[2px] top-1 bottom-1 z-20 w-[2px] rounded-full bg-primary" />
       ) : null}
     </div>
   );

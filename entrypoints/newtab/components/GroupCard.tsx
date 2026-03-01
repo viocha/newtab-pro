@@ -277,7 +277,7 @@ export function GroupCard({
   return (
     <div className="relative flex flex-col">
       {isTarget && dropIndicator.zone === 'before' ? (
-        <div className="pointer-events-none absolute bottom-2 -left-[6px] top-2 z-20 w-[2px] rounded-full bg-primary" />
+        <div className="pointer-events-none absolute bottom-2 -left-[7px] top-2 z-20 w-[2px] rounded-full bg-primary" />
       ) : null}
 
       <section
@@ -579,7 +579,7 @@ export function GroupCard({
       </section>
 
       {isTarget && dropIndicator.zone === 'after' ? (
-        <div className="pointer-events-none absolute bottom-2 -right-[6px] top-2 z-20 w-[2px] rounded-full bg-primary" />
+        <div className="pointer-events-none absolute bottom-2 -right-[7px] top-2 z-20 w-[2px] rounded-full bg-primary" />
       ) : null}
     </div>
   );
