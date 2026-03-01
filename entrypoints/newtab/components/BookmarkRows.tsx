@@ -168,7 +168,7 @@ function BookmarkItemNode({
               className="size-3.5 rounded-[3px]"
               loading="lazy"
             />
-            <span className="truncate text-foreground hover:underline">{bookmark.title}</span>
+            <span className="truncate text-foreground">{bookmark.title}</span>
           </a>
         </ContextMenuTrigger>
         <ContextMenuContent className="w-44">
