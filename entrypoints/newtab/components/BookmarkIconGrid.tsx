@@ -156,6 +156,20 @@ function IconBookmarkItemNode({
         </ContextMenuTrigger>
 
         <ContextMenuContent className="w-44">
+          <ContextMenuItem onSelect={() => onEditBookmark(target, bookmark)}>
+            <Edit3 className="mr-2 size-3.5" />
+            编辑
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={() => onDeleteBookmark(target, bookmark.id)}>
+            <Trash2 className="mr-2 size-3.5" />
+            删除
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem onSelect={() => navigator.clipboard.writeText(bookmark.url)}>
+            <LinkIcon className="mr-2 size-3.5" />
+            复制链接
+          </ContextMenuItem>
+          <ContextMenuSeparator />
           <ContextMenuItem onSelect={() => browser.tabs.create({ url: bookmark.url })}>
             <ExternalLink className="mr-2 size-3.5" />
             在新标签页打开
@@ -169,20 +183,6 @@ function IconBookmarkItemNode({
           >
             <EyeOff className="mr-2 size-3.5" />
             在隐私窗口打开
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem onSelect={() => navigator.clipboard.writeText(bookmark.url)}>
-            <LinkIcon className="mr-2 size-3.5" />
-            复制链接
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem onSelect={() => onEditBookmark(target, bookmark)}>
-            <Edit3 className="mr-2 size-3.5" />
-            编辑
-          </ContextMenuItem>
-          <ContextMenuItem onSelect={() => onDeleteBookmark(target, bookmark.id)}>
-            <Trash2 className="mr-2 size-3.5" />
-            删除
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
