@@ -312,6 +312,10 @@ export function SubgroupPanel({
                     </DropdownMenuSub>
                   </>
                 )}
+                <DropdownMenuItem onSelect={() => onDeleteSubgroup(target)}>
+                  <Trash2 className="mr-2 size-3.5" />
+                  删除小组
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem disabled={subgroup.bookmarks.length === 0} onSelect={() => {
                     for (const b of subgroup.bookmarks) browser.tabs.create({ url: b.url });
@@ -332,11 +336,6 @@ export function SubgroupPanel({
                 >
                   <EyeOff className="mr-2 size-3.5" />
                   在隐私窗口打开全部
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => onDeleteSubgroup(target)}>
-                  <Trash2 className="mr-2 size-3.5" />
-                  删除小组
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

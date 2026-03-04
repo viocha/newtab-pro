@@ -584,10 +584,12 @@ export function GroupCard({
                   </>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => onAddSubgroup(group.id)}>
-                  <FolderPlus className="mr-2 size-3.5" />
-                  添加小组
-                </DropdownMenuItem>
+                {group.viewMode !== 'browser-tree' && (
+                  <DropdownMenuItem onSelect={() => onAddSubgroup(group.id)}>
+                    <FolderPlus className="mr-2 size-3.5" />
+                    添加小组
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <Palette className="mr-2 size-3.5" />
@@ -636,6 +638,10 @@ export function GroupCard({
                     </DropdownMenuSub>
                   </>
                 )}
+                <DropdownMenuItem onSelect={() => onDeleteGroup(group.id)}>
+                  <Trash2 className="mr-2 size-3.5" />
+                  删除分组
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   disabled={allUrls.length === 0}
@@ -659,11 +665,6 @@ export function GroupCard({
                 >
                   <EyeOff className="mr-2 size-3.5" />
                   在隐私窗口打开全部
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => onDeleteGroup(group.id)}>
-                  <Trash2 className="mr-2 size-3.5" />
-                  删除分组
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
