@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AppWindow, ChevronDown, ChevronRight, Copy, ExternalLink, EyeOff, Folder, FolderOpen } from 'lucide-react';
+import { AppWindow, ChevronDown, ChevronRight, Copy, ExternalLink, EyeOff, Folder, FolderOpen, MapPin } from 'lucide-react';
 import { browser, type Browser } from 'wxt/browser';
 
 
@@ -17,6 +17,27 @@ import { FaviconImage } from './FaviconImage';
 
 /** 每行的近似高度（px），用于将 maxItems 换算成 maxHeight */
 const ITEM_HEIGHT_PX = 28;
+
+/** 通过 management API 找到 Bookmark Pro 扩展并发送定位消息 */
+async function locateInBookmarkPro(nodeId: string): Promise<void> {
+  try {
+    const extensions = await chrome.management.getAll();
+    const bookmarkPro = extensions.find(
+      (ext) => ext.name === 'Bookmark Pro' && ext.enabled,
+    );
+    if (!bookmarkPro) {
+      console.warn('[Newtab Pro] Bookmark Pro 扩展未找到或未启用');
+      return;
+    }
+    // 发送定位请求到 Bookmark Pro 的 background
+    chrome.runtime.sendMessage(bookmarkPro.id, {
+      type: 'LOCATE_BOOKMARK',
+      nodeId,
+    });
+  } catch (err) {
+    console.error('[Newtab Pro] 发送定位请求失败:', err);
+  }
+}
 
 type TreeNode = Browser.bookmarks.BookmarkTreeNode;
 
@@ -143,22 +164,29 @@ export function BrowserTreeView({
                 </span>
               </div>
             </ContextMenuTrigger>
-            {folderUrls.length > 0 && (
-              <ContextMenuContent>
-                <ContextMenuItem onSelect={() => { for (const u of folderUrls) void browser.tabs.create({ url: u }); }}>
-                  <ExternalLink className="mr-2 size-3.5" />
-                  打开全部书签
-                </ContextMenuItem>
-                <ContextMenuItem onSelect={() => void browser.windows.create({ url: folderUrls })}>
-                  <AppWindow className="mr-2 size-3.5" />
-                  在新窗口打开全部
-                </ContextMenuItem>
-                <ContextMenuItem onSelect={() => void browser.windows.create({ url: folderUrls, incognito: true })}>
-                  <EyeOff className="mr-2 size-3.5" />
-                  在隐私窗口打开全部
-                </ContextMenuItem>
-              </ContextMenuContent>
-            )}
+            <ContextMenuContent>
+              {folderUrls.length > 0 && (
+                <>
+                  <ContextMenuItem onSelect={() => { for (const u of folderUrls) void browser.tabs.create({ url: u }); }}>
+                    <ExternalLink className="mr-2 size-3.5" />
+                    打开全部书签
+                  </ContextMenuItem>
+                  <ContextMenuItem onSelect={() => void browser.windows.create({ url: folderUrls })}>
+                    <AppWindow className="mr-2 size-3.5" />
+                    在新窗口打开全部
+                  </ContextMenuItem>
+                  <ContextMenuItem onSelect={() => void browser.windows.create({ url: folderUrls, incognito: true })}>
+                    <EyeOff className="mr-2 size-3.5" />
+                    在隐私窗口打开全部
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                </>
+              )}
+              <ContextMenuItem onSelect={() => void locateInBookmarkPro(node.id)}>
+                <MapPin className="mr-2 size-3.5" />
+                在侧栏书签中定位
+              </ContextMenuItem>
+            </ContextMenuContent>
           </ContextMenu>
           {hasChildren && isExpanded && renderNodes(node.children!, depth + 1)}
           </React.Fragment>
@@ -218,6 +246,11 @@ export function BrowserTreeView({
             <ContextMenuItem onSelect={() => { if (node.url) void browser.windows.create({ url: node.url, incognito: true }); }}>
               <EyeOff className="mr-2 size-3.5" />
               在隐私窗口打开
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem onSelect={() => void locateInBookmarkPro(node.id)}>
+              <MapPin className="mr-2 size-3.5" />
+              在侧栏书签中定位
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
