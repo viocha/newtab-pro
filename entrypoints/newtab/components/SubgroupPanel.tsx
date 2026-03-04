@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, FolderTree, GripVertical, LayoutGrid, LayoutList, MoreHorizontal, Plus, Trash2, ExternalLink, AppWindow, EyeOff } from 'lucide-react';
+import { ChevronDown, ChevronRight, FolderTree, GripVertical, LayoutGrid, LayoutList, MoreHorizontal, Plus, Trash2, ExternalLink, AppWindow, EyeOff, FolderInput } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { browser } from 'wxt/browser';
 
@@ -10,6 +10,9 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
@@ -22,6 +25,7 @@ import type {
   BookmarkViewMode,
   IconSize,
   InsertTarget,
+  Space,
 } from '../types';
 import { useDndUIStore } from '../drag';
 import { BookmarkRows } from './BookmarkRows';
@@ -30,6 +34,15 @@ import { BookmarkIconGrid } from './BookmarkIconGrid';
 type SubgroupPanelProps = {
   groupId: string;
   subgroup: BookmarkSubgroup;
+  spaces: Space[];
+  activeSpaceId: string;
+  onMoveSubgroupToSpace: (source: InsertTarget, targetSpaceId: string, targetGroupId: string) => void;
+  onMoveBookmarkToSpace: (
+    source: BookmarkNodeTarget,
+    targetSpaceId: string,
+    targetGroupId: string,
+    targetSubgroupId?: string,
+  ) => void;
   onToggleSubgroup: (target: InsertTarget) => void;
   onRenameSubgroup: (target: InsertTarget, nextTitle: string) => void;
   onDeleteSubgroup: (target: InsertTarget) => void;
@@ -56,6 +69,10 @@ type SubgroupPanelProps = {
 export function SubgroupPanel({
   groupId,
   subgroup,
+  spaces,
+  activeSpaceId,
+  onMoveSubgroupToSpace,
+  onMoveBookmarkToSpace,
   onToggleSubgroup,
   onRenameSubgroup,
   onDeleteSubgroup,
@@ -250,13 +267,55 @@ export function SubgroupPanel({
                     </div>
                   </>
                 )}
+                {spaces.some((s) =>
+                  s.id !== activeSpaceId
+                    ? s.board.groups.length > 0
+                    : s.board.groups.some((g) => g.id !== groupId)
+                ) && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <FolderInput className="mr-2 size-3.5" />
+                        移动到
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="w-44">
+                        {spaces.map((space) => {
+                          if (space.board.groups.length === 0) return null;
+                          return (
+                            <DropdownMenuSub key={space.id}>
+                              <DropdownMenuSubTrigger>
+                                {space.title}
+                                {space.id === activeSpaceId && (
+                                  <span className="ml-1 text-[10px] text-muted-foreground">(当前)</span>
+                                )}
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent className="w-44">
+                                {space.board.groups.map((g) => {
+                                  const isCurrentGroup =
+                                    space.id === activeSpaceId && g.id === groupId;
+                                  return (
+                                    <DropdownMenuItem
+                                      key={g.id}
+                                      disabled={isCurrentGroup}
+                                      onSelect={() => onMoveSubgroupToSpace(target, space.id, g.id)}
+                                    >
+                                      {g.title}
+                                    </DropdownMenuItem>
+                                  );
+                                })}
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                          );
+                        })}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  </>
+                )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  disabled={subgroup.bookmarks.length === 0}
-                  onSelect={() => {
+                <DropdownMenuItem disabled={subgroup.bookmarks.length === 0} onSelect={() => {
                     for (const b of subgroup.bookmarks) browser.tabs.create({ url: b.url });
-                  }}
-                >
+                  }}>
                   <ExternalLink className="mr-2 size-3.5" />
                   打开全部书签
                 </DropdownMenuItem>
@@ -292,6 +351,9 @@ export function SubgroupPanel({
                 target={bookmarkTarget}
                 iconSize={subgroup.iconSize}
                 emptyHint="暂无书签"
+                spaces={spaces}
+                activeSpaceId={activeSpaceId}
+                onMoveBookmarkToSpace={onMoveBookmarkToSpace}
                 onEditBookmark={onOpenEditBookmark}
                 onDeleteBookmark={onDeleteBookmark}
                 onMoveBookmark={onMoveBookmark}
@@ -302,6 +364,9 @@ export function SubgroupPanel({
                 bookmarks={subgroup.bookmarks}
                 target={bookmarkTarget}
                 emptyHint="暂无书签"
+                spaces={spaces}
+                activeSpaceId={activeSpaceId}
+                onMoveBookmarkToSpace={onMoveBookmarkToSpace}
                 onEditBookmark={onOpenEditBookmark}
                 onDeleteBookmark={onDeleteBookmark}
                 onMoveBookmark={onMoveBookmark}

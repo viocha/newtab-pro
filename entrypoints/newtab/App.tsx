@@ -507,6 +507,9 @@ export default function App() {
     moveBookmark,
     importSpaceStore,
     spaceStore,
+    moveGroupToSpace,
+    moveSubgroupToSpace,
+    moveBookmarkToSpace,
   } = useBoardStore();
 
   const [formState, setFormState] = useState<BookmarkFormState>(DEFAULT_FORM_STATE);
@@ -996,6 +999,29 @@ export default function App() {
                 <div key={group.id} className="relative">
                   <GroupCard
                     group={group}
+                    spaces={spaces}
+                    activeSpaceId={activeSpaceId}
+                    onMoveGroupToSpace={(groupId, targetSpaceId) => {
+                      const ok = moveGroupToSpace(groupId, targetSpaceId);
+                      if (ok) {
+                        const targetSpace = spaces.find((s) => s.id === targetSpaceId);
+                        toast('分组已移动', { description: `已移至 Space「${targetSpace?.title ?? targetSpaceId}」` });
+                      }
+                    }}
+                    onMoveSubgroupToSpace={(source, targetSpaceId, targetGroupId) => {
+                      const ok = moveSubgroupToSpace(source, targetSpaceId, targetGroupId);
+                      if (ok) {
+                        const targetSpace = spaces.find((s) => s.id === targetSpaceId);
+                        toast('小组已移动', { description: `已移至 Space「${targetSpace?.title ?? targetSpaceId}」` });
+                      }
+                    }}
+                    onMoveBookmarkToSpace={(source, targetSpaceId, targetGroupId, targetSubgroupId) => {
+                      const ok = moveBookmarkToSpace(source, targetSpaceId, targetGroupId, targetSubgroupId);
+                      if (ok) {
+                        const targetSpace = spaces.find((s) => s.id === targetSpaceId);
+                        toast('书签已移动', { description: `已移至 Space「${targetSpace?.title ?? targetSpaceId}」` });
+                      }
+                    }}
                     onToggleGroup={toggleGroup}
                     onAddSubgroup={(groupId) => {
                       const newSubgroupId = addSubgroup(groupId);
@@ -1006,12 +1032,6 @@ export default function App() {
                     onRenameGroup={renameGroup}
                     onSetGroupColor={setGroupColor}
                     onDeleteGroup={(groupId) => {
-                      if (board.groups.length <= 1) {
-                        toast('无法删除', {
-                          description: '至少保留一个分组',
-                        });
-                        return;
-                      }
                       const groupRef = board.groups.find((item) => item.id === groupId);
                       if (!groupRef) return;
                       if (groupRef.bookmarks.length === 0 && groupRef.subgroups.length === 0) {

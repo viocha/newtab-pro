@@ -46,6 +46,10 @@ function createEmptyGroup(index: number, title = `分组 ${index + 1}`): Bookmar
   };
 }
 
+function createEmptyBoard(): BookmarkBoard {
+  return { groups: [] };
+}
+
 function createDefaultBoard(): BookmarkBoard {
   return {
     groups: [
@@ -149,9 +153,7 @@ function sanitizeBoard(raw: unknown): BookmarkBoard {
         browserTreeMaxItems: typeof group.browserTreeMaxItems === 'number' && group.browserTreeMaxItems > 0 ? Math.round(group.browserTreeMaxItems) : undefined,      };
     });
 
-  return {
-    groups: groups.length > 0 ? groups : [createEmptyGroup(0, '默认')],
-  };
+  return { groups };
 }
 
 function sanitizeSpaceStore(raw: unknown): SpaceStore {
@@ -391,7 +393,11 @@ export function useBoardStore() {
     (title?: string): string => {
       return commitWithResult((draft) => {
         const idx = draft.spaces.length + 1;
-        const space = createDefaultSpace(title || `Space ${idx}`);
+        const space: Space = {
+          id: createId(),
+          title: title || `Space ${idx}`,
+          board: createEmptyBoard(),
+        };
         draft.spaces.push(space);
         draft.activeSpaceId = space.id;
         return space.id;
@@ -486,7 +492,6 @@ export function useBoardStore() {
     (groupId: string): DeletedGroupSnapshot | null => {
       return commitWithResult((draft) => {
         const board = getActiveBoard(draft);
-        if (board.groups.length <= 1) return null;
         const index = findGroupIndex(board.groups, groupId);
         if (index < 0) return null;
         const [group] = board.groups.splice(index, 1);
@@ -847,6 +852,89 @@ export function useBoardStore() {
     [commit],
   );
 
+  // ── cross-space move operations ────────────────────────────────────
+
+  /**
+   * Move a group from the active space to another space.
+   * Returns false if the move is not allowed (e.g. source is the only group).
+   */
+  const moveGroupToSpace = useCallback(
+    (groupId: string, targetSpaceId: string): boolean => {
+      return commitWithResult((draft) => {
+        if (targetSpaceId === draft.activeSpaceId) return false;
+        const sourceSpace = draft.spaces.find((s) => s.id === draft.activeSpaceId);
+        const targetSpace = draft.spaces.find((s) => s.id === targetSpaceId);
+        if (!sourceSpace || !targetSpace) return false;
+        const idx = findGroupIndex(sourceSpace.board.groups, groupId);
+        if (idx < 0) return false;
+        const [group] = sourceSpace.board.groups.splice(idx, 1);
+        if (!group) return false;
+        targetSpace.board.groups.push(group);
+        return true;
+      });
+    },
+    [commitWithResult],
+  );
+
+  /**
+   * Move a subgroup from the active space's group to another space's specific group.
+   */
+  const moveSubgroupToSpace = useCallback(
+    (source: InsertTarget, targetSpaceId: string, targetGroupId: string): boolean => {
+      return commitWithResult((draft) => {
+        const sourceSpace = draft.spaces.find((s) => s.id === draft.activeSpaceId);
+        const targetSpace = draft.spaces.find((s) => s.id === targetSpaceId);
+        if (!sourceSpace || !targetSpace) return false;
+        const sourceGroup = sourceSpace.board.groups.find((g) => g.id === source.groupId);
+        const targetGroup = targetSpace.board.groups.find((g) => g.id === targetGroupId);
+        if (!sourceGroup || !targetGroup) return false;
+        const idx = findSubgroupIndex(sourceGroup, source.subgroupId);
+        if (idx < 0) return false;
+        const [subgroup] = sourceGroup.subgroups.splice(idx, 1);
+        if (!subgroup) return false;
+        targetGroup.subgroups.push(subgroup);
+        return true;
+      });
+    },
+    [commitWithResult],
+  );
+
+  /**
+   * Move a bookmark from the active space to a target space's group (and optionally subgroup).
+   */
+  const moveBookmarkToSpace = useCallback(
+    (
+      source: BookmarkNodeTarget,
+      targetSpaceId: string,
+      targetGroupId: string,
+      targetSubgroupId?: string,
+    ): boolean => {
+      return commitWithResult((draft) => {
+        const sourceSpace = draft.spaces.find((s) => s.id === draft.activeSpaceId);
+        const targetSpace = draft.spaces.find((s) => s.id === targetSpaceId);
+        if (!sourceSpace || !targetSpace) return false;
+        const sourceList = getBookmarkList(sourceSpace.board, source);
+        const targetGroup = targetSpace.board.groups.find((g) => g.id === targetGroupId);
+        if (!sourceList || !targetGroup) return false;
+        let targetList: BookmarkItem[];
+        if (targetSubgroupId) {
+          const targetSubgroup = targetGroup.subgroups.find((sg) => sg.id === targetSubgroupId);
+          if (!targetSubgroup) return false;
+          targetList = targetSubgroup.bookmarks;
+        } else {
+          targetList = targetGroup.bookmarks;
+        }
+        const sourceIndex = sourceList.findIndex((item) => item.id === source.bookmarkId);
+        if (sourceIndex < 0) return false;
+        const [moved] = sourceList.splice(sourceIndex, 1);
+        if (!moved) return false;
+        targetList.push(moved);
+        return true;
+      });
+    },
+    [commitWithResult],
+  );
+
   const importSpaceStore = useCallback(
     (raw: unknown) => {
       const next = sanitizeSpaceStore(raw);
@@ -932,6 +1020,10 @@ export function useBoardStore() {
     removeBookmark,
     restoreBookmark,
     moveBookmark,
+    // cross-space move ops
+    moveGroupToSpace,
+    moveSubgroupToSpace,
+    moveBookmarkToSpace,
     importSpaceStore,
   };
 }

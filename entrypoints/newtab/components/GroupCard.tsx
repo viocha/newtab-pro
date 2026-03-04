@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DragEvent } from 'react';
-import { Check, GripHorizontal, LayoutGrid, LayoutList, MoreHorizontal, FolderTree, FolderPlus, FolderOpen, BookOpen, Palette, Plus, Trash2, ExternalLink, AppWindow, EyeOff } from 'lucide-react';
+import { Check, GripHorizontal, LayoutGrid, LayoutList, MoreHorizontal, FolderTree, FolderPlus, FolderOpen, BookOpen, Palette, Plus, Trash2, ExternalLink, AppWindow, EyeOff, FolderInput } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { browser } from 'wxt/browser';
 
@@ -26,6 +26,7 @@ import type {
   BookmarkViewMode,
   IconSize,
   InsertTarget,
+  Space,
 } from '../types';
 import { useDndUIStore, readTabDragPayload } from '../drag';
 import { BookmarkRows } from './BookmarkRows';
@@ -37,6 +38,20 @@ import { BROWSER_TREE_DEFAULT_MAX_ITEMS } from '../constants';
 
 type GroupCardProps = {
   group: BookmarkGroup;
+  spaces: Space[];
+  activeSpaceId: string;
+  onMoveGroupToSpace: (groupId: string, targetSpaceId: string) => void;
+  onMoveSubgroupToSpace: (
+    source: InsertTarget,
+    targetSpaceId: string,
+    targetGroupId: string,
+  ) => void;
+  onMoveBookmarkToSpace: (
+    source: BookmarkNodeTarget,
+    targetSpaceId: string,
+    targetGroupId: string,
+    targetSubgroupId?: string,
+  ) => void;
   onToggleGroup: (groupId: string) => void;
   onAddSubgroup: (groupId: string) => void;
   onRenameGroup: (groupId: string, nextTitle: string) => void;
@@ -217,6 +232,11 @@ function ColorPickerButton({ currentColor, onChange }: { currentColor: string; o
 
 export function GroupCard({
   group,
+  spaces,
+  activeSpaceId,
+  onMoveGroupToSpace,
+  onMoveSubgroupToSpace,
+  onMoveBookmarkToSpace,
   onToggleGroup,
   onAddSubgroup,
   onRenameGroup,
@@ -594,6 +614,28 @@ export function GroupCard({
                     </div>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
+                {spaces.length > 1 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <FolderInput className="mr-2 size-3.5" />
+                        移动到
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="w-44">
+                        {spaces.map((s) => (
+                          <DropdownMenuItem
+                            key={s.id}
+                            disabled={s.id === activeSpaceId}
+                            onSelect={() => onMoveGroupToSpace(group.id, s.id)}
+                          >
+                            {s.title}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   disabled={allUrls.length === 0}
@@ -660,6 +702,9 @@ export function GroupCard({
                     target={groupRootTarget}
                     iconSize={group.iconSize}
                     emptyHint=""
+                    spaces={spaces}
+                    activeSpaceId={activeSpaceId}
+                    onMoveBookmarkToSpace={onMoveBookmarkToSpace}
                     onEditBookmark={onOpenEditBookmark}
                     onDeleteBookmark={onDeleteBookmark}
                     onMoveBookmark={onMoveBookmark}
@@ -670,6 +715,9 @@ export function GroupCard({
                     bookmarks={group.bookmarks}
                     target={groupRootTarget}
                     emptyHint=""
+                    spaces={spaces}
+                    activeSpaceId={activeSpaceId}
+                    onMoveBookmarkToSpace={onMoveBookmarkToSpace}
                     onEditBookmark={onOpenEditBookmark}
                     onDeleteBookmark={onDeleteBookmark}
                     onMoveBookmark={onMoveBookmark}
@@ -683,6 +731,10 @@ export function GroupCard({
                       <SubgroupPanel
                         groupId={group.id}
                         subgroup={subgroup}
+                        spaces={spaces}
+                        activeSpaceId={activeSpaceId}
+                        onMoveSubgroupToSpace={onMoveSubgroupToSpace}
+                        onMoveBookmarkToSpace={onMoveBookmarkToSpace}
                         onToggleSubgroup={onToggleSubgroup}
                         onRenameSubgroup={onRenameSubgroup}
                         onDeleteSubgroup={onDeleteSubgroup}

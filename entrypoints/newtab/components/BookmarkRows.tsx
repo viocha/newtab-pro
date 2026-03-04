@@ -1,6 +1,6 @@
 import type { DragEvent } from 'react';
 import { useState } from 'react';
-import { Edit3, ExternalLink, AppWindow, EyeOff, Trash2, Link as LinkIcon } from 'lucide-react';
+import { Edit3, ExternalLink, AppWindow, EyeOff, Trash2, Link as LinkIcon, FolderInput } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { browser } from 'wxt/browser';
 
@@ -9,11 +9,14 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
 
-import type { BookmarkContainerTarget, BookmarkItem, BookmarkNodeTarget } from '../types';
+import type { BookmarkContainerTarget, BookmarkItem, BookmarkNodeTarget, Space } from '../types';
 import { tryNormalizeUrl } from '../utils';
 import { useDndUIStore, readTabDragPayload } from '../drag';
 import { FaviconImage } from './FaviconImage';
@@ -22,6 +25,14 @@ type BookmarkRowsProps = {
   bookmarks: BookmarkItem[];
   target: BookmarkContainerTarget;
   emptyHint: string;
+  spaces: Space[];
+  activeSpaceId: string;
+  onMoveBookmarkToSpace: (
+    source: BookmarkNodeTarget,
+    targetSpaceId: string,
+    targetGroupId: string,
+    targetSubgroupId?: string,
+  ) => void;
   onEditBookmark: (target: BookmarkContainerTarget, bookmark: BookmarkItem) => void;
   onDeleteBookmark: (target: BookmarkContainerTarget, bookmarkId: string) => void;
   onMoveBookmark: (
@@ -64,6 +75,9 @@ function BookmarkItemNode({
   target,
   contextOpenBookmarkId,
   setContextOpenBookmarkId,
+  spaces,
+  activeSpaceId,
+  onMoveBookmarkToSpace,
   onEditBookmark,
   onDeleteBookmark,
 }: {
@@ -72,6 +86,14 @@ function BookmarkItemNode({
   target: BookmarkContainerTarget;
   contextOpenBookmarkId: string | null;
   setContextOpenBookmarkId: (id: string | null) => void;
+  spaces: Space[];
+  activeSpaceId: string;
+  onMoveBookmarkToSpace: (
+    source: BookmarkNodeTarget,
+    targetSpaceId: string,
+    targetGroupId: string,
+    targetSubgroupId?: string,
+  ) => void;
   onEditBookmark: (target: BookmarkContainerTarget, b: BookmarkItem) => void;
   onDeleteBookmark: (target: BookmarkContainerTarget, id: string) => void;
 }) {
@@ -181,6 +203,97 @@ function BookmarkItemNode({
             删除
           </ContextMenuItem>
           <ContextMenuSeparator />
+          <ContextMenuSub>
+            <ContextMenuSubTrigger>
+              <FolderInput className="mr-2 size-3.5" />
+              移动到
+            </ContextMenuSubTrigger>
+            <ContextMenuSubContent className="w-44">
+              {spaces.map((space) => {
+                if (space.board.groups.length === 0) return null;
+                return (
+                  <ContextMenuSub key={space.id}>
+                    <ContextMenuSubTrigger>
+                      {space.title}
+                      {space.id === activeSpaceId && (
+                        <span className="ml-1 text-[10px] text-muted-foreground">(当前)</span>
+                      )}
+                    </ContextMenuSubTrigger>
+                    <ContextMenuSubContent className="w-44">
+                      {space.board.groups.map((g) => {
+                        const isCurrentGroup =
+                          space.id === activeSpaceId && g.id === target.groupId;
+                        const isCurrentRoot = isCurrentGroup && !target.subgroupId;
+                        if (g.subgroups.length === 0) {
+                          return (
+                            <ContextMenuItem
+                              key={g.id}
+                              disabled={isCurrentRoot}
+                              onSelect={() =>
+                                onMoveBookmarkToSpace(
+                                  { ...target, bookmarkId: bookmark.id },
+                                  space.id,
+                                  g.id,
+                                )
+                              }
+                            >
+                              {g.title}
+                            </ContextMenuItem>
+                          );
+                        }
+                        return (
+                          <ContextMenuSub key={g.id}>
+                            <ContextMenuSubTrigger>
+                              {g.title}
+                              {isCurrentGroup && (
+                                <span className="ml-1 text-[10px] text-muted-foreground">(当前)</span>
+                              )}
+                            </ContextMenuSubTrigger>
+                            <ContextMenuSubContent className="w-44">
+                              <ContextMenuItem
+                                disabled={isCurrentRoot}
+                                onSelect={() =>
+                                  onMoveBookmarkToSpace(
+                                    { ...target, bookmarkId: bookmark.id },
+                                    space.id,
+                                    g.id,
+                                  )
+                                }
+                              >
+                                根目录
+                              </ContextMenuItem>
+                              <ContextMenuSeparator />
+                              {g.subgroups.map((sg) => {
+                                const isCurrentSG =
+                                  isCurrentGroup && target.subgroupId === sg.id;
+                                return (
+                                  <ContextMenuItem
+                                    key={sg.id}
+                                    disabled={isCurrentSG}
+                                    onSelect={() =>
+                                      onMoveBookmarkToSpace(
+                                        { ...target, bookmarkId: bookmark.id },
+                                        space.id,
+                                        g.id,
+                                        sg.id,
+                                      )
+                                    }
+                                  >
+                                    {sg.title}
+                                  </ContextMenuItem>
+                                );
+                              })}
+                            </ContextMenuSubContent>
+                          </ContextMenuSub>
+                        );
+                      })}
+                    </ContextMenuSubContent>
+                  </ContextMenuSub>
+                );
+              })}
+            </ContextMenuSubContent>
+          </ContextMenuSub>
+          <ContextMenuSeparator />
           <ContextMenuItem onSelect={() => navigator.clipboard.writeText(bookmark.url)}>
             <LinkIcon className="mr-2 size-3.5" />
             复制链接
@@ -230,6 +343,9 @@ export function BookmarkRows({
   bookmarks,
   target,
   emptyHint,
+  spaces,
+  activeSpaceId,
+  onMoveBookmarkToSpace,
   onEditBookmark,
   onDeleteBookmark,
   onMoveBookmark,
@@ -324,6 +440,9 @@ export function BookmarkRows({
           target={target}
           contextOpenBookmarkId={contextOpenBookmarkId}
           setContextOpenBookmarkId={setContextOpenBookmarkId}
+          spaces={spaces}
+          activeSpaceId={activeSpaceId}
+          onMoveBookmarkToSpace={onMoveBookmarkToSpace}
           onEditBookmark={onEditBookmark}
           onDeleteBookmark={onDeleteBookmark}
         />
