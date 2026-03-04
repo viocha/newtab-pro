@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DragEvent } from 'react';
-import { Check, GripHorizontal, LayoutGrid, LayoutList, MoreHorizontal, FolderTree, FolderPlus, Palette, Plus, Trash2, ExternalLink, AppWindow, EyeOff } from 'lucide-react';
+import { Check, GripHorizontal, LayoutGrid, LayoutList, MoreHorizontal, FolderTree, FolderPlus, FolderOpen, BookOpen, Palette, Plus, Trash2, ExternalLink, AppWindow, EyeOff } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { browser } from 'wxt/browser';
 
@@ -30,8 +30,10 @@ import type {
 import { useDndUIStore, readTabDragPayload } from '../drag';
 import { BookmarkRows } from './BookmarkRows';
 import { BookmarkIconGrid } from './BookmarkIconGrid';
+import { BrowserTreeView } from './BrowserTreeView';
 import { SubgroupPanel } from './SubgroupPanel';
 import { tryNormalizeUrl, createFaviconUrl } from '../utils';
+import { BROWSER_TREE_DEFAULT_MAX_ITEMS } from '../constants';
 
 type GroupCardProps = {
   group: BookmarkGroup;
@@ -61,6 +63,10 @@ type GroupCardProps = {
   onSetIconSize: (size: IconSize) => void;
   onSetSubgroupViewMode: (subgroupId: string, mode: BookmarkViewMode) => void;
   onSetSubgroupIconSize: (subgroupId: string, size: IconSize) => void;
+  /** 设置书签树模式最多显示条目数 */
+  onSetBrowserTreeMaxItems: (groupId: string, maxItems: number) => void;
+  /** 打开书签文件夹选择对话框 */
+  onOpenBrowserFolderPicker: (groupId: string) => void;
   autoFocusEdit?: boolean;
   autoFocusSubgroupId?: string | null;
   onClearAutoFocus?: () => void;
@@ -106,6 +112,14 @@ function collectGroupUrls(group: BookmarkGroup): string[] {
   for (const sg of group.subgroups) {
     for (const b of sg.bookmarks) urls.push(b.url);
   }
+  return urls;
+}
+
+interface BmNode { url?: string; children?: BmNode[] }
+function collectBmUrls(nodes: BmNode[]): string[] {
+  const urls: string[] = [];
+  const walk = (n: BmNode) => { if (n.url) urls.push(n.url); n.children?.forEach(walk); };
+  nodes.forEach(walk);
   return urls;
 }
 
@@ -221,6 +235,8 @@ export function GroupCard({
   onSetIconSize,
   onSetSubgroupViewMode,
   onSetSubgroupIconSize,
+  onSetBrowserTreeMaxItems,
+  onOpenBrowserFolderPicker,
   autoFocusEdit,
   autoFocusSubgroupId,
   onClearAutoFocus,
@@ -228,6 +244,10 @@ export function GroupCard({
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(group.title);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [btUrls, setBtUrls] = useState<string[]>([]);
+  const [btMaxDraft, setBtMaxDraft] = useState<string>(
+    String(group.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS),
+  );
 
   useEffect(() => {
     if (autoFocusEdit) {
@@ -235,6 +255,25 @@ export function GroupCard({
       setTitleDraft(group.title);
     }
   }, [autoFocusEdit, group.title]);
+
+  // 同步外部 browserTreeMaxItems 到草稿
+  useEffect(() => {
+    setBtMaxDraft(String(group.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS));
+  }, [group.browserTreeMaxItems]);
+
+  // 书签树模式下预加载 folder 中所有 URL，用于菜单中「打开所有」功能
+  useEffect(() => {
+    if (group.viewMode !== 'browser-tree' || !group.browserTreeFolderId) {
+      setBtUrls([]);
+      return;
+    }
+    let alive = true;
+    void browser.bookmarks.getSubTree(group.browserTreeFolderId).then(([folder]) => {
+      if (!alive) return;
+      setBtUrls(collectBmUrls((folder?.children ?? []) as BmNode[]));
+    }).catch(() => { if (alive) setBtUrls([]); });
+    return () => { alive = false; };
+  }, [group.viewMode, group.browserTreeFolderId]);
 
   const groupRootTarget = useMemo<BookmarkContainerTarget>(
     () => ({
@@ -273,6 +312,7 @@ export function GroupCard({
 
   const isDragging = activeId === dndId;
   const isTarget = dropIndicator?.id === dndId && dropIndicator.type === 'group';
+  const allUrls = group.viewMode === 'browser-tree' ? btUrls : collectGroupUrls(group);
 
   return (
     <div className="relative flex flex-col">
@@ -381,6 +421,7 @@ export function GroupCard({
               className="size-7 text-black/80 hover:bg-black/10 hover:text-black"
               onClick={() => onOpenManualAdd(groupRootTarget)}
               title="添加书签"
+              style={group.viewMode === 'browser-tree' ? { display: 'none' } : undefined}
             >
               <Plus className="size-3.5" />
             </Button>
@@ -390,6 +431,7 @@ export function GroupCard({
               className="size-7 text-black/80 hover:bg-black/10 hover:text-black"
               onClick={() => onOpenImportAdd(groupRootTarget)}
               title="从书签导入"
+              style={group.viewMode === 'browser-tree' ? { display: 'none' } : undefined}
             >
               <FolderTree className="size-3.5" />
             </Button>
@@ -406,25 +448,38 @@ export function GroupCard({
                   <MoreHorizontal className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuContent align="end" className="w-58">
                 {/* View mode segmented */}
                 <DropdownMenuLabel className="pb-1 text-xs font-medium text-muted-foreground">视图模式</DropdownMenuLabel>
                 <div className="px-2 pb-2">
                   <div className="flex items-center rounded-md bg-muted p-0.5">
-                    {([['list', <LayoutList className="size-3.5" />, '列表'], ['icon', <LayoutGrid className="size-3.5" />, '图标']] as const).map(([val, icon, label]) => (
-                      <button
-                        key={val}
-                        className={cn(
-                          'flex flex-1 items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-medium transition-all',
-                          group.viewMode === val
-                            ? 'bg-background text-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground',
-                        )}
-                        onClick={() => onSetViewMode(val as BookmarkViewMode)}
-                      >
-                        {icon}{label}
-                      </button>
-                    ))}
+                    {(
+                      [['list', <LayoutList className="size-3.5" />, '列表'],
+                       ['icon', <LayoutGrid className="size-3.5" />, '图标'],
+                       ['browser-tree', <BookOpen className="size-3.5" />, '书签树']] as const
+                    ).map(([val, icon, label]) => {
+                      const isGroupEmpty =
+                        group.bookmarks.length === 0 &&
+                        group.subgroups.every((s) => s.bookmarks.length === 0);
+                      const isDisabled = val === 'browser-tree' && !isGroupEmpty;
+                      return (
+                        <button
+                          key={val}
+                          disabled={isDisabled}
+                          title={isDisabled ? '分组内容不为空时无法切换至书签树模式' : undefined}
+                          className={cn(
+                            'flex flex-1 items-center justify-center gap-1 rounded px-1.5 py-1 text-xs font-medium transition-all',
+                            group.viewMode === val
+                              ? 'bg-background text-foreground shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground',
+                            isDisabled && 'cursor-not-allowed opacity-40 hover:text-muted-foreground',
+                          )}
+                          onClick={() => !isDisabled && onSetViewMode(val as BookmarkViewMode)}
+                        >
+                          {icon}{label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
                 {/* Icon size segmented – only in icon mode */}
@@ -449,6 +504,63 @@ export function GroupCard({
                         ))}
                       </div>
                     </div>
+                  </>
+                )}
+                {/* Browser-tree config – only in browser-tree mode */}
+                {group.viewMode === 'browser-tree' && (
+                  <>
+                    <div className="flex items-center justify-between px-2 py-1.5">
+                      <span className="text-xs font-medium text-muted-foreground">最多条目数</span>
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          className="flex size-6 items-center justify-center rounded text-base hover:bg-muted"
+                          onClick={() => {
+                            const n = Math.max(5, (group.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS) - 5);
+                            onSetBrowserTreeMaxItems(group.id, n);
+                            setBtMaxDraft(String(n));
+                          }}
+                        >−</button>
+                        <input
+                          type="number"
+                          min={5}
+                          max={300}
+                          className="h-6 w-12 rounded border border-border bg-muted/50 px-1 text-center text-xs"
+                          value={btMaxDraft}
+                          onChange={(e) => setBtMaxDraft(e.target.value)}
+                          onBlur={() => {
+                            const v = parseInt(btMaxDraft, 10);
+                            if (!isNaN(v) && v >= 5) {
+                              onSetBrowserTreeMaxItems(group.id, Math.min(300, v));
+                            } else {
+                              setBtMaxDraft(String(group.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS));
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              const v = parseInt(btMaxDraft, 10);
+                              if (!isNaN(v) && v >= 5) {
+                                onSetBrowserTreeMaxItems(group.id, Math.min(300, v));
+                              } else {
+                                setBtMaxDraft(String(group.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS));
+                              }
+                              (e.target as HTMLInputElement).blur();
+                            }
+                          }}
+                        />
+                        <button
+                          className="flex size-6 items-center justify-center rounded text-base hover:bg-muted"
+                          onClick={() => {
+                            const n = Math.min(300, (group.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS) + 5);
+                            onSetBrowserTreeMaxItems(group.id, n);
+                            setBtMaxDraft(String(n));
+                          }}
+                        >+</button>
+                      </div>
+                    </div>
+                    <DropdownMenuItem onSelect={() => onOpenBrowserFolderPicker(group.id)}>
+                      <FolderOpen className="mr-2 size-3.5" />
+                      {group.browserTreeFolderId ? '重新选择文件夹' : '选择文件夹'}
+                    </DropdownMenuItem>
                   </>
                 )}
                 <DropdownMenuSeparator />
@@ -484,27 +596,27 @@ export function GroupCard({
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  disabled={collectGroupUrls(group).length === 0}
+                  disabled={allUrls.length === 0}
                   onSelect={() => {
-                    for (const url of collectGroupUrls(group)) browser.tabs.create({ url });
+                    for (const url of allUrls) browser.tabs.create({ url });
                   }}
                 >
                   <ExternalLink className="mr-2 size-3.5" />
-                  打开所有书签
+                  打开全部书签
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  disabled={collectGroupUrls(group).length === 0}
-                  onSelect={() => browser.windows.create({ url: collectGroupUrls(group) })}
+                  disabled={allUrls.length === 0}
+                  onSelect={() => browser.windows.create({ url: allUrls })}
                 >
                   <AppWindow className="mr-2 size-3.5" />
-                  在新窗口打开所有
+                  在新窗口打开全部
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  disabled={collectGroupUrls(group).length === 0}
-                  onSelect={() => browser.windows.create({ url: collectGroupUrls(group), incognito: true })}
+                  disabled={allUrls.length === 0}
+                  onSelect={() => browser.windows.create({ url: allUrls, incognito: true })}
                 >
                   <EyeOff className="mr-2 size-3.5" />
-                  在隐私窗口打开所有
+                  在隐私窗口打开全部
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => onDeleteGroup(group.id)}>
@@ -517,8 +629,25 @@ export function GroupCard({
         </header>
 
         {!group.collapsed && (
-          <div className="flex flex-1 flex-col p-2">
-            {group.bookmarks.length === 0 && group.subgroups.length === 0 ? (
+          <div className={cn('flex flex-1 flex-col', group.viewMode !== 'browser-tree' && 'p-2')}>
+            {group.viewMode === 'browser-tree' ? (
+              group.browserTreeFolderId ? (
+                <BrowserTreeView
+                  folderId={group.browserTreeFolderId}
+                  maxItems={group.browserTreeMaxItems}
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-2 py-4">
+                  <p className="text-xs text-muted-foreground">尚未选择书签文件夹</p>
+                  <button
+                    className="text-xs text-primary underline underline-offset-2 hover:opacity-80"
+                    onClick={() => onOpenBrowserFolderPicker(group.id)}
+                  >
+                    点此选择文件夹
+                  </button>
+                </div>
+              )
+            ) : group.bookmarks.length === 0 && group.subgroups.length === 0 ? (
               <GroupEmptyZone
                 groupId={group.id}
                 onDropExternalBookmark={onDropExternalBookmark}

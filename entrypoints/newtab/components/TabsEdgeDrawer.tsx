@@ -86,7 +86,7 @@ export function TabsEdgeDrawer() {
 
   const loadTabs = useCallback(async () => {
     try {
-      const all = await browser.tabs.query({});
+      const all = await browser.tabs.query({ currentWindow: true });
       const filtered = all
         .filter(
           (t) =>
@@ -95,8 +95,6 @@ export function TabsEdgeDrawer() {
             !t.url.startsWith('edge://newtab'),
         )
         .sort((a, b) => {
-          if ((a.windowId ?? 0) !== (b.windowId ?? 0))
-            return (a.windowId ?? 0) - (b.windowId ?? 0);
           if (a.pinned && !b.pinned) return -1;
           if (!a.pinned && b.pinned) return 1;
           return (a.index ?? 0) - (b.index ?? 0);
@@ -111,10 +109,15 @@ export function TabsEdgeDrawer() {
     browser.tabs.onUpdated.addListener(handler);
     browser.tabs.onRemoved.addListener(handler);
     browser.tabs.onCreated.addListener(handler);
+    // 标签拖入当前窗口（onAttached）或拖出当前窗口（onDetached）时也需要刷新
+    browser.tabs.onAttached.addListener(handler);
+    browser.tabs.onDetached.addListener(handler);
     return () => {
       browser.tabs.onUpdated.removeListener(handler);
       browser.tabs.onRemoved.removeListener(handler);
       browser.tabs.onCreated.removeListener(handler);
+      browser.tabs.onAttached.removeListener(handler);
+      browser.tabs.onDetached.removeListener(handler);
     };
   }, [loadTabs]);
 

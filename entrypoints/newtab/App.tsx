@@ -41,12 +41,14 @@ import { cn } from '@/lib/utils';
 
 import { BookmarkFormDialog } from './components/BookmarkFormDialog';
 import { BookmarkTreeDialog } from './components/BookmarkTreeDialog';
+import { BrowserFolderPickerDialog } from './components/BrowserFolderPickerDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { GroupCard } from './components/GroupCard';
 import { TabsEdgeDrawer } from './components/TabsEdgeDrawer';
 import { useDndUIStore } from './drag';
 import type { BookmarkContainerTarget, BookmarkNodeTarget } from './types';
 import { useBoardStore } from './use-board-store';
+import { BROWSER_TREE_DEFAULT_MAX_ITEMS } from './constants';
 import type { DndIndicator } from './drag';
 import { FaviconImage } from './components/FaviconImage';
 
@@ -487,6 +489,7 @@ export default function App() {
     toggleGroup,
     setGroupViewMode,
     setGroupIconSize,
+    setGroupBrowserTreeConfig,
     addSubgroup,
     renameSubgroup,
     deleteSubgroup,
@@ -516,6 +519,7 @@ export default function App() {
   const [autoEditGroupId, setAutoEditGroupId] = useState<string | null>(null);
   const [autoEditSubgroupId, setAutoEditSubgroupId] = useState<string | null>(null);
   const [autoEditSpaceId, setAutoEditSpaceId] = useState<string | null>(null);
+  const [browserFolderPickerGroupId, setBrowserFolderPickerGroupId] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const formTargetLabel = useMemo(
@@ -1054,6 +1058,11 @@ export default function App() {
                     onSetIconSize={(size) => setGroupIconSize(group.id, size)}
                     onSetSubgroupViewMode={(subgroupId, mode) => setSubgroupViewMode(group.id, subgroupId, mode)}
                     onSetSubgroupIconSize={(subgroupId, size) => setSubgroupIconSize(group.id, subgroupId, size)}
+                    onSetBrowserTreeMaxItems={(groupId, maxItems) => {
+                      const grp = board.groups.find((g) => g.id === groupId);
+                      setGroupBrowserTreeConfig(groupId, grp?.browserTreeFolderId ?? null, maxItems);
+                    }}
+                    onOpenBrowserFolderPicker={setBrowserFolderPickerGroupId}
                     autoFocusEdit={autoEditGroupId === group.id}
                     autoFocusSubgroupId={autoEditSubgroupId}
                     onClearAutoFocus={() => {
@@ -1159,6 +1168,28 @@ export default function App() {
               return;
             }
             addBookmark(treeDialogTarget, bookmark);
+          }}
+        />
+
+        <BrowserFolderPickerDialog
+          open={!!browserFolderPickerGroupId}
+          initialFolderId={
+            browserFolderPickerGroupId
+              ? board.groups.find((g) => g.id === browserFolderPickerGroupId)?.browserTreeFolderId
+              : undefined
+          }
+          onOpenChange={(next) => {
+            if (!next) setBrowserFolderPickerGroupId(null);
+          }}
+          onConfirm={(folderId) => {
+            if (browserFolderPickerGroupId) {
+              const grp = board.groups.find((g) => g.id === browserFolderPickerGroupId);
+              setGroupBrowserTreeConfig(
+                browserFolderPickerGroupId,
+                folderId,
+                grp?.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS,
+              );
+            }
           }}
         />
 

@@ -258,21 +258,21 @@ export function SubgroupPanel({
                   }}
                 >
                   <ExternalLink className="mr-2 size-3.5" />
-                  打开所有书签
+                  打开全部书签
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={subgroup.bookmarks.length === 0}
                   onSelect={() => browser.windows.create({ url: subgroup.bookmarks.map(b => b.url) })}
                 >
                   <AppWindow className="mr-2 size-3.5" />
-                  在新窗口打开所有
+                  在新窗口打开全部
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={subgroup.bookmarks.length === 0}
                   onSelect={() => browser.windows.create({ url: subgroup.bookmarks.map(b => b.url), incognito: true })}
                 >
                   <EyeOff className="mr-2 size-3.5" />
-                  在隐私窗口打开所有
+                  在隐私窗口打开全部
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => onDeleteSubgroup(target)}>

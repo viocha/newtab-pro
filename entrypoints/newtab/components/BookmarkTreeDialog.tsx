@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 
 
 import { FaviconImage } from './FaviconImage';
@@ -224,7 +224,7 @@ export function BookmarkTreeDialog({ open, targetLabel, onOpenChange, onAddBookm
           />
         </div>
 
-        <ScrollArea className="h-[min(62vh,540px)] rounded-lg border border-border/70 bg-background/60">
+        <div className="h-[min(62vh,540px)] overflow-y-auto rounded-lg border border-border/70 bg-background/60">
           {loading ? (
             <div className="flex h-32 items-center justify-center text-xs text-muted-foreground">正在加载书签...</div>
           ) : error ? (
@@ -237,7 +237,7 @@ export function BookmarkTreeDialog({ open, targetLabel, onOpenChange, onAddBookm
           ) : (
             <div className="py-1">{renderNodes(visibleTree, 0)}</div>
           )}
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );

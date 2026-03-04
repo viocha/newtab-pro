@@ -94,7 +94,7 @@ function toText(value: unknown, fallback: string) {
 }
 
 function toViewMode(value: unknown): BookmarkViewMode {
-  return value === 'icon' ? 'icon' : 'list';
+  return value === 'icon' ? 'icon' : value === 'browser-tree' ? 'browser-tree' : 'list';
 }
 
 function toIconSize(value: unknown): IconSize {
@@ -145,8 +145,8 @@ function sanitizeBoard(raw: unknown): BookmarkBoard {
         bookmarks: sanitizeBookmarkList(group.bookmarks),
         subgroups,
         viewMode: toViewMode(group.viewMode),
-        iconSize: toIconSize(group.iconSize),
-      };
+        iconSize: toIconSize(group.iconSize),        browserTreeFolderId: typeof group.browserTreeFolderId === 'string' && group.browserTreeFolderId ? group.browserTreeFolderId : undefined,
+        browserTreeMaxItems: typeof group.browserTreeMaxItems === 'number' && group.browserTreeMaxItems > 0 ? Math.round(group.browserTreeMaxItems) : undefined,      };
     });
 
   return {
@@ -572,6 +572,20 @@ export function useBoardStore() {
     [commit],
   );
 
+  const setGroupBrowserTreeConfig = useCallback(
+    (groupId: string, folderId: string | null, maxItems: number) => {
+      commit((draft) => {
+        const board = getActiveBoard(draft);
+        const group = board.groups.find((item) => item.id === groupId);
+        if (group) {
+          group.browserTreeFolderId = folderId ?? undefined;
+          group.browserTreeMaxItems = Math.max(5, Math.min(300, Math.round(maxItems)));
+        }
+      });
+    },
+    [commit],
+  );
+
   // ── subgroup operations ────────────────────────────────────────────
 
   const addSubgroup = useCallback(
@@ -900,6 +914,7 @@ export function useBoardStore() {
     toggleGroup,
     setGroupViewMode,
     setGroupIconSize,
+    setGroupBrowserTreeConfig,
     // subgroup ops
     addSubgroup,
     renameSubgroup,

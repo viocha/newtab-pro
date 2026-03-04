@@ -4,7 +4,7 @@ export type BookmarkItem = {
   url: string;
 };
 
-export type BookmarkViewMode = 'list' | 'icon';
+export type BookmarkViewMode = 'list' | 'icon' | 'browser-tree';
 export type IconSize = 'sm' | 'md' | 'lg';
 
 export type BookmarkSubgroup = {
@@ -25,6 +25,10 @@ export type BookmarkGroup = {
   subgroups: BookmarkSubgroup[];
   viewMode: BookmarkViewMode;
   iconSize: IconSize;
+  /** 书签树视图：绑定的浏览器书签文件夹 ID */
+  browserTreeFolderId?: string;
+  /** 书签树视图：可见区域最多展示的条目数（决定最大高度） */
+  browserTreeMaxItems?: number;
 };
 
 export type BookmarkBoard = {
