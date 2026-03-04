@@ -5,7 +5,7 @@ export const SPACES_STORAGE_FALLBACK_KEY = 'newtab-pro-spaces-fallback-v1';
 export const TAB_DRAG_MIME = 'application/x-newtab-pro-tab';
 export const SORT_DRAG_MIME = 'application/x-newtab-pro-sort';
 
-export const BROWSER_TREE_DEFAULT_MAX_ITEMS = 30;
+export const BROWSER_TREE_DEFAULT_MAX_ITEMS = 20;
 
 export const GROUP_GRADIENTS = [
   'linear-gradient(90deg, #8be3a6 0%, #68d694 100%)',
