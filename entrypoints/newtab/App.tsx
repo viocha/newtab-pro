@@ -171,6 +171,9 @@ const DragOverlayContent = () => {
 
   if (activeData.type === 'tab') {
     const tab = activeData.tab;
+    // Default sidebar style (not hovering any container)
+    // Apply the captured native width so the overlay matches the original button width.
+    const tabDefaultWidth = activeData.nativeWidth ?? overlayWidth ?? undefined;
     // Hovering over an icon-grid container → morph to icon style
     if (overContainerData?.isIconGrid) {
       const sz = overContainerData.iconSize ?? 'md';
@@ -198,7 +201,7 @@ const DragOverlayContent = () => {
       );
     }
     return (
-      <div className="flex shrink-0 items-center gap-2.5 rounded-lg py-1.5 px-1.5 bg-card border border-border/40 shadow-lg">
+      <div style={{ width: tabDefaultWidth }} className="flex shrink-0 items-center gap-2.5 rounded-lg py-1.5 px-1.5 bg-card border border-border/40 shadow-lg">
         <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted shadow-sm">
           <FaviconImage url={tab.url} className="size-4 rounded-[3px] object-contain" />
         </span>
@@ -560,16 +563,21 @@ export default function App() {
   const handleDragStart = (event: DragStartEvent) => {
     const data = event.active.data.current;
     let width: number | null = null;
+    let activeDragData = data;
 
     if (data?.type === 'tab') {
       const bookmarkEl = document.querySelector('[id^="dnd-bookmark|"]');
       width = bookmarkEl?.getBoundingClientRect().width ?? null;
+      // Capture the tab button's own width for the default (non-morphed) overlay
+      const tabEl = document.getElementById(`dnd-${event.active.id}`);
+      const tabNativeWidth = tabEl?.getBoundingClientRect().width ?? null;
+      if (tabNativeWidth) activeDragData = { ...data, nativeWidth: tabNativeWidth };
     } else {
       const el = document.getElementById(`dnd-${event.active.id}`);
       width = el?.getBoundingClientRect().width ?? null;
     }
 
-    setActiveDrag(String(event.active.id), data, width);
+    setActiveDrag(String(event.active.id), activeDragData, width);
     dropIndicatorRef.current = null;
     document.body.classList.add('dragging');
     if (data?.type === 'bookmark' || data?.type === 'tab' || data?.type === 'space') {
@@ -581,14 +589,76 @@ export default function App() {
 
   const handleDragMove = (event: DragMoveEvent) => {
     const { active, over } = event;
-    if (!over || !activeData) {
+
+    if (!activeData) return;
+
+    // ── group drag: compute indicator purely from DOM position (X axis) ──
+    // This gives continuous 50/50 before-after coverage regardless of gaps.
+    if (activeData.type === 'group') {
+      const px = pointerRef.current.x;
+      const draggedDomId = `dnd-${String(active.id)}`;
+      const els = Array.from(document.querySelectorAll('[id^="dnd-group|"]')) as HTMLElement[];
+      let bestId: string | null = null;
+      let bestZone: 'before' | 'after' = 'before';
+      let bestDist = Infinity;
+      for (const el of els) {
+        if (el.id === draggedDomId) continue;
+        const rect = el.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const dist = Math.abs(px - cx);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestId = el.id.slice(4); // strip "dnd-"
+          bestZone = px > cx ? 'after' : 'before';
+        }
+      }
+      if (bestId) {
+        const ind = { id: bestId, zone: bestZone, type: 'group' as const };
+        if (dropIndicatorRef.current?.id !== ind.id || dropIndicatorRef.current?.zone !== ind.zone) {
+          setDropIndicator((dropIndicatorRef.current = ind));
+        }
+      }
+      return;
+    }
+
+    // ── subgroup drag: compute indicator purely from DOM position (Y axis) ──
+    // Only consider sibling subgroups in the SAME parent group to avoid
+    // cross-group indicator placement.
+    if (activeData.type === 'subgroup') {
+      const py = pointerRef.current.y;
+      const draggedDomId = `dnd-${String(active.id)}`;
+      const activeGroupId = String(active.id).split('|')[1] ?? '';
+      const els = Array.from(document.querySelectorAll(`[id^="dnd-subgroup|${activeGroupId}|"]`)) as HTMLElement[];
+      let bestId: string | null = null;
+      let bestZone: 'before' | 'after' = 'before';
+      let bestDist = Infinity;
+      for (const el of els) {
+        if (el.id === draggedDomId) continue;
+        const rect = el.getBoundingClientRect();
+        const cy = rect.top + rect.height / 2;
+        const dist = Math.abs(py - cy);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestId = el.id.slice(4);
+          bestZone = py > cy ? 'after' : 'before';
+        }
+      }
+      if (bestId) {
+        const ind = { id: bestId, zone: bestZone, type: 'subgroup' as const };
+        if (dropIndicatorRef.current?.id !== ind.id || dropIndicatorRef.current?.zone !== ind.zone) {
+          setDropIndicator((dropIndicatorRef.current = ind));
+        }
+      }
+      return;
+    }
+
+    if (!over) {
       setDropIndicator((dropIndicatorRef.current = null));
       setOverContainerData(null);
       return;
     }
     if (active.id === over.id) {
       setDropIndicator((dropIndicatorRef.current = null));
-      // Stay in same container — don't clear container style
       return;
     }
 
@@ -609,20 +679,81 @@ export default function App() {
           const cParts = String(over.id).split('|');
           const cGroupId = cParts[1] ?? '';
           const cRawSg = cParts[2] ?? '';
-          const cSubgroupId = (cRawSg === 'undefined' || cRawSg === '') ? undefined : cRawSg;
 
-          const cGroup = board.groups.find(g => g.id === cGroupId);
-          const cBms = cGroup
-            ? (cSubgroupId ? cGroup.subgroups.find(s => s.id === cSubgroupId)?.bookmarks : cGroup.bookmarks)
-            : undefined;
+          // Pointer landed in a gap (no individual droppable hit).
+          // Three sub-cases handled in priority order:
+          //   1. Same-row icons exist AND pointer is to the right of all of them
+          //      → trailing empty cells → "after" rightmost icon in that row.
+          //   2. Same-row icons exist, pointer is between them
+          //      → nearest by X + before/after (no dead zones).
+          //   3. Pointer is in the vertical gap between rows
+          //      → nearest by Euclidean distance + X-based before/after.
+          const prefix = `dnd-bookmark|${cGroupId}|${cRawSg}|`;
+          const draggedDomId = `dnd-${String(active.id)}`;
+          const px = pointerRef.current.x;
+          const py = pointerRef.current.y;
+          const iconEls = Array.from(document.querySelectorAll(`[id^="${prefix}"]`)) as HTMLElement[];
+          const eligible = iconEls.filter(el => el.id !== draggedDomId);
 
-          if (cBms && cBms.length > 0) {
-            const lastBm = cBms[cBms.length - 1];
-            const lastDndId = `bookmark|${cGroupId}|${cRawSg}|${lastBm.id}`;
-            setDropIndicator((dropIndicatorRef.current = { id: lastDndId, zone: 'after', type: 'bookmark' }));
-          } else {
-            // Empty grid — clear indicator (the empty-zone droppable will handle it)
+          if (eligible.length === 0) {
             setDropIndicator((dropIndicatorRef.current = null));
+          } else {
+            // Icons whose rect vertically contains the pointer Y
+            const sameRow = eligible.filter(el => {
+              const r = el.getBoundingClientRect();
+              return py >= r.top && py <= r.bottom;
+            });
+
+            let bestId: string | null = null;
+            let bestZone: 'before' | 'after' = 'after';
+
+            if (sameRow.length > 0) {
+              // Find rightmost icon in this row
+              let rightmost = sameRow[0];
+              for (const el of sameRow) {
+                if (el.getBoundingClientRect().right > rightmost.getBoundingClientRect().right) {
+                  rightmost = el;
+                }
+              }
+              if (px > rightmost.getBoundingClientRect().right) {
+                // Case 1: trailing empty space → after the rightmost icon in this row
+                bestId = rightmost.id.slice(4);
+                bestZone = 'after';
+              } else {
+                // Case 2: gap between icons in same row → nearest by X
+                let bestDist = Infinity;
+                for (const el of sameRow) {
+                  const cx = el.getBoundingClientRect().left + el.getBoundingClientRect().width / 2;
+                  const dist = Math.abs(px - cx);
+                  if (dist < bestDist) {
+                    bestDist = dist;
+                    bestId = el.id.slice(4);
+                    bestZone = px > cx ? 'after' : 'before';
+                  }
+                }
+              }
+            } else {
+              // Case 3: vertical gap between rows → Euclidean nearest
+              let bestDist = Infinity;
+              for (const el of eligible) {
+                const rect = el.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                const dist = Math.hypot(px - cx, py - cy);
+                if (dist < bestDist) {
+                  bestDist = dist;
+                  bestId = el.id.slice(4);
+                  bestZone = px > cx ? 'after' : 'before';
+                }
+              }
+            }
+
+            if (bestId) {
+              const ind = { id: bestId, zone: bestZone, type: 'bookmark' as const };
+              if (dropIndicatorRef.current?.id !== ind.id || dropIndicatorRef.current?.zone !== ind.zone) {
+                setDropIndicator((dropIndicatorRef.current = ind));
+              }
+            }
           }
         }
         return;
@@ -650,34 +781,6 @@ export default function App() {
           ? pointerRef.current.x > rect.left + rect.width / 2
           : pointerRef.current.y > rect.top + rect.height / 2;
         setDropIndicator((dropIndicatorRef.current = { id: String(over.id), zone: isAfter ? 'after' : 'before', type: 'bookmark' }));
-      }
-    } else if (activeData.type === 'subgroup') {
-      if (overData.type !== 'subgroup' && overData.type !== 'subgroup-end') {
-        setDropIndicator((dropIndicatorRef.current = null));
-        return;
-      }
-      if (overData.type === 'subgroup-end') {
-        setDropIndicator((dropIndicatorRef.current = { id: String(over.id), zone: 'after', type: 'subgroup' }));
-        return;
-      }
-      const el = document.getElementById(`dnd-${over.id}`);
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        const y = pointerRef.current.y;
-        const isAfter = y > rect.top + rect.height / 2;
-        setDropIndicator((dropIndicatorRef.current = { id: String(over.id), zone: isAfter ? 'after' : 'before', type: 'subgroup' }));
-      }
-    } else if (activeData.type === 'group') {
-      if (overData.type !== 'group') {
-        setDropIndicator((dropIndicatorRef.current = null));
-        return;
-      }
-      const el = document.getElementById(`dnd-${over.id}`);
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        const x = pointerRef.current.x;
-        const isAfter = x > rect.left + rect.width / 2;
-        setDropIndicator((dropIndicatorRef.current = { id: String(over.id), zone: isAfter ? 'after' : 'before', type: 'group' }));
       }
     } else if (activeData.type === 'space') {
       if (overData.type !== 'space') {
@@ -778,37 +881,41 @@ export default function App() {
     const overData = over.data.current;
     if (!overData) return;
 
-    if (activeData.type === 'group' && overData.type === 'group') {
+    if (activeData.type === 'group' && dropInd.type === 'group') {
+      // Parse target group ID from dropInd.id (format: "group|<groupId>")
+      const targetGroupId = dropInd.id.split('|')[1];
+      if (!targetGroupId) return;
       const groups = board.groups;
       if (dropInd.zone === 'after') {
-        const targetIndex = groups.findIndex((g) => g.id === overData.groupId);
+        const targetIndex = groups.findIndex((g) => g.id === targetGroupId);
+        if (targetIndex < 0) return;
         if (targetIndex === groups.length - 1) {
           moveGroupToEnd(activeData.groupId);
         } else {
           moveGroupBefore(activeData.groupId, groups[targetIndex + 1].id);
         }
       } else {
-        moveGroupBefore(activeData.groupId, overData.groupId);
+        moveGroupBefore(activeData.groupId, targetGroupId);
       }
-    } else if (activeData.type === 'subgroup' && (overData.type === 'subgroup' || overData.type === 'subgroup-end')) {
+    } else if (activeData.type === 'subgroup' && dropInd.type === 'subgroup') {
+      // Parse from dropInd.id (format: "subgroup|<groupId>|<subgroupId>")
+      const parts = dropInd.id.split('|');
+      const targetGroupId = parts[1];
+      const targetSubgroupId = parts[2];
+      if (!targetGroupId || !targetSubgroupId) return;
       const source = { groupId: activeData.groupId, subgroupId: activeData.subgroup.id };
-      const targetGrpId = overData.target.groupId;
-      if (overData.type === 'subgroup-end') {
-        moveSubgroupToEnd(source, targetGrpId);
-      } else {
-        if (dropInd.zone === 'after') {
-          const group = board.groups.find((g) => g.id === targetGrpId);
-          if (group) {
-            const targetIndex = group.subgroups.findIndex((s) => s.id === overData.target.subgroupId);
-            if (targetIndex === group.subgroups.length - 1) {
-              moveSubgroupToEnd(source, targetGrpId);
-            } else {
-              moveSubgroupBefore(source, { groupId: targetGrpId, subgroupId: group.subgroups[targetIndex + 1].id });
-            }
+      if (dropInd.zone === 'after') {
+        const group = board.groups.find((g) => g.id === targetGroupId);
+        if (group) {
+          const targetIndex = group.subgroups.findIndex((s) => s.id === targetSubgroupId);
+          if (targetIndex === group.subgroups.length - 1) {
+            moveSubgroupToEnd(source, targetGroupId);
+          } else {
+            moveSubgroupBefore(source, { groupId: targetGroupId, subgroupId: group.subgroups[targetIndex + 1].id });
           }
-        } else {
-          moveSubgroupBefore(source, { groupId: targetGrpId, subgroupId: overData.target.subgroupId });
         }
+      } else {
+        moveSubgroupBefore(source, { groupId: targetGroupId, subgroupId: targetSubgroupId });
       }
     } else if (activeData.type === 'space' && overData.type === 'space') {
       if (dropInd.zone === 'after') {

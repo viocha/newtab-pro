@@ -155,7 +155,7 @@ export function SubgroupPanel({
       <section
         ref={setDropRef}
         id={`dnd-${dndId}`}
-        className="rounded-lg border border-border/70 bg-card/70 px-1.5 py-1 shadow-sm"
+        className={cn('rounded-lg border border-border/70 bg-card/70 px-1.5 py-1 shadow-sm transition-opacity', isDragging && 'opacity-50')}
       >
         <header className="group flex items-center gap-0.5 px-0.5">
           <span

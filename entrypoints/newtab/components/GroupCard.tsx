@@ -671,7 +671,7 @@ export function GroupCard({
         </header>
 
         {!group.collapsed && (
-          <div className={cn('flex flex-1 flex-col', group.viewMode !== 'browser-tree' && 'p-2')}>
+          <div className={cn('flex flex-1 flex-col', group.viewMode !== 'browser-tree' ? 'p-2' : 'py-1')}>
             {group.viewMode === 'browser-tree' ? (
               group.browserTreeFolderId ? (
                 <BrowserTreeView

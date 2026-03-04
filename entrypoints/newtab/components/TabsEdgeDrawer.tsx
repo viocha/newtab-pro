@@ -33,6 +33,7 @@ function TabDraggableItem({ tab, expanded }: { tab: BrowserTab; expanded: boolea
   return (
     <button
       ref={setNodeRef}
+      id={`dnd-${dndId}`}
       {...listeners}
       {...attributes}
       type="button"
