@@ -225,9 +225,7 @@ export function BookmarkTreeDialog({ open, targetLabel, onOpenChange, onAddBookm
         </div>
 
         <div className="h-[min(62vh,540px)] overflow-y-auto rounded-lg border border-border/70 bg-background/60">
-          {loading ? (
-            <div className="flex h-32 items-center justify-center text-xs text-muted-foreground">正在加载书签...</div>
-          ) : error ? (
+          {error ? (
             <div className="flex h-32 items-center justify-center px-4 text-xs text-destructive">{error}</div>
           ) : visibleTree.length === 0 ? (
             <div className="flex h-32 items-center justify-center gap-2 text-xs text-muted-foreground">
