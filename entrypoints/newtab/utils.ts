@@ -13,6 +13,12 @@ export function normalizeUrl(input: string) {
     throw new Error('URL is required');
   }
 
+  // Non-http(s) protocols (e.g. chrome://, edge://, about:, file://)
+  // Preserve exactly as entered — do NOT modify.
+  if (!(/^https?:\/\//i.test(raw)) && /^[a-zA-Z][a-zA-Z0-9+\-.]*:\/\//i.test(raw)) {
+    return raw;
+  }
+
   const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
   const parsed = new URL(withProtocol);
   return parsed.toString();

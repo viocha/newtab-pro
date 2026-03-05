@@ -98,3 +98,29 @@ export type SpaceStore = {
   spaces: Space[];
   activeSpaceId: string;
 };
+
+// ── App settings ──────────────────────────────────────────────────────
+
+export type SearchEngine = {
+  id: string;
+  name: string;
+  /** URL template, use {query} as placeholder */
+  searchUrl: string;
+  /** OpenSearch suggestion URL template (returns JSON [query, [suggestions, ...]]) */
+  suggestUrl?: string;
+  /** Direct icon image URL; if set, used instead of auto-resolved favicon */
+  iconUrl?: string;
+};
+
+export type AppSettings = {
+  showSearchBar: boolean;
+  searchEngines: SearchEngine[];
+  activeSearchEngineId: string;
+  openSearchInNewTab: boolean;
+  spaceNextShortcut: string;
+  spacePrevShortcut: string;
+  /** Fallback suggestion URL used when an engine has no suggestUrl */
+  defaultSuggestUrl: string;
+  /** Recent search queries, newest first, max 50 */
+  searchHistory: string[];
+};

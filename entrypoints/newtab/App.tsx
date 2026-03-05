@@ -1,5 +1,5 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
-import { Check, LayoutGrid, Plus, ChevronDown, ChevronRight, GripVertical, GripHorizontal, Settings, Download, Upload, Columns, Pencil, Trash2, X } from 'lucide-react';
+import { Check, LayoutGrid, Plus, ChevronDown, ChevronRight, GripVertical, GripHorizontal, Settings, Download, Upload, Columns, Pencil, Trash2, X, HelpCircle, Sliders } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   DndContext,
@@ -45,9 +45,13 @@ import { BrowserFolderPickerDialog } from './components/BrowserFolderPickerDialo
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { GroupCard } from './components/GroupCard';
 import { TabsEdgeDrawer } from './components/TabsEdgeDrawer';
+import { SearchBar } from './components/SearchBar';
+import { HelpDialog } from './components/HelpDialog';
+import { SettingsDialog } from './components/SettingsDialog';
 import { useDndUIStore } from './drag';
 import type { BookmarkContainerTarget, BookmarkNodeTarget } from './types';
 import { useBoardStore } from './use-board-store';
+import { useSettingsStore } from './use-settings-store';
 import { BROWSER_TREE_DEFAULT_MAX_ITEMS } from './constants';
 import type { DndIndicator } from './drag';
 import { FaviconImage } from './components/FaviconImage';
@@ -515,6 +519,23 @@ export default function App() {
     moveBookmarkToSpace,
   } = useBoardStore();
 
+  const {
+    settings,
+    updateSettings,
+    addSearchEngine,
+    updateSearchEngine,
+    deleteSearchEngine,
+    resetSearchEngines,
+    setActiveSearchEngine,
+    reorderSearchEngines,
+    addToSearchHistory,
+    removeFromSearchHistory,
+    clearSearchHistory,
+  } = useSettingsStore();
+
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+
   const [formState, setFormState] = useState<BookmarkFormState>(DEFAULT_FORM_STATE);
   const [treeDialogTarget, setTreeDialogTarget] = useState<BookmarkContainerTarget | null>(null);
   const [deleteState, setDeleteState] = useState<DeleteState>({ open: false });
@@ -527,6 +548,70 @@ export default function App() {
   const [autoEditSpaceId, setAutoEditSpaceId] = useState<string | null>(null);
   const [browserFolderPickerGroupId, setBrowserFolderPickerGroupId] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const searchBarInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Space keyboard shortcuts ──────────────────────────────────────
+  useEffect(() => {
+    const parseShortcut = (shortcut: string) => {
+      const parts = shortcut.toLowerCase().split('+').map((p) => p.trim());
+      const key = parts.find((p) => !['alt', 'shift', 'ctrl', 'meta'].includes(p)) ?? '';
+      return {
+        key,
+        alt: parts.includes('alt'),
+        shift: parts.includes('shift'),
+        ctrl: parts.includes('ctrl'),
+        meta: parts.includes('meta'),
+      };
+    };
+
+    const nextShortcut = parseShortcut(settings.spaceNextShortcut);
+    const prevShortcut = parseShortcut(settings.spacePrevShortcut);
+
+    const handler = (e: KeyboardEvent) => {
+      // Don't fire when typing in inputs
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
+
+      const key = e.key.toLowerCase();
+      const matchNext =
+        key === nextShortcut.key &&
+        e.altKey === nextShortcut.alt &&
+        e.shiftKey === nextShortcut.shift &&
+        e.ctrlKey === nextShortcut.ctrl;
+      const matchPrev =
+        key === prevShortcut.key &&
+        e.altKey === prevShortcut.alt &&
+        e.shiftKey === prevShortcut.shift &&
+        e.ctrlKey === prevShortcut.ctrl;
+
+      if (matchNext || matchPrev) {
+        e.preventDefault();
+        const currentIndex = spaces.findIndex((s) => s.id === activeSpaceId);
+        if (currentIndex === -1) return;
+        const nextIndex = matchNext
+          ? (currentIndex + 1) % spaces.length
+          : (currentIndex - 1 + spaces.length) % spaces.length;
+        switchSpace(spaces[nextIndex].id);
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [settings.spaceNextShortcut, settings.spacePrevShortcut, spaces, activeSpaceId, switchSpace]);
+
+  // ── “/” 键聊焦搜索框 ────────────────────────────────────
+  useEffect(() => {
+    if (!settings.showSearchBar) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== '/') return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
+      e.preventDefault();
+      searchBarInputRef.current?.focus();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [settings.showSearchBar]);
 
   const formTargetLabel = useMemo(
     () => getTargetLabel(board.groups, formState.target),
@@ -998,6 +1083,16 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-2">
+              <Button
+                size="icon"
+                variant="ghost"
+                title="帮助"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => setHelpOpen(true)}
+              >
+                <HelpCircle className="size-4" />
+              </Button>
+
               <DropdownMenu onOpenChange={setSettingsMenuOpen}>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -1013,6 +1108,11 @@ export default function App() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem onSelect={() => setSettingsDialogOpen(true)}>
+                    <Sliders className="mr-2 size-3.5" />
+                    功能设置
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
                       <Columns className="mr-2 size-3.5" />
@@ -1092,6 +1192,19 @@ export default function App() {
               </Button>
             </div>
           </header>
+
+          {settings.showSearchBar && (
+            <div className="mt-3">
+              <SearchBar
+                ref={searchBarInputRef}
+                settings={settings}
+                onSetActiveEngine={setActiveSearchEngine}
+                onAddToHistory={addToSearchHistory}
+                onRemoveFromHistory={removeFromSearchHistory}
+                onClearHistory={clearSearchHistory}
+              />
+            </div>
+          )}
 
           <main className="mt-3">
             <div
@@ -1381,6 +1494,25 @@ export default function App() {
             deleteSpace(deleteSpaceState.spaceId);
             toast('已删除 Space', { description: deleteSpaceState.title });
           }}
+        />
+
+        <HelpDialog
+          open={helpOpen}
+          onOpenChange={setHelpOpen}
+          settings={settings}
+        />
+
+        <SettingsDialog
+          open={settingsDialogOpen}
+          onOpenChange={setSettingsDialogOpen}
+          settings={settings}
+          onUpdateSettings={updateSettings}
+          onAddSearchEngine={addSearchEngine}
+          onUpdateSearchEngine={updateSearchEngine}
+          onDeleteSearchEngine={deleteSearchEngine}
+          onSetActiveSearchEngine={setActiveSearchEngine}
+          onResetSearchEngines={resetSearchEngines}
+          onReorderSearchEngines={reorderSearchEngines}
         />
 
         <Toaster />
