@@ -218,7 +218,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
   );
 
   return (
-    <div ref={containerRef} className="relative w-full max-w-2xl mx-auto">
+    <div ref={containerRef} data-no-drag-switch className="relative w-full max-w-2xl mx-auto">
       {/* Engine chip row — quick switcher */}
       {settings.searchEngines.length > 1 && (
         <div className="mb-1.5 flex items-center gap-1 overflow-x-auto scrollbar-none pb-0.5">

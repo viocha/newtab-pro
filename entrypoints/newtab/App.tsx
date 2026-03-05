@@ -549,6 +549,7 @@ export default function App() {
   const [browserFolderPickerGroupId, setBrowserFolderPickerGroupId] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const searchBarInputRef = useRef<HTMLInputElement>(null);
+  const dragSwitchRef = useRef<{ startX: number; startY: number; switched: boolean } | null>(null);
 
   // ── Space keyboard shortcuts ──────────────────────────────────────
   useEffect(() => {
@@ -612,6 +613,46 @@ export default function App() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [settings.showSearchBar]);
+
+  // ── Board drag to switch Space ────────────────────────────────────
+  const handleBoardPointerDown = useCallback((e: React.PointerEvent<HTMLElement>) => {
+    if (e.button !== 0) return;
+    if (spaces.length <= 1) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-group-card]')) return;
+    if (target.closest('[data-no-drag-switch]')) return;
+    dragSwitchRef.current = { startX: e.clientX, startY: e.clientY, switched: false };
+    // Prevent text selection as soon as drag intent begins
+    document.body.style.userSelect = 'none';
+  }, [spaces.length]);
+
+  const handleBoardPointerMove = useCallback((e: React.PointerEvent<HTMLElement>) => {
+    const state = dragSwitchRef.current;
+    if (!state || state.switched) return;
+    const deltaX = e.clientX - state.startX;
+    const deltaY = e.clientY - state.startY;
+    // If vertical movement dominates, cancel — user is scrolling
+    if (Math.abs(deltaY) > Math.abs(deltaX) + 8) {
+      dragSwitchRef.current = null;
+      document.body.style.userSelect = '';
+      return;
+    }
+    if (Math.abs(deltaX) < 48) return;
+    state.switched = true;
+    document.body.style.userSelect = '';
+    const currentIndex = spaces.findIndex((s) => s.id === activeSpaceId);
+    if (currentIndex === -1) return;
+    const nextIndex = deltaX < 0
+      ? (currentIndex + 1) % spaces.length
+      : (currentIndex - 1 + spaces.length) % spaces.length;
+    switchSpace(spaces[nextIndex].id);
+    dragSwitchRef.current = null;
+  }, [spaces, activeSpaceId, switchSpace]);
+
+  const handleBoardPointerUp = useCallback(() => {
+    dragSwitchRef.current = null;
+    document.body.style.userSelect = '';
+  }, []);
 
   const formTargetLabel = useMemo(
     () => getTargetLabel(board.groups, formState.target),
@@ -1050,8 +1091,14 @@ export default function App() {
       <div className="min-h-screen bg-page text-foreground">
         <TabsEdgeDrawer />
 
-        <div className={cn('mx-auto max-w-[1680px] px-5 py-4 pl-14 sm:px-6 sm:pl-14')}>
-          <header className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-card/85 px-4 py-2.5 shadow-sm">
+        <div
+          className={cn('mx-auto max-w-[1680px] px-5 py-4 pl-14 sm:px-6 sm:pl-14')}
+          onPointerDown={handleBoardPointerDown}
+          onPointerMove={handleBoardPointerMove}
+          onPointerUp={handleBoardPointerUp}
+          onPointerCancel={handleBoardPointerUp}
+        >
+          <header data-no-drag-switch className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-card/85 px-4 py-2.5 shadow-sm">
             {/* Space tabs */}
             <div className="flex min-w-0 items-center gap-1 overflow-x-auto pl-1">
               {spaces.map((space) => (
@@ -1206,7 +1253,9 @@ export default function App() {
             </div>
           )}
 
-          <main className="mt-3">
+          <main
+            className="mt-3"
+          >
             <div
               className="grid items-start gap-3"
               style={{
@@ -1216,7 +1265,7 @@ export default function App() {
               }}
             >
               {board.groups.map((group, index) => (
-                <div key={group.id} className="relative">
+                <div key={group.id} className="relative" data-group-card="true">
                   <GroupCard
                     group={group}
                     spaces={spaces}
