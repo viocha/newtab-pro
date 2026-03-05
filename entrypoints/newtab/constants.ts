@@ -7,6 +7,7 @@ export const TAB_DRAG_MIME = 'application/x-newtab-pro-tab';
 export const SORT_DRAG_MIME = 'application/x-newtab-pro-sort';
 
 export const BROWSER_TREE_DEFAULT_MAX_ITEMS = 20;
+export const IFRAME_DEFAULT_HEIGHT = 600;
 
 export const GROUP_GRADIENTS = [
   'linear-gradient(90deg, #8be3a6 0%, #68d694 100%)',
@@ -76,4 +77,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   spacePrevShortcut: 'alt+shift+w',
   defaultSuggestUrl: 'https://suggestqueries.google.com/complete/search?client=firefox&q={query}',
   searchHistory: [],
+  iframeAutoRun: true,
 };

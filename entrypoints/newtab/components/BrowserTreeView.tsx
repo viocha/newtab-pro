@@ -80,7 +80,7 @@ export function BrowserTreeView({
     };
 
     setLoading(true);
-    setNodes([]);
+    // 不立即清空节点，保持旧内容可见，避免高度闪烁；load() 成功后会替换
     void load();
 
     // 监听书签变化，静默重新加载（保留展开状态）
@@ -117,7 +117,12 @@ export function BrowserTreeView({
   };
 
   const renderNodes = (items: TreeNode[], depth: number): React.ReactNode =>
-    items.map((node) => {
+    [...items].sort((a, b) => {
+      const aFolder = !a.url;
+      const bFolder = !b.url;
+      if (aFolder === bFolder) return 0;
+      return aFolder ? -1 : 1;
+    }).map((node) => {
       const key = node.id || `${node.title}-${node.url}-${depth}`;
       const isFolder = !node.url;
       const hasChildren = !!(node.children?.length);
@@ -260,8 +265,10 @@ export function BrowserTreeView({
   // 可见区域最大高度
   const maxHeight = maxItems * ITEM_HEIGHT_PX;
 
-  // 初次加载时静默等待，避免闪烁"正在加载"文字
-  if (loading && nodes.length === 0) return null;
+  // 初次加载时用固定高度占位，避免高度闪烁
+  if (loading && nodes.length === 0) {
+    return <div style={{ height: maxHeight }} className="rounded" />;
+  }
 
   if (error) {
     return (

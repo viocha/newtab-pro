@@ -1,5 +1,5 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
-import { Check, LayoutGrid, Plus, ChevronDown, ChevronRight, GripVertical, GripHorizontal, Settings, Download, Upload, Columns, Pencil, Trash2, X, HelpCircle, Sliders } from 'lucide-react';
+import { Check, LayoutGrid, Plus, ChevronDown, ChevronRight, GripVertical, GripHorizontal, Settings, Download, Upload, Columns, Pencil, Trash2, X, HelpCircle, Sliders, Search, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   DndContext,
@@ -32,6 +32,9 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 
@@ -42,6 +45,7 @@ import { cn } from '@/lib/utils';
 import { BookmarkFormDialog } from './components/BookmarkFormDialog';
 import { BookmarkTreeDialog } from './components/BookmarkTreeDialog';
 import { BrowserFolderPickerDialog } from './components/BrowserFolderPickerDialog';
+import { IframeUrlPickerDialog } from './components/IframeUrlPickerDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { GroupCard } from './components/GroupCard';
 import { TabsEdgeDrawer } from './components/TabsEdgeDrawer';
@@ -52,7 +56,7 @@ import { useDndUIStore } from './drag';
 import type { BookmarkContainerTarget, BookmarkNodeTarget } from './types';
 import { useBoardStore } from './use-board-store';
 import { useSettingsStore } from './use-settings-store';
-import { BROWSER_TREE_DEFAULT_MAX_ITEMS } from './constants';
+import { BROWSER_TREE_DEFAULT_MAX_ITEMS, IFRAME_DEFAULT_HEIGHT } from './constants';
 import type { DndIndicator } from './drag';
 import { FaviconImage } from './components/FaviconImage';
 
@@ -311,6 +315,15 @@ function SpaceTab({
   onRename,
   onDelete,
   onAutoFocusDone,
+  spaceColumns,
+  globalColumns,
+  onSetSpaceColumns,
+  spaceShowSearch,
+  globalShowSearch,
+  onSetSpaceShowSearch,
+  spaceIframeAutoRun,
+  globalIframeAutoRun,
+  onSetSpaceIframeAutoRun,
 }: {
   id: string;
   title: string;
@@ -321,6 +334,15 @@ function SpaceTab({
   onRename: (id: string, title: string) => void;
   onDelete: (id: string) => void;
   onAutoFocusDone?: () => void;
+  spaceColumns?: 'auto' | 1 | 2 | 3 | 4 | 5 | 6;
+  globalColumns: 'auto' | 1 | 2 | 3 | 4 | 5 | 6;
+  onSetSpaceColumns: (id: string, cols: 'auto' | 1 | 2 | 3 | 4 | 5 | 6 | undefined) => void;
+  spaceShowSearch?: boolean;
+  globalShowSearch: boolean;
+  onSetSpaceShowSearch: (id: string, show: boolean | undefined) => void;
+  spaceIframeAutoRun?: boolean;
+  globalIframeAutoRun: boolean;
+  onSetSpaceIframeAutoRun: (id: string, autoRun: boolean | undefined) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(title);
@@ -455,11 +477,106 @@ function SpaceTab({
           )}
         </button>
       </ContextMenuTrigger>
-      <ContextMenuContent className="w-36">
+      <ContextMenuContent className="w-44">
         <ContextMenuItem onSelect={startEditing}>
           <Pencil className="mr-2 size-3.5" />
           重命名
         </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>
+            <Columns className="mr-2 size-3.5" />
+            列数
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent>
+            <ContextMenuItem
+              onSelect={() => onSetSpaceColumns(id, undefined)}
+              className="flex items-center justify-between gap-4"
+            >
+              跟随全局（{globalColumns === 'auto' ? '自适应' : `${globalColumns} 列`}）
+              {spaceColumns === undefined && <Check className="size-4 opacity-50" />}
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onSelect={() => onSetSpaceColumns(id, 'auto')}
+              className="flex items-center justify-between gap-4"
+            >
+              自适应
+              {spaceColumns === 'auto' && <Check className="size-4 opacity-50" />}
+            </ContextMenuItem>
+            {([1, 2, 3, 4, 5, 6] as const).map((col) => (
+              <ContextMenuItem
+                key={col}
+                onSelect={() => onSetSpaceColumns(id, col)}
+                className="flex items-center justify-between gap-4"
+              >
+                固定 {col} 列
+                {spaceColumns === col && <Check className="size-4 opacity-50" />}
+              </ContextMenuItem>
+            ))}
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>
+            <Search className="mr-2 size-3.5" />
+            搜索栏
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent>
+            <ContextMenuItem
+              onSelect={() => onSetSpaceShowSearch(id, undefined)}
+              className="flex items-center justify-between gap-4"
+            >
+              跟随全局（{globalShowSearch ? '显示' : '隐藏'}）
+              {spaceShowSearch === undefined && <Check className="size-4 opacity-50" />}
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onSelect={() => onSetSpaceShowSearch(id, true)}
+              className="flex items-center justify-between gap-4"
+            >
+              显示
+              {spaceShowSearch === true && <Check className="size-4 opacity-50" />}
+            </ContextMenuItem>
+            <ContextMenuItem
+              onSelect={() => onSetSpaceShowSearch(id, false)}
+              className="flex items-center justify-between gap-4"
+            >
+              隐藏
+              {spaceShowSearch === false && <Check className="size-4 opacity-50" />}
+            </ContextMenuItem>
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>
+            <Globe className="mr-2 size-3.5" />
+            iframe 自动运行
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent>
+            <ContextMenuItem
+              onSelect={() => onSetSpaceIframeAutoRun(id, undefined)}
+              className="flex items-center justify-between gap-4"
+            >
+              跟随全局（{globalIframeAutoRun ? '自动' : '手动'}）
+              {spaceIframeAutoRun === undefined && <Check className="size-4 opacity-50" />}
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onSelect={() => onSetSpaceIframeAutoRun(id, true)}
+              className="flex items-center justify-between gap-4"
+            >
+              自动运行
+              {spaceIframeAutoRun === true && <Check className="size-4 opacity-50" />}
+            </ContextMenuItem>
+            <ContextMenuItem
+              onSelect={() => onSetSpaceIframeAutoRun(id, false)}
+              className="flex items-center justify-between gap-4"
+            >
+              手动运行
+              {spaceIframeAutoRun === false && <Check className="size-4 opacity-50" />}
+            </ContextMenuItem>
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        <ContextMenuSeparator />
         <ContextMenuItem
           disabled={isOnly}
           onSelect={() => onDelete(id)}
@@ -482,7 +599,11 @@ export default function App() {
     activeSpaceId,
     addSpace,
     renameSpace,
+    setSpaceColumns,
+    setSpaceShowSearch,
+    setSpaceIframeAutoRun,
     deleteSpace,
+    restoreSpace,
     switchSpace,
     moveSpaceBefore,
     moveSpaceToEnd,
@@ -497,6 +618,7 @@ export default function App() {
     setGroupViewMode,
     setGroupIconSize,
     setGroupBrowserTreeConfig,
+    setGroupIframeConfig,
     addSubgroup,
     renameSubgroup,
     deleteSubgroup,
@@ -541,12 +663,22 @@ export default function App() {
   const [deleteState, setDeleteState] = useState<DeleteState>({ open: false });
   const [deleteSpaceState, setDeleteSpaceState] = useState<DeleteSpaceState>({ open: false });
 
-  const [columns, setColumns] = useState<'auto' | 1 | 2 | 3 | 4 | 5 | 6>('auto');
+  const [columns, setColumnsState] = useState<'auto' | 1 | 2 | 3 | 4 | 5 | 6>(() => {
+    const saved = localStorage.getItem('newtab-pro:columns');
+    if (saved === 'auto') return 'auto';
+    const n = Number(saved);
+    return ([1, 2, 3, 4, 5, 6] as const).includes(n as any) ? (n as 1 | 2 | 3 | 4 | 5 | 6) : 'auto';
+  });
+  const setColumns = (v: 'auto' | 1 | 2 | 3 | 4 | 5 | 6) => {
+    setColumnsState(v);
+    localStorage.setItem('newtab-pro:columns', String(v));
+  };
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [autoEditGroupId, setAutoEditGroupId] = useState<string | null>(null);
   const [autoEditSubgroupId, setAutoEditSubgroupId] = useState<string | null>(null);
   const [autoEditSpaceId, setAutoEditSpaceId] = useState<string | null>(null);
   const [browserFolderPickerGroupId, setBrowserFolderPickerGroupId] = useState<string | null>(null);
+  const [iframeUrlPickerGroupId, setIframeUrlPickerGroupId] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const searchBarInputRef = useRef<HTMLInputElement>(null);
   const dragSwitchRef = useRef<{ startX: number; startY: number; switched: boolean } | null>(null);
@@ -601,8 +733,16 @@ export default function App() {
   }, [settings.spaceNextShortcut, settings.spacePrevShortcut, spaces, activeSpaceId, switchSpace]);
 
   // ── “/” 键聊焦搜索框 ────────────────────────────────────
+  // ── effectiveShowSearch: 当前 Space 覆盖值，fallback 全局 ──────────────
+  const _activeSpaceForSearch = spaces.find((s) => s.id === activeSpaceId);
+  const effectiveShowSearch =
+    _activeSpaceForSearch?.showSearch !== undefined
+      ? _activeSpaceForSearch.showSearch
+      : settings.showSearchBar;
+
+  // ── "/" 键聊焦搜索框 ────────────────────────────────────
   useEffect(() => {
-    if (!settings.showSearchBar) return;
+    if (!effectiveShowSearch) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key !== '/') return;
       const tag = (e.target as HTMLElement)?.tagName;
@@ -612,13 +752,18 @@ export default function App() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [settings.showSearchBar]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveShowSearch]);
 
   // ── Board drag to switch Space ────────────────────────────────────
   const handleBoardPointerDown = useCallback((e: React.PointerEvent<HTMLElement>) => {
     if (e.button !== 0) return;
     if (spaces.length <= 1) return;
     const target = e.target as HTMLElement;
+    // 输入框/可编辑元素内的指针按下不触发 Space 切换（防止选择文本时误触发）
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+    // 菜单/对话框 portal 通过 React 事件冒泡到此，需额外过滤
+    if (target.closest('[role="menu"]') || target.closest('[role="dialog"]')) return;
     if (target.closest('[data-group-card]')) return;
     if (target.closest('[data-no-drag-switch]')) return;
     dragSwitchRef.current = { startX: e.clientX, startY: e.clientY, switched: false };
@@ -1065,15 +1210,22 @@ export default function App() {
     const space = spaces.find((s) => s.id === spaceId);
     if (!space) return;
     const hasContent = space.board.groups.some(
-      (g) => g.bookmarks.length > 0 || g.subgroups.length > 0,
+      (g) =>
+        g.bookmarks.length > 0 ||
+        g.subgroups.length > 0 ||
+        (g.viewMode === 'iframe' && !!g.iframeUrl) ||
+        (g.viewMode === 'browser-tree' && !!g.browserTreeFolderId),
     );
     if (!hasContent) {
-      deleteSpace(spaceId);
-      toast('已删除 Space', { description: space.title });
+      const snapshot = deleteSpace(spaceId);
+      toast('已删除 Space', {
+        description: space.title,
+        action: snapshot ? { label: '撤销', onClick: () => restoreSpace(snapshot) } : undefined,
+      });
       return;
     }
     setDeleteSpaceState({ open: true, spaceId, title: space.title });
-  }, [spaces, deleteSpace]);
+  }, [spaces, deleteSpace, restoreSpace]);
 
   if (loading) {
     return <div className="min-h-screen bg-page" />;
@@ -1113,6 +1265,15 @@ export default function App() {
                   onRename={renameSpace}
                   onDelete={handleDeleteSpace}
                   onAutoFocusDone={() => setAutoEditSpaceId(null)}
+                  spaceColumns={space.columns}
+                  globalColumns={columns}
+                  onSetSpaceColumns={setSpaceColumns}
+                  spaceShowSearch={space.showSearch}
+                  globalShowSearch={settings.showSearchBar}
+                  onSetSpaceShowSearch={setSpaceShowSearch}
+                  spaceIframeAutoRun={space.iframeAutoRun}
+                  globalIframeAutoRun={settings.iframeAutoRun}
+                  onSetSpaceIframeAutoRun={setSpaceIframeAutoRun}
                 />
               ))}
 
@@ -1240,7 +1401,7 @@ export default function App() {
             </div>
           </header>
 
-          {settings.showSearchBar && (
+          {effectiveShowSearch && (
             <div className="mt-3">
               <SearchBar
                 ref={searchBarInputRef}
@@ -1253,23 +1414,34 @@ export default function App() {
             </div>
           )}
 
+          {spaces.map((space) => {
+            const spaceGroups = space.board.groups;
+            const spaceEff = space.columns ?? columns;
+            const spaceGridCols = spaceEff === 'auto'
+              ? 'repeat(auto-fill, minmax(320px, 1fr))'
+              : `repeat(${spaceEff}, minmax(0, 1fr))`;
+            return (
           <main
+            key={space.id}
             className="mt-3"
+            style={space.id !== activeSpaceId ? { display: 'none' } : undefined}
           >
             <div
               className="grid items-start gap-3"
-              style={{
-                gridTemplateColumns: columns === 'auto'
-                  ? 'repeat(auto-fill, minmax(320px, 1fr))'
-                  : `repeat(${columns}, minmax(0, 1fr))`
-              }}
+              style={{ gridTemplateColumns: spaceGridCols }}
             >
-              {board.groups.map((group, index) => (
+              {spaceGroups.map((group) => (
                 <div key={group.id} className="relative" data-group-card="true">
                   <GroupCard
                     group={group}
                     spaces={spaces}
                     activeSpaceId={activeSpaceId}
+                    isActiveSpace={space.id === activeSpaceId}
+                    iframeAutoRun={
+                      space.iframeAutoRun !== undefined
+                        ? space.iframeAutoRun
+                        : settings.iframeAutoRun
+                    }
                     onMoveGroupToSpace={(groupId, targetSpaceId) => {
                       const ok = moveGroupToSpace(groupId, targetSpaceId);
                       if (ok) {
@@ -1301,7 +1473,7 @@ export default function App() {
                     onRenameGroup={renameGroup}
                     onSetGroupColor={setGroupColor}
                     onDeleteGroup={(groupId) => {
-                      const groupRef = board.groups.find((item) => item.id === groupId);
+                      const groupRef = spaceGroups.find((item) => item.id === groupId);
                       if (!groupRef) return;
                       if (groupRef.bookmarks.length === 0 && groupRef.subgroups.length === 0) {
                         const snapshot = deleteGroup(groupId);
@@ -1323,7 +1495,7 @@ export default function App() {
                     onToggleSubgroup={toggleSubgroup}
                     onRenameSubgroup={renameSubgroup}
                     onDeleteSubgroup={(target) => {
-                      const groupRef = board.groups.find((item) => item.id === target.groupId);
+                      const groupRef = spaceGroups.find((item) => item.id === target.groupId);
                       const subgroup = groupRef?.subgroups.find((item) => item.id === target.subgroupId);
                       if (!subgroup) return;
                       if (subgroup.bookmarks.length === 0) {
@@ -1348,10 +1520,12 @@ export default function App() {
                     onSetSubgroupViewMode={(subgroupId, mode) => setSubgroupViewMode(group.id, subgroupId, mode)}
                     onSetSubgroupIconSize={(subgroupId, size) => setSubgroupIconSize(group.id, subgroupId, size)}
                     onSetBrowserTreeMaxItems={(groupId, maxItems) => {
-                      const grp = board.groups.find((g) => g.id === groupId);
+                      const grp = spaceGroups.find((g) => g.id === groupId);
                       setGroupBrowserTreeConfig(groupId, grp?.browserTreeFolderId ?? null, maxItems);
                     }}
                     onOpenBrowserFolderPicker={setBrowserFolderPickerGroupId}
+                    onSetIframeConfig={setGroupIframeConfig}
+                    onOpenIframeUrlPicker={setIframeUrlPickerGroupId}
                     autoFocusEdit={autoEditGroupId === group.id}
                     autoFocusSubgroupId={autoEditSubgroupId}
                     onClearAutoFocus={() => {
@@ -1406,6 +1580,8 @@ export default function App() {
             </div>
 
           </main>
+            );
+          })}
         </div>
 
         <BookmarkFormDialog
@@ -1457,6 +1633,28 @@ export default function App() {
               return;
             }
             addBookmark(treeDialogTarget, bookmark);
+          }}
+        />
+
+        <IframeUrlPickerDialog
+          open={!!iframeUrlPickerGroupId}
+          onOpenChange={(v) => { if (!v) setIframeUrlPickerGroupId(null); }}
+          spaces={spaceStore.spaces}
+          initialUrl={
+            iframeUrlPickerGroupId
+              ? board.groups.find((g) => g.id === iframeUrlPickerGroupId)?.iframeUrl
+              : undefined
+          }
+          onConfirm={(url) => {
+            if (iframeUrlPickerGroupId) {
+              const g = board.groups.find((grp) => grp.id === iframeUrlPickerGroupId);
+              setGroupIframeConfig(
+                iframeUrlPickerGroupId,
+                url,
+                g?.iframeHeight ?? IFRAME_DEFAULT_HEIGHT,
+              );
+              setIframeUrlPickerGroupId(null);
+            }
           }}
         />
 
@@ -1540,8 +1738,11 @@ export default function App() {
           }}
           onConfirm={() => {
             if (!deleteSpaceState.open) return;
-            deleteSpace(deleteSpaceState.spaceId);
-            toast('已删除 Space', { description: deleteSpaceState.title });
+            const snapshot = deleteSpace(deleteSpaceState.spaceId);
+            toast('已删除 Space', {
+              description: deleteSpaceState.title,
+              action: snapshot ? { label: '撤销', onClick: () => restoreSpace(snapshot) } : undefined,
+            });
           }}
         />
 

@@ -138,7 +138,13 @@ export function BookmarkTreeDialog({ open, targetLabel, onOpenChange, onAddBookm
   };
 
   const renderNodes = (nodes: TreeNode[], depth: number) => {
-    return nodes.map((node) => {
+    const sorted = [...nodes].sort((a, b) => {
+      const aFolder = !a.url;
+      const bFolder = !b.url;
+      if (aFolder === bFolder) return 0;
+      return aFolder ? -1 : 1;
+    });
+    return sorted.map((node) => {
       const key = node.id || `${node.title}-${node.url}`;
       const isFolder = !node.url;
       const hasChildren = !!node.children?.length;

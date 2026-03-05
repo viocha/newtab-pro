@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { browser } from 'wxt/browser';
 
-import { SPACES_STORAGE_KEY, SPACES_STORAGE_FALLBACK_KEY } from './constants';
+import { SPACES_STORAGE_KEY, SPACES_STORAGE_FALLBACK_KEY, IFRAME_DEFAULT_HEIGHT } from './constants';
 import type {
   BookmarkBoard,
   BookmarkContainerTarget,
@@ -12,6 +12,7 @@ import type {
   BookmarkViewMode,
   DeletedBookmarkSnapshot,
   DeletedGroupSnapshot,
+  DeletedSpaceSnapshot,
   DeletedSubgroupSnapshot,
   IconSize,
   InsertTarget,
@@ -99,7 +100,7 @@ function toText(value: unknown, fallback: string) {
 }
 
 function toViewMode(value: unknown): BookmarkViewMode {
-  return value === 'icon' ? 'icon' : value === 'browser-tree' ? 'browser-tree' : 'list';
+  return value === 'icon' ? 'icon' : value === 'browser-tree' ? 'browser-tree' : value === 'iframe' ? 'iframe' : 'list';
 }
 
 function toIconSize(value: unknown): IconSize {
@@ -151,7 +152,9 @@ function sanitizeBoard(raw: unknown): BookmarkBoard {
         subgroups,
         viewMode: toViewMode(group.viewMode),
         iconSize: toIconSize(group.iconSize),        browserTreeFolderId: typeof group.browserTreeFolderId === 'string' && group.browserTreeFolderId ? group.browserTreeFolderId : undefined,
-        browserTreeMaxItems: typeof group.browserTreeMaxItems === 'number' && group.browserTreeMaxItems > 0 ? Math.round(group.browserTreeMaxItems) : undefined,      };
+        browserTreeMaxItems: typeof group.browserTreeMaxItems === 'number' && group.browserTreeMaxItems > 0 ? Math.round(group.browserTreeMaxItems) : undefined,
+        iframeUrl: typeof group.iframeUrl === 'string' && group.iframeUrl ? group.iframeUrl : undefined,
+        iframeHeight: typeof group.iframeHeight === 'number' && group.iframeHeight > 0 ? Math.round(group.iframeHeight) : undefined,      };
     });
 
   return { groups };
@@ -164,11 +167,22 @@ function sanitizeSpaceStore(raw: unknown): SpaceStore {
 
   const spaces: Space[] = raw.spaces
     .filter(isObject)
-    .map((space) => ({
-      id: toText(space.id, createId()),
-      title: toText(space.title, 'Space'),
-      board: sanitizeBoard(space.board),
-    }));
+    .map((space) => {
+      const rawCols = space.columns;
+      const cols: Space['columns'] =
+        rawCols === 'auto' ? 'auto'
+        : typeof rawCols === 'number' && [1, 2, 3, 4, 5, 6].includes(rawCols)
+          ? (rawCols as 1 | 2 | 3 | 4 | 5 | 6)
+          : undefined;
+      return {
+        id: toText(space.id, createId()),
+        title: toText(space.title, 'Space'),
+        board: sanitizeBoard(space.board),
+        ...(cols !== undefined ? { columns: cols } : {}),
+        ...(typeof space.showSearch === 'boolean' ? { showSearch: space.showSearch } : {}),
+        ...(typeof space.iframeAutoRun === 'boolean' ? { iframeAutoRun: space.iframeAutoRun } : {}),
+      };
+    });
 
   if (spaces.length === 0) {
     return createDefaultSpaceStore();
@@ -421,16 +435,77 @@ export function useBoardStore() {
     [commit],
   );
 
-  const deleteSpace = useCallback(
-    (spaceId: string) => {
+  const setSpaceColumns = useCallback(
+    (spaceId: string, cols: Space['columns']) => {
       commit((draft) => {
-        if (draft.spaces.length <= 1) return;
+        const space = draft.spaces.find((s) => s.id === spaceId);
+        if (space) {
+          if (cols === undefined) {
+            delete space.columns;
+          } else {
+            space.columns = cols;
+          }
+        }
+      });
+    },
+    [commit],
+  );
+
+  const setSpaceShowSearch = useCallback(
+    (spaceId: string, show: boolean | undefined) => {
+      commit((draft) => {
+        const space = draft.spaces.find((s) => s.id === spaceId);
+        if (space) {
+          if (show === undefined) {
+            delete space.showSearch;
+          } else {
+            space.showSearch = show;
+          }
+        }
+      });
+    },
+    [commit],
+  );
+
+  const setSpaceIframeAutoRun = useCallback(
+    (spaceId: string, autoRun: boolean | undefined) => {
+      commit((draft) => {
+        const space = draft.spaces.find((s) => s.id === spaceId);
+        if (space) {
+          if (autoRun === undefined) {
+            delete space.iframeAutoRun;
+          } else {
+            space.iframeAutoRun = autoRun;
+          }
+        }
+      });
+    },
+    [commit],
+  );
+
+  const deleteSpace = useCallback(
+    (spaceId: string): DeletedSpaceSnapshot | null => {
+      return commitWithResult((draft) => {
+        if (draft.spaces.length <= 1) return null;
         const index = draft.spaces.findIndex((s) => s.id === spaceId);
-        if (index < 0) return;
-        draft.spaces.splice(index, 1);
+        if (index < 0) return null;
+        const prevActiveSpaceId = draft.activeSpaceId;
+        const [space] = draft.spaces.splice(index, 1);
         if (draft.activeSpaceId === spaceId) {
           draft.activeSpaceId = draft.spaces[Math.min(index, draft.spaces.length - 1)].id;
         }
+        return { space, index, prevActiveSpaceId };
+      });
+    },
+    [commitWithResult],
+  );
+
+  const restoreSpace = useCallback(
+    (snapshot: DeletedSpaceSnapshot) => {
+      commit((draft) => {
+        const insertionIndex = Math.max(0, Math.min(snapshot.index, draft.spaces.length));
+        draft.spaces.splice(insertionIndex, 0, snapshot.space);
+        draft.activeSpaceId = snapshot.prevActiveSpaceId;
       });
     },
     [commit],
@@ -590,6 +665,20 @@ export function useBoardStore() {
         if (group) {
           group.browserTreeFolderId = folderId ?? undefined;
           group.browserTreeMaxItems = Math.max(5, Math.min(300, Math.round(maxItems)));
+        }
+      });
+    },
+    [commit],
+  );
+
+  const setGroupIframeConfig = useCallback(
+    (groupId: string, url: string, height: number) => {
+      commit((draft) => {
+        const board = getActiveBoard(draft);
+        const group = board.groups.find((item) => item.id === groupId);
+        if (group) {
+          group.iframeUrl = url || undefined;
+          group.iframeHeight = Math.max(100, Math.min(2000, Math.round(height)));
         }
       });
     },
@@ -992,7 +1081,11 @@ export function useBoardStore() {
     // space ops
     addSpace,
     renameSpace,
+    setSpaceColumns,
+    setSpaceShowSearch,
+    setSpaceIframeAutoRun,
     deleteSpace,
+    restoreSpace,
     switchSpace,
     moveSpaceBefore,
     moveSpaceToEnd,
@@ -1008,6 +1101,7 @@ export function useBoardStore() {
     setGroupViewMode,
     setGroupIconSize,
     setGroupBrowserTreeConfig,
+    setGroupIframeConfig,
     // subgroup ops
     addSubgroup,
     renameSubgroup,

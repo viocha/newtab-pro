@@ -4,6 +4,13 @@ import { useDraggable } from '@dnd-kit/core';
 import { browser, type Browser } from 'wxt/browser';
 
 import { Button } from '@/components/ui/button';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
 
 import { useDndUIStore } from '../drag';
@@ -15,8 +22,23 @@ const COLLAPSED_W = 44;
 const EXPANDED_W = 280;
 const TABS_REVERSED_KEY = 'newtab-pro-tabs-reversed';
 
-function TabDraggableItem({ tab, expanded }: { tab: BrowserTab; expanded: boolean }) {
+function TabDraggableItem({
+  tab,
+  expanded,
+  onContextMenuOpenChange,
+}: {
+  tab: BrowserTab;
+  expanded: boolean;
+  onContextMenuOpenChange?: (open: boolean) => void;
+}) {
   const title = tab.title || tab.url || '未命名';
+
+  // 跟踪当前项的右键菜单是否打开，用于保持高亮背景
+  const [menuOpen, setMenuOpen] = useState(false);
+  const handleMenuOpenChange = (open: boolean) => {
+    setMenuOpen(open);
+    onContextMenuOpenChange?.(open);
+  };
 
   const dndId = `tab|${tab.id}`;
   const { setNodeRef, listeners, attributes } = useDraggable({
@@ -31,41 +53,58 @@ function TabDraggableItem({ tab, expanded }: { tab: BrowserTab; expanded: boolea
   const isDragging = activeId === dndId;
 
   return (
-    <button
-      ref={setNodeRef}
-      id={`dnd-${dndId}`}
-      {...listeners}
-      {...attributes}
-      type="button"
-      title={`${title}\n${tab.url}`}
-      className={cn(
-        'group flex w-full shrink-0 items-center gap-2.5 rounded-lg py-1.5',
-        'text-left transition-colors duration-100',
-        'hover:bg-accent/80 active:bg-accent',
-        'cursor-grab active:cursor-grabbing',
-        isDragging && 'opacity-40',
-      )}
-      style={{ paddingLeft: expanded ? 6 : 0, paddingRight: expanded ? 6 : 0 }}
-    >
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-background/60 shadow-sm">
-        <FaviconImage
-          url={tab.url || ''}
-          tabIconUrl={tab.favIconUrl}
-          className="size-4 rounded-[3px] object-contain"
-          onError={(e: any) => {
-            e.currentTarget.style.display = 'none';
-          }}
-        />
-      </span>
-      <span
-        className={cn(
-          'min-w-0 flex-1 truncate text-[12px] text-foreground/85 transition-opacity duration-150 whitespace-nowrap',
-          expanded ? 'opacity-100' : 'opacity-0',
-        )}
-      >
-        {title}
-      </span>
-    </button>
+    <ContextMenu onOpenChange={handleMenuOpenChange}>
+      <ContextMenuTrigger asChild>
+        <button
+          ref={setNodeRef}
+          id={`dnd-${dndId}`}
+          {...listeners}
+          {...attributes}
+          type="button"
+          title={`${title}\n${tab.url}`}
+          className={cn(
+            'group flex w-full shrink-0 items-center gap-2.5 rounded-lg py-1.5',
+            'text-left transition-colors duration-100',
+            'hover:bg-accent/80 active:bg-accent',
+            'cursor-grab active:cursor-grabbing',
+            isDragging && 'opacity-40',
+            menuOpen && 'bg-accent/80',
+          )}
+          style={{ paddingLeft: expanded ? 6 : 0, paddingRight: expanded ? 6 : 0 }}
+        >
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-background/60 shadow-sm">
+            <FaviconImage
+              url={tab.url || ''}
+              tabIconUrl={tab.favIconUrl}
+              className="size-4 rounded-[3px] object-contain"
+              onError={(e: any) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          </span>
+          <span
+            className={cn(
+              'min-w-0 flex-1 truncate text-[12px] text-foreground/85 transition-opacity duration-150 whitespace-nowrap',
+              expanded ? 'opacity-100' : 'opacity-0',
+            )}
+          >
+            {title}
+          </span>
+        </button>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onSelect={() => navigator.clipboard.writeText(title).catch(() => {})}>
+          复制标题
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          disabled={!tab.url}
+          onSelect={() => tab.url && navigator.clipboard.writeText(tab.url).catch(() => {})}
+        >
+          复制 URL
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
 
@@ -80,6 +119,9 @@ export function TabsEdgeDrawer() {
     }
   });
   const closeTimer = useRef<number | null>(null);
+  const [contextMenuOpen, setContextMenuOpen] = useState(false);
+  // 跟踪鼠标是否在侧栏内，用于菜单关闭后判断是否需要收缩
+  const mouseInsideRef = useRef(false);
 
   const { activeId } = useDndUIStore();
   const isDraggingTab = activeId?.startsWith('tab|') ?? false;
@@ -131,13 +173,27 @@ export function TabsEdgeDrawer() {
 
   const handleMouseEnter = () => {
     clearTimer();
+    mouseInsideRef.current = true;
     setManualExpanded(true);
   };
 
   const handleMouseLeave = () => {
+    mouseInsideRef.current = false;
+    if (contextMenuOpen) return;
     clearTimer();
     closeTimer.current = window.setTimeout(() => setManualExpanded(false), 180);
   };
+
+  // 右键菜单关闭后，若鼠标已离开侧栏，则触发收缩
+  useEffect(() => {
+    if (contextMenuOpen) return;
+    if (mouseInsideRef.current) return;
+    if (closeTimer.current) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+    closeTimer.current = window.setTimeout(() => setManualExpanded(false), 180);
+  }, [contextMenuOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const displayTabs = reversed ? [...tabs].reverse() : tabs;
 
@@ -199,7 +255,12 @@ export function TabsEdgeDrawer() {
           </div>
         )}
         {displayTabs.map((tab) => (
-          <TabDraggableItem key={tab.id} tab={tab} expanded={expanded} />
+          <TabDraggableItem
+            key={tab.id}
+            tab={tab}
+            expanded={expanded}
+            onContextMenuOpenChange={setContextMenuOpen}
+          />
         ))}
       </div>
 

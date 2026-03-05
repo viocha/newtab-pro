@@ -64,6 +64,8 @@ function sanitizeSettings(raw: unknown): AppSettings {
     searchHistory: Array.isArray(r.searchHistory)
       ? (r.searchHistory as unknown[]).filter((h): h is string => typeof h === 'string').slice(0, 50)
       : DEFAULT_SETTINGS.searchHistory,
+    iframeAutoRun:
+      typeof r.iframeAutoRun === 'boolean' ? r.iframeAutoRun : DEFAULT_SETTINGS.iframeAutoRun,
   };
 }
 

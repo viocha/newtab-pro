@@ -587,6 +587,22 @@ export function SettingsDialog({
                   />
                 </div>
               </section>
+
+              {/* Iframe section */}
+              <section>
+                <div className="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  内嵌网页
+                </div>
+                <div className="divide-y divide-border/40 rounded-lg border border-border/50 bg-muted/20">
+                  <Toggle
+                    checked={settings.iframeAutoRun}
+                    onCheckedChange={(v) => onUpdateSettings({ iframeAutoRun: v })}
+                    label="切换 Space 时自动运行 iframe"
+                    description="关闭后，需手动点击分组标题栏的播放按钮来加载内嵌网页"
+                    rounded="both"
+                  />
+                </div>
+              </section>
             </div>
           )}
 

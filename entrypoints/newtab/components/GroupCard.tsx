@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DragEvent } from 'react';
-import { Check, GripHorizontal, LayoutGrid, LayoutList, MoreHorizontal, FolderTree, FolderPlus, FolderOpen, BookOpen, Palette, Plus, Trash2, ExternalLink, AppWindow, EyeOff, FolderInput } from 'lucide-react';
+import { Check, GripHorizontal, LayoutGrid, LayoutList, MoreHorizontal, FolderTree, FolderPlus, FolderOpen, BookOpen, Palette, Plus, Trash2, ExternalLink, AppWindow, EyeOff, FolderInput, Globe, Wrench, Play } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { browser } from 'wxt/browser';
 
@@ -35,7 +35,7 @@ import { BookmarkIconGrid } from './BookmarkIconGrid';
 import { BrowserTreeView } from './BrowserTreeView';
 import { SubgroupPanel } from './SubgroupPanel';
 import { tryNormalizeUrl, createFaviconUrl } from '../utils';
-import { BROWSER_TREE_DEFAULT_MAX_ITEMS } from '../constants';
+import { BROWSER_TREE_DEFAULT_MAX_ITEMS, IFRAME_DEFAULT_HEIGHT } from '../constants';
 
 type GroupCardProps = {
   group: BookmarkGroup;
@@ -83,6 +83,14 @@ type GroupCardProps = {
   onSetBrowserTreeMaxItems: (groupId: string, maxItems: number) => void;
   /** 打开书签文件夹选择对话框 */
   onOpenBrowserFolderPicker: (groupId: string) => void;
+  /** 打开 iframe URL 书签选择对话框 */
+  onOpenIframeUrlPicker: (groupId: string) => void;
+  /** 设置内嵌网页配置 */
+  onSetIframeConfig: (groupId: string, url: string, height: number) => void;
+  /** 当前分组所属 Space 是否为活跃 Space，用于 iframe 懒加载控制 */
+  isActiveSpace: boolean;
+  /** 该 Space 是否自动运行 iframe，由全局设置和 per-Space 设置合并计算 */
+  iframeAutoRun: boolean;
   autoFocusEdit?: boolean;
   autoFocusSubgroupId?: string | null;
   onClearAutoFocus?: () => void;
@@ -239,9 +247,13 @@ export function GroupCard({
   onSetSubgroupIconSize,
   onSetBrowserTreeMaxItems,
   onOpenBrowserFolderPicker,
+  onSetIframeConfig,
+  onOpenIframeUrlPicker,
   autoFocusEdit,
   autoFocusSubgroupId,
   onClearAutoFocus,
+  isActiveSpace,
+  iframeAutoRun,
 }: GroupCardProps) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(group.title);
@@ -250,6 +262,20 @@ export function GroupCard({
   const [btMaxDraft, setBtMaxDraft] = useState<string>(
     String(group.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS),
   );
+  const [iframeUrlDraft, setIframeUrlDraft] = useState(group.iframeUrl ?? '');
+  const [iframeHeightDraft, setIframeHeightDraft] = useState<string>(
+    String(group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT),
+  );
+  // iframe 懒加载：只有 Space 被激活过才真正渲染 iframe，避免页面加载时所有 Space 的 iframe 同时请求
+  // 如果 iframeAutoRun=false，则初始不激活，需要手动点击 play 按钮
+  const [iframeActivated, setIframeActivated] = useState(isActiveSpace && iframeAutoRun);
+  const [iframeReloadKey, setIframeReloadKey] = useState(0);
+
+  useEffect(() => {
+    if (isActiveSpace && iframeAutoRun && !iframeActivated) setIframeActivated(true);
+    // iframeActivated 故意不加入依赖——单向激活闸，防止无限循环
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActiveSpace, iframeAutoRun]);
 
   useEffect(() => {
     if (autoFocusEdit) {
@@ -262,6 +288,14 @@ export function GroupCard({
   useEffect(() => {
     setBtMaxDraft(String(group.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS));
   }, [group.browserTreeMaxItems]);
+
+  // 同步外部 iframeUrl / iframeHeight 到草稿
+  useEffect(() => {
+    setIframeUrlDraft(group.iframeUrl ?? '');
+  }, [group.iframeUrl]);
+  useEffect(() => {
+    setIframeHeightDraft(String(group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT));
+  }, [group.iframeHeight]);
 
   // 书签树模式下预加载 folder 中所有 URL，用于菜单中「打开所有」功能
   useEffect(() => {
@@ -423,7 +457,7 @@ export function GroupCard({
               className="size-7 text-black/80 hover:bg-black/10 hover:text-black"
               onClick={() => onOpenManualAdd(groupRootTarget)}
               title="添加书签"
-              style={group.viewMode === 'browser-tree' ? { display: 'none' } : undefined}
+              style={group.viewMode === 'browser-tree' || group.viewMode === 'iframe' ? { display: 'none' } : undefined}
             >
               <Plus className="size-3.5" />
             </Button>
@@ -433,7 +467,7 @@ export function GroupCard({
               className="size-7 text-black/80 hover:bg-black/10 hover:text-black"
               onClick={() => onOpenImportAdd(groupRootTarget)}
               title="从书签导入"
-              style={group.viewMode === 'browser-tree' ? { display: 'none' } : undefined}
+              style={group.viewMode === 'browser-tree' || group.viewMode === 'iframe' ? { display: 'none' } : undefined}
             >
               <FolderTree className="size-3.5" />
             </Button>
@@ -457,20 +491,21 @@ export function GroupCard({
                   <div className="flex items-center rounded-md bg-muted p-0.5">
                     {(
                       [['list', <LayoutList className="size-3.5" />, '列表'],
-                       ['icon', <LayoutGrid className="size-3.5" />, '图标'],
-                       ['browser-tree', <BookOpen className="size-3.5" />, '书签树']] as const
+                      ['icon', <LayoutGrid className="size-3.5" />, '图标'],
+                      ['browser-tree', <BookOpen className="size-3.5" />, '书签树'],
+                      ['iframe', <Globe className="size-3.5" />, '内嵌网页']] as const
                     ).map(([val, icon, label]) => {
                       const isGroupEmpty =
                         group.bookmarks.length === 0 &&
                         group.subgroups.every((s) => s.bookmarks.length === 0);
-                      const isDisabled = val === 'browser-tree' && !isGroupEmpty;
+                      const isDisabled = (val === 'browser-tree' || val === 'iframe') && !isGroupEmpty;
                       return (
                         <button
                           key={val}
                           disabled={isDisabled}
-                          title={isDisabled ? '分组内容不为空时无法切换至书签树模式' : undefined}
+                          title={isDisabled ? `${label}（分组内容不为空时无法切换）` : label}
                           className={cn(
-                            'flex flex-1 items-center justify-center gap-1 rounded px-1.5 py-1 text-xs font-medium transition-all',
+                            'flex flex-1 items-center justify-center rounded px-1.5 py-1.5 transition-all',
                             group.viewMode === val
                               ? 'bg-background text-foreground shadow-sm'
                               : 'text-muted-foreground hover:text-foreground',
@@ -478,7 +513,7 @@ export function GroupCard({
                           )}
                           onClick={() => !isDisabled && onSetViewMode(val as BookmarkViewMode)}
                         >
-                          {icon}{label}
+                          {icon}
                         </button>
                       );
                     })}
@@ -506,6 +541,108 @@ export function GroupCard({
                         ))}
                       </div>
                     </div>
+                  </>
+                )}
+                {/* Iframe config – only in iframe mode */}
+                {group.viewMode === 'iframe' && (
+                  <>
+                    <div className="px-2 py-1.5 space-y-2">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs font-medium text-muted-foreground">URL</span>
+                        <div className="flex gap-1">
+                          <input
+                            type="url"
+                            placeholder="https://example.com"
+                            className="h-7 flex-1 rounded border border-border bg-muted/50 px-2 text-xs outline-none focus:ring-1 focus:ring-primary/50"
+                            value={iframeUrlDraft}
+                            onChange={(e) => setIframeUrlDraft(e.target.value)}
+                            onBlur={() => {
+                              onSetIframeConfig(
+                                group.id,
+                                iframeUrlDraft.trim(),
+                                group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT,
+                              );
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                onSetIframeConfig(
+                                  group.id,
+                                  iframeUrlDraft.trim(),
+                                  group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT,
+                                );
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">高度 (px)</span>
+                        <div className="flex items-center gap-0.5">
+                          <button
+                            className="flex size-6 items-center justify-center rounded text-base hover:bg-muted"
+                            onClick={() => {
+                              const n = Math.max(100, (group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT) - 50);
+                              onSetIframeConfig(group.id, iframeUrlDraft.trim(), n);
+                            }}
+                          >−</button>
+                          <input
+                            type="number"
+                            min={100}
+                            max={2000}
+                            className="h-6 w-14 rounded border border-border bg-muted/50 px-1 text-center text-xs"
+                            value={iframeHeightDraft}
+                            onChange={(e) => setIframeHeightDraft(e.target.value)}
+                            onBlur={() => {
+                              const v = parseInt(iframeHeightDraft, 10);
+                              if (!isNaN(v) && v >= 100) {
+                                onSetIframeConfig(group.id, iframeUrlDraft.trim(), Math.min(2000, v));
+                              } else {
+                                setIframeHeightDraft(String(group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT));
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const v = parseInt(iframeHeightDraft, 10);
+                                if (!isNaN(v) && v >= 100) {
+                                  onSetIframeConfig(group.id, iframeUrlDraft.trim(), Math.min(2000, v));
+                                } else {
+                                  setIframeHeightDraft(String(group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT));
+                                }
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
+                          />
+                          <button
+                            className="flex size-6 items-center justify-center rounded text-base hover:bg-muted"
+                            onClick={() => {
+                              const n = Math.min(2000, (group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT) + 50);
+                              onSetIframeConfig(group.id, iframeUrlDraft.trim(), n);
+                            }}
+                          >+</button>
+                        </div>
+                      </div>
+                    </div>
+                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onOpenIframeUrlPicker(group.id); }}>
+                      <BookOpen className="mr-2 size-3.5" />
+                      从书签选择
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={(e) => {
+                      if (group.iframeUrl) {
+                        try {
+                          const urlObj = new URL(group.iframeUrl);
+                          browser.runtime.sendMessage({
+                            type: 'CLEAR_SERVICE_WORKER',
+                            origin: urlObj.origin
+                          }).then(() => {
+                            setIframeReloadKey(k => k + 1);
+                          });
+                        } catch (err) { }
+                      }
+                    }}>
+                      <Wrench className="mr-2 size-3.5" />
+                      清除该站 SW 缓存
+                    </DropdownMenuItem>
                   </>
                 )}
                 {/* Browser-tree config – only in browser-tree mode */}
@@ -559,14 +696,14 @@ export function GroupCard({
                         >+</button>
                       </div>
                     </div>
-                    <DropdownMenuItem onSelect={() => onOpenBrowserFolderPicker(group.id)}>
+                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onOpenBrowserFolderPicker(group.id); }}>
                       <FolderOpen className="mr-2 size-3.5" />
                       {group.browserTreeFolderId ? '重新选择文件夹' : '选择文件夹'}
                     </DropdownMenuItem>
                   </>
                 )}
                 <DropdownMenuSeparator />
-                {group.viewMode !== 'browser-tree' && (
+                {group.viewMode !== 'browser-tree' && group.viewMode !== 'iframe' && (
                   <DropdownMenuItem onSelect={() => onAddSubgroup(group.id)}>
                     <FolderPlus className="mr-2 size-3.5" />
                     添加小组
@@ -654,8 +791,73 @@ export function GroupCard({
         </header>
 
         {!group.collapsed && (
-          <div className={cn('flex flex-1 flex-col', group.viewMode !== 'browser-tree' ? 'p-2' : 'py-1')}>
-            {group.viewMode === 'browser-tree' ? (
+          <div className={cn('flex flex-1 flex-col', group.viewMode !== 'browser-tree' && group.viewMode !== 'iframe' ? 'p-2' : 'py-1')}>
+            {group.viewMode === 'iframe' ? (
+              group.iframeUrl ? (
+                <div className="rounded-md" style={{ height: group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT, overflow: 'clip' }}>
+                  {iframeActivated ? (
+                    <iframe
+                      key={iframeReloadKey}
+                      src={group.iframeUrl}
+                      title={group.title}
+                      className="h-full w-full border-0"
+                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-orientation-lock allow-pointer-lock allow-presentation allow-downloads"
+                      allow="fullscreen *; autoplay *; camera *; microphone *; geolocation *; clipboard-read *; clipboard-write *; payment *; encrypted-media *; picture-in-picture *; display-capture *; web-share *; accelerometer *; gyroscope *; magnetometer *; midi *; usb *; bluetooth *; hid *; serial *; gamepad *; screen-wake-lock *; idle-detection *; storage-access *; xr-spatial-tracking *; publickey-credentials-get *"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-muted/30">
+                      <Globe className="size-8 text-muted-foreground/40" />
+                      <p className="max-w-[80%] truncate text-xs text-muted-foreground" title={group.iframeUrl}>
+                        {group.iframeUrl}
+                      </p>
+                      <button
+                        className="flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20"
+                        onClick={() => setIframeActivated(true)}
+                      >
+                        <Play className="size-3 fill-current" />
+                        点击加载
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 py-4 px-3">
+                  <p className="text-xs text-muted-foreground">请输入要嵌入的网页 URL</p>
+                  <input
+                    type="url"
+                    placeholder="https://example.com"
+                    className="h-8 w-full max-w-sm rounded border border-border bg-muted/50 px-2 text-xs outline-none focus:ring-1 focus:ring-primary/50"
+                    value={iframeUrlDraft}
+                    onChange={(e) => setIframeUrlDraft(e.target.value)}
+                    onBlur={() => {
+                      if (iframeUrlDraft.trim()) {
+                        onSetIframeConfig(
+                          group.id,
+                          iframeUrlDraft.trim(),
+                          group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT,
+                        );
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && iframeUrlDraft.trim()) {
+                        onSetIframeConfig(
+                          group.id,
+                          iframeUrlDraft.trim(),
+                          group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT,
+                        );
+                        (e.target as HTMLInputElement).blur();
+                      }
+                    }}
+                  />
+                  <button
+                    className="text-xs text-primary underline underline-offset-2 hover:opacity-80"
+                    onClick={() => onOpenIframeUrlPicker(group.id)}
+                  >
+                    或从书签选择
+                  </button>
+                </div>
+              )
+            ) : group.viewMode === 'browser-tree' ? (
               group.browserTreeFolderId ? (
                 <BrowserTreeView
                   folderId={group.browserTreeFolderId}
