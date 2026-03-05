@@ -482,6 +482,13 @@ function SpaceTab({
           <Pencil className="mr-2 size-3.5" />
           重命名
         </ContextMenuItem>
+        <ContextMenuItem
+          disabled={isOnly}
+          onSelect={() => onDelete(id)}
+        >
+          <Trash2 className="mr-2 size-3.5" />
+          删除
+        </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuSub>
           <ContextMenuSubTrigger>
@@ -576,14 +583,6 @@ function SpaceTab({
             </ContextMenuItem>
           </ContextMenuSubContent>
         </ContextMenuSub>
-        <ContextMenuSeparator />
-        <ContextMenuItem
-          disabled={isOnly}
-          onSelect={() => onDelete(id)}
-        >
-          <Trash2 className="mr-2 size-3.5" />
-          删除
-        </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   );
@@ -1401,6 +1400,9 @@ export default function App() {
             </div>
           </header>
 
+          <ContextMenu>
+            <ContextMenuTrigger asChild>
+              <div>
           {effectiveShowSearch && (
             <div className="mt-3">
               <SearchBar
@@ -1421,17 +1423,17 @@ export default function App() {
               ? 'repeat(auto-fill, minmax(320px, 1fr))'
               : `repeat(${spaceEff}, minmax(0, 1fr))`;
             return (
-          <main
-            key={space.id}
-            className="mt-3"
-            style={space.id !== activeSpaceId ? { display: 'none' } : undefined}
-          >
+              <main
+                key={space.id}
+                className="mt-3"
+                style={space.id !== activeSpaceId ? { display: 'none' } : undefined}
+              >
             <div
               className="grid items-start gap-3"
               style={{ gridTemplateColumns: spaceGridCols }}
             >
               {spaceGroups.map((group) => (
-                <div key={group.id} className="relative" data-group-card="true">
+                <div key={group.id} className="relative" data-group-card="true" onContextMenu={(e) => e.stopPropagation()}>
                   <GroupCard
                     group={group}
                     spaces={spaces}
@@ -1579,9 +1581,115 @@ export default function App() {
               ))}
             </div>
 
-          </main>
+              </main>
             );
           })}
+              </div>
+            </ContextMenuTrigger>
+            <ContextMenuContent className="w-52">
+              <ContextMenuItem onSelect={() => {
+                const newGroupId = addGroup();
+                if (newGroupId) setTimeout(() => setAutoEditGroupId(newGroupId), 150);
+              }}>
+                <Plus className="mr-2 size-3.5" />
+                添加分组
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuSub>
+                <ContextMenuSubTrigger>
+                  <Columns className="mr-2 size-3.5" />
+                  列数
+                </ContextMenuSubTrigger>
+                <ContextMenuSubContent>
+                  <ContextMenuItem
+                    onSelect={() => setSpaceColumns(activeSpaceId!, undefined)}
+                    className="flex items-center justify-between gap-4"
+                  >
+                    跟随全局（{columns === 'auto' ? '自适应' : `${columns} 列`}）
+                    {_activeSpaceForSearch?.columns === undefined && <Check className="size-4 opacity-50" />}
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem
+                    onSelect={() => setSpaceColumns(activeSpaceId!, 'auto')}
+                    className="flex items-center justify-between gap-4"
+                  >
+                    自适应
+                    {_activeSpaceForSearch?.columns === 'auto' && <Check className="size-4 opacity-50" />}
+                  </ContextMenuItem>
+                  {([1, 2, 3, 4, 5, 6] as const).map((col) => (
+                    <ContextMenuItem
+                      key={col}
+                      onSelect={() => setSpaceColumns(activeSpaceId!, col)}
+                      className="flex items-center justify-between gap-4"
+                    >
+                      固定 {col} 列
+                      {_activeSpaceForSearch?.columns === col && <Check className="size-4 opacity-50" />}
+                    </ContextMenuItem>
+                  ))}
+                </ContextMenuSubContent>
+              </ContextMenuSub>
+              <ContextMenuSub>
+                <ContextMenuSubTrigger>
+                  <Search className="mr-2 size-3.5" />
+                  搜索栏
+                </ContextMenuSubTrigger>
+                <ContextMenuSubContent>
+                  <ContextMenuItem
+                    onSelect={() => setSpaceShowSearch(activeSpaceId!, undefined)}
+                    className="flex items-center justify-between gap-4"
+                  >
+                    跟随全局（{settings.showSearchBar ? '显示' : '隐藏'}）
+                    {_activeSpaceForSearch?.showSearch === undefined && <Check className="size-4 opacity-50" />}
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem
+                    onSelect={() => setSpaceShowSearch(activeSpaceId!, true)}
+                    className="flex items-center justify-between gap-4"
+                  >
+                    显示
+                    {_activeSpaceForSearch?.showSearch === true && <Check className="size-4 opacity-50" />}
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onSelect={() => setSpaceShowSearch(activeSpaceId!, false)}
+                    className="flex items-center justify-between gap-4"
+                  >
+                    隐藏
+                    {_activeSpaceForSearch?.showSearch === false && <Check className="size-4 opacity-50" />}
+                  </ContextMenuItem>
+                </ContextMenuSubContent>
+              </ContextMenuSub>
+              <ContextMenuSub>
+                <ContextMenuSubTrigger>
+                  <Globe className="mr-2 size-3.5" />
+                  iframe 自动运行
+                </ContextMenuSubTrigger>
+                <ContextMenuSubContent>
+                  <ContextMenuItem
+                    onSelect={() => setSpaceIframeAutoRun(activeSpaceId!, undefined)}
+                    className="flex items-center justify-between gap-4"
+                  >
+                    跟随全局（{settings.iframeAutoRun ? '自动' : '手动'}）
+                    {_activeSpaceForSearch?.iframeAutoRun === undefined && <Check className="size-4 opacity-50" />}
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem
+                    onSelect={() => setSpaceIframeAutoRun(activeSpaceId!, true)}
+                    className="flex items-center justify-between gap-4"
+                  >
+                    自动运行
+                    {_activeSpaceForSearch?.iframeAutoRun === true && <Check className="size-4 opacity-50" />}
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onSelect={() => setSpaceIframeAutoRun(activeSpaceId!, false)}
+                    className="flex items-center justify-between gap-4"
+                  >
+                    手动运行
+                    {_activeSpaceForSearch?.iframeAutoRun === false && <Check className="size-4 opacity-50" />}
+                  </ContextMenuItem>
+                </ContextMenuSubContent>
+              </ContextMenuSub>
+            </ContextMenuContent>
+          </ContextMenu>
         </div>
 
         <BookmarkFormDialog

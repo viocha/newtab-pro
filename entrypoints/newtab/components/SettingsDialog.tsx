@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   GripVertical,
   Check,
@@ -102,14 +102,13 @@ function ShortcutInput({
   value: string;
   onChange: (v: string) => void;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value);
+  const [recording, setRecording] = useState(false);
+  const [liveCombo, setLiveCombo] = useState('');
+  const recorderRef = useRef<HTMLDivElement>(null);
 
-  const commit = () => {
-    const val = draft.trim().toLowerCase();
-    if (val) onChange(val);
-    setEditing(false);
-  };
+  useEffect(() => {
+    if (recording) recorderRef.current?.focus();
+  }, [recording]);
 
   const formatShortcut = (raw: string) =>
     raw
@@ -119,32 +118,67 @@ function ShortcutInput({
         if (t === 'alt') return 'Alt';
         if (t === 'shift') return 'Shift';
         if (t === 'ctrl' || t === 'control') return 'Ctrl';
+        if (t === 'meta') return '⌘';
         return t.toUpperCase();
       })
       .join(' + ');
 
-  if (editing) {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (e.key === 'Escape') {
+      setRecording(false);
+      setLiveCombo('');
+      return;
+    }
+
+    // Standalone modifier key — show partial combo
+    if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
+      const parts: string[] = [];
+      if (e.ctrlKey || e.key === 'Control') parts.push('ctrl');
+      if (e.altKey || e.key === 'Alt') parts.push('alt');
+      if (e.shiftKey || e.key === 'Shift') parts.push('shift');
+      setLiveCombo(parts.join('+'));
+      return;
+    }
+
+    // Non-modifier key — build full combo and commit
+    const parts: string[] = [];
+    if (e.ctrlKey) parts.push('ctrl');
+    if (e.altKey) parts.push('alt');
+    if (e.shiftKey) parts.push('shift');
+    parts.push(e.key.toLowerCase());
+    onChange(parts.join('+'));
+    setRecording(false);
+    setLiveCombo('');
+  };
+
+  const handleKeyUp = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
+      const parts: string[] = [];
+      if (e.ctrlKey) parts.push('ctrl');
+      if (e.altKey) parts.push('alt');
+      if (e.shiftKey) parts.push('shift');
+      setLiveCombo(parts.join('+'));
+    }
+  };
+
+  if (recording) {
     return (
-      <div className="flex items-center justify-between gap-2 px-3 py-2">
+      <div
+        ref={recorderRef}
+        tabIndex={0}
+        data-shortcut-recording
+        className="flex items-center justify-between gap-2 px-3 py-2.5 bg-primary/5 outline-none ring-1 ring-inset ring-primary/30 rounded cursor-default select-none"
+        onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
+        onBlur={() => { setRecording(false); setLiveCombo(''); }}
+      >
         <span className="text-sm">{label}</span>
-        <Input
-          autoFocus
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              commit();
-            }
-            if (e.key === 'Escape') {
-              setDraft(value);
-              setEditing(false);
-            }
-          }}
-          onBlur={commit}
-          className="h-7 w-44 text-xs"
-          placeholder="例如 alt+w"
-        />
+        <span className={cn('text-xs font-mono', liveCombo ? 'text-foreground/80' : 'text-muted-foreground animate-pulse')}>
+          {liveCombo ? formatShortcut(liveCombo) : '按下快捷键…'}
+        </span>
       </div>
     );
   }
@@ -152,10 +186,7 @@ function ShortcutInput({
   return (
     <button
       type="button"
-      onClick={() => {
-        setDraft(value);
-        setEditing(true);
-      }}
+      onClick={() => setRecording(true)}
       className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-muted/40 transition-colors"
     >
       <span className="text-sm">{label}</span>
@@ -457,7 +488,13 @@ export function SettingsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="w-[min(96vw,480px)]" aria-describedby={undefined}>
+        <DialogContent
+          className="w-[min(96vw,480px)]"
+          aria-describedby={undefined}
+          onEscapeKeyDown={(e) => {
+            if (document.querySelector('[data-shortcut-recording]')) e.preventDefault();
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-1.5">
               {view === 'engines' ? (
