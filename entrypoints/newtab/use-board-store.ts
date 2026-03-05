@@ -19,6 +19,7 @@ import type {
   SpaceStore,
 } from './types';
 import { createFaviconUrl, createId, normalizeUrl, pickGroupGradient } from './utils';
+import { GROUP_COLOR_PRESETS } from './constants';
 
 // ── helpers ──────────────────────────────────────────────────────────
 
@@ -33,11 +34,11 @@ function createEmptySubgroup(title = '未分组'): BookmarkSubgroup {
   };
 }
 
-function createEmptyGroup(index: number, title = `分组 ${index + 1}`): BookmarkGroup {
+function createEmptyGroup(index: number, title = `分组 ${index + 1}`, color?: string): BookmarkGroup {
   return {
     id: createId(),
     title,
-    color: pickGroupGradient(index),
+    color: color ?? pickGroupGradient(index),
     collapsed: false,
     bookmarks: [],
     subgroups: [],
@@ -452,7 +453,11 @@ export function useBoardStore() {
     (title?: string): string => {
       return commitWithResult((draft) => {
         const board = getActiveBoard(draft);
-        const group = createEmptyGroup(board.groups.length, title || `分组 ${board.groups.length + 1}`);
+        const usedColors = new Set(board.groups.map((g) => g.color).filter(Boolean));
+        const unusedColor = GROUP_COLOR_PRESETS.find((c) => !usedColors.has(c));
+        const color = unusedColor ??
+          GROUP_COLOR_PRESETS[Math.floor(Math.random() * GROUP_COLOR_PRESETS.length)];
+        const group = createEmptyGroup(board.groups.length, title || `分组 ${board.groups.length + 1}`, color);
         board.groups.push(group);
         return group.id;
       });

@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { GROUP_COLOR_PRESETS } from '../constants';
 
 import type {
   BookmarkContainerTarget,
@@ -86,25 +87,6 @@ type GroupCardProps = {
   autoFocusSubgroupId?: string | null;
   onClearAutoFocus?: () => void;
 };
-
-const GROUP_COLOR_PRESETS = [
-  // Gradients
-  'linear-gradient(90deg, #8be3a6 0%, #68d694 100%)',
-  'linear-gradient(90deg, #f8dd63 0%, #edd631 100%)',
-  'linear-gradient(90deg, #d7a6ff 0%, #c886f4 100%)',
-  'linear-gradient(90deg, #8fd7ff 0%, #5fb9ef 100%)',
-  'linear-gradient(90deg, #ffc38f 0%, #ffa869 100%)',
-  // Solids
-  '#f87171', // red
-  '#fb923c', // orange
-  '#fbbf24', // amber
-  '#a3e635', // lime
-  '#34d399', // emerald
-  '#22d3ee', // cyan
-  '#60a5fa', // blue
-  '#a78bfa', // violet
-  '#f472b6', // pink
-];
 
 function readExternalBookmarkFromDrop(event: DragEvent) {
   const tabPayload = readTabDragPayload(event);

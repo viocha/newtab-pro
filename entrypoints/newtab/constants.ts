@@ -16,6 +16,25 @@ export const GROUP_GRADIENTS = [
   'linear-gradient(90deg, #ffc38f 0%, #ffa869 100%)',
 ] as const;
 
+export const GROUP_COLOR_PRESETS = [
+  // Gradients
+  'linear-gradient(90deg, #8be3a6 0%, #68d694 100%)',
+  'linear-gradient(90deg, #f8dd63 0%, #edd631 100%)',
+  'linear-gradient(90deg, #d7a6ff 0%, #c886f4 100%)',
+  'linear-gradient(90deg, #8fd7ff 0%, #5fb9ef 100%)',
+  'linear-gradient(90deg, #ffc38f 0%, #ffa869 100%)',
+  // Solids
+  '#f87171',
+  '#fb923c',
+  '#fbbf24',
+  '#a3e635',
+  '#34d399',
+  '#22d3ee',
+  '#60a5fa',
+  '#a78bfa',
+  '#f472b6',
+];
+
 import type { SearchEngine, AppSettings } from './types';
 
 export const DEFAULT_SEARCH_ENGINES: SearchEngine[] = [
