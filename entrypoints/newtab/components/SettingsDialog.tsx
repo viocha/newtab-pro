@@ -640,6 +640,7 @@ export function SettingsDialog({
                   />
                 </div>
               </section>
+
             </div>
           )}
 
@@ -712,6 +713,7 @@ export function SettingsDialog({
         destructive
         onConfirm={onResetSearchEngines}
       />
+
     </>
   );
 }

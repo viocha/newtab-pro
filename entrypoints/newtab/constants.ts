@@ -36,7 +36,7 @@ export const GROUP_COLOR_PRESETS = [
   '#f472b6',
 ];
 
-import type { SearchEngine, AppSettings } from './types';
+import type { SearchEngine, AppSettings, BackupSettings } from './types';
 
 export const DEFAULT_SEARCH_ENGINES: SearchEngine[] = [
   {
@@ -78,4 +78,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultSuggestUrl: 'https://suggestqueries.google.com/complete/search?client=firefox&q={query}',
   searchHistory: [],
   iframeAutoRun: true,
+  backup: {
+    webdavUrl: '',
+    username: '',
+    password: '',
+    remotePath: 'newtab-pro/backup.json',
+    autoBackupEnabled: false,
+    autoBackupIntervalHours: 6,
+  } satisfies BackupSettings,
 };

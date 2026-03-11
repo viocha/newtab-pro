@@ -1,6 +1,7 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
-import { Check, LayoutGrid, Plus, ChevronDown, ChevronRight, GripVertical, GripHorizontal, Settings, Download, Upload, Columns, Pencil, Trash2, X, HelpCircle, Sliders, Search, Globe } from 'lucide-react';
+import { Check, LayoutGrid, Plus, ChevronDown, ChevronRight, GripVertical, GripHorizontal, Settings, Download, Upload, Columns, Pencil, Trash2, X, HelpCircle, Sliders, Search, Globe, Cloud } from 'lucide-react';
 import { toast } from 'sonner';
+import { browser } from 'wxt/browser';
 import {
   DndContext,
   PointerSensor,
@@ -52,10 +53,12 @@ import { TabsEdgeDrawer } from './components/TabsEdgeDrawer';
 import { SearchBar } from './components/SearchBar';
 import { HelpDialog } from './components/HelpDialog';
 import { SettingsDialog } from './components/SettingsDialog';
+import { WebDavBackupDialog } from './components/WebDavBackupDialog';
 import { useDndUIStore } from './drag';
-import type { BookmarkContainerTarget, BookmarkNodeTarget } from './types';
+import type { BackupSettings, BookmarkContainerTarget, BookmarkNodeTarget } from './types';
 import { useBoardStore } from './use-board-store';
 import { useSettingsStore } from './use-settings-store';
+import { createBackupPayload, parseBackupPayload } from './backup';
 import { BROWSER_TREE_DEFAULT_MAX_ITEMS, IFRAME_DEFAULT_HEIGHT } from './constants';
 import type { DndIndicator } from './drag';
 import { FaviconImage } from './components/FaviconImage';
@@ -652,10 +655,12 @@ export default function App() {
     addToSearchHistory,
     removeFromSearchHistory,
     clearSearchHistory,
+    importSettings,
   } = useSettingsStore();
 
   const [helpOpen, setHelpOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [webDavDialogOpen, setWebDavDialogOpen] = useState(false);
 
   const [formState, setFormState] = useState<BookmarkFormState>(DEFAULT_FORM_STATE);
   const [treeDialogTarget, setTreeDialogTarget] = useState<BookmarkContainerTarget | null>(null);
@@ -681,6 +686,154 @@ export default function App() {
   const importInputRef = useRef<HTMLInputElement>(null);
   const searchBarInputRef = useRef<HTMLInputElement>(null);
   const dragSwitchRef = useRef<{ startX: number; startY: number; switched: boolean } | null>(null);
+
+  const applyBackupData = useCallback(
+    (raw: unknown) => {
+      const parsed = parseBackupPayload(raw);
+      if (!parsed) {
+        throw new Error('版本不匹配或文件格式错误');
+      }
+      importSpaceStore(parsed.spaceStore);
+      if (parsed.settings) {
+        importSettings(parsed.settings, { preserveBackup: true });
+      }
+      return parsed;
+    },
+    [importSettings, importSpaceStore],
+  );
+
+  const handleManualBackup = useCallback(async () => {
+    try {
+      const response = await browser.runtime.sendMessage({
+        type: 'WEBDAV_UPLOAD',
+        config: settings.backup,
+        payload: createBackupPayload(spaceStore, settings),
+      });
+
+      if (!response?.success) {
+        const errorMessage = response?.error || '备份上传失败';
+        updateSettings({
+          backup: {
+            ...settings.backup,
+            lastBackupError: errorMessage,
+          },
+        });
+        toast('备份失败', { description: errorMessage });
+        return;
+      }
+
+      updateSettings({
+        backup: {
+          ...settings.backup,
+          lastBackupAt: response.uploadedAt,
+          lastBackupError: undefined,
+        },
+      });
+      toast('备份成功', { description: settings.backup.remotePath });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '备份上传失败';
+      updateSettings({
+        backup: {
+          ...settings.backup,
+          lastBackupError: errorMessage,
+        },
+      });
+      toast('备份失败', { description: errorMessage });
+    }
+  }, [settings, spaceStore, updateSettings]);
+
+  const handleManualRestore = useCallback(async () => {
+    try {
+      const response = await browser.runtime.sendMessage({
+        type: 'WEBDAV_DOWNLOAD',
+        config: settings.backup,
+      });
+
+      if (!response?.success) {
+        const errorMessage = response?.error || '备份下载失败';
+        updateSettings({
+          backup: {
+            ...settings.backup,
+            lastBackupError: errorMessage,
+          },
+        });
+        toast('恢复失败', { description: errorMessage });
+        return;
+      }
+
+      const parsed = applyBackupData(response.payload);
+      updateSettings({
+        backup: {
+          ...settings.backup,
+          lastBackupError: undefined,
+        },
+      });
+      toast('恢复成功', {
+        description: parsed.exportedAt
+          ? `已覆盖本地数据，备份时间 ${new Date(parsed.exportedAt).toLocaleString('zh-CN')}`
+          : '已覆盖本地数据',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '恢复失败';
+      updateSettings({
+        backup: {
+          ...settings.backup,
+          lastBackupError: errorMessage,
+        },
+      });
+      toast('恢复失败', { description: errorMessage });
+    }
+  }, [applyBackupData, settings.backup, updateSettings]);
+
+  const handleTestWebDavConnection = useCallback(async (config: BackupSettings) => {
+    const response = await browser.runtime.sendMessage({
+      type: 'WEBDAV_TEST',
+      config,
+    });
+
+    if (!response?.success) {
+      throw new Error(response?.error || '测试连接失败');
+    }
+  }, []);
+
+  const handleSaveBackupAccount = useCallback(
+    (nextBackup: BackupSettings) => {
+      updateSettings({
+        backup: {
+          ...nextBackup,
+          lastBackupError: undefined,
+        },
+      });
+    },
+    [updateSettings],
+  );
+
+  const handleRemoveBackupAccount = useCallback(() => {
+    updateSettings({
+      backup: {
+        ...settings.backup,
+        webdavUrl: '',
+        username: '',
+        password: '',
+        remotePath: 'newtab-pro/backup.json',
+        autoBackupEnabled: false,
+        lastBackupAt: undefined,
+        lastBackupError: undefined,
+      },
+    });
+  }, [settings.backup, updateSettings]);
+
+  const handleUpdateBackupSettings = useCallback(
+    (partial: Partial<BackupSettings>) => {
+      updateSettings({
+        backup: {
+          ...settings.backup,
+          ...partial,
+        },
+      });
+    },
+    [settings.backup, updateSettings],
+  );
 
   // ── Space keyboard shortcuts ──────────────────────────────────────
   useEffect(() => {
@@ -1340,8 +1493,7 @@ export default function App() {
                   </DropdownMenuSub>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={() => {
-                    const exportData = { ...spaceStore, version: 1 };
-                    const json = JSON.stringify(exportData, null, 2);
+                    const json = JSON.stringify(createBackupPayload(spaceStore, settings), null, 2);
                     const blob = new Blob([json], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -1358,6 +1510,16 @@ export default function App() {
                     <Download className="mr-2 size-3.5" />
                     导入数据
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setSettingsMenuOpen(false);
+                      setWebDavDialogOpen(true);
+                    }}
+                  >
+                    <Cloud className="mr-2 size-3.5" />
+                    WebDAV 备份
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -1365,26 +1527,24 @@ export default function App() {
                 ref={importInputRef}
                 type="file"
                 accept=".json"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    try {
-                      const raw = JSON.parse(reader.result as string);
-                      if (raw.version !== 1) {
-                        toast('导入失败', { description: '版本不匹配或文件格式错误' });
-                        return;
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      try {
+                        const raw = JSON.parse(reader.result as string);
+                        applyBackupData(raw);
+                        toast('导入成功', { description: file.name });
+                      } catch (error) {
+                        toast('导入失败', {
+                          description: error instanceof Error ? error.message : '文件格式不正确',
+                        });
                       }
-                      importSpaceStore(raw);
-                      toast('导入成功', { description: file.name });
-                    } catch {
-                      toast('导入失败', { description: '文件格式不正确' });
-                    }
-                  };
-                  reader.readAsText(file);
-                  e.target.value = '';
+                    };
+                    reader.readAsText(file);
+                    e.target.value = '';
                 }}
               />
 
@@ -1871,6 +2031,18 @@ export default function App() {
           onSetActiveSearchEngine={setActiveSearchEngine}
           onResetSearchEngines={resetSearchEngines}
           onReorderSearchEngines={reorderSearchEngines}
+        />
+
+        <WebDavBackupDialog
+          open={webDavDialogOpen}
+          onOpenChange={setWebDavDialogOpen}
+          backupSettings={settings.backup}
+          onSaveAccount={handleSaveBackupAccount}
+          onRemoveAccount={handleRemoveBackupAccount}
+          onUpdateBackupSettings={handleUpdateBackupSettings}
+          onTestConnection={handleTestWebDavConnection}
+          onManualBackup={handleManualBackup}
+          onManualRestore={handleManualRestore}
         />
 
         <Toaster />

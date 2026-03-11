@@ -128,6 +128,17 @@ export type SearchEngine = {
   iconUrl?: string;
 };
 
+export type BackupSettings = {
+  webdavUrl: string;
+  username: string;
+  password: string;
+  remotePath: string;
+  autoBackupEnabled: boolean;
+  autoBackupIntervalHours: number;
+  lastBackupAt?: string;
+  lastBackupError?: string;
+};
+
 export type AppSettings = {
   showSearchBar: boolean;
   searchEngines: SearchEngine[];
@@ -141,4 +152,5 @@ export type AppSettings = {
   searchHistory: string[];
   /** 切换到 Space 时是否自动运行 iframe 分组，默认 true */
   iframeAutoRun: boolean;
+  backup: BackupSettings;
 };

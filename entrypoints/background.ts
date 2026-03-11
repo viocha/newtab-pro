@@ -1,3 +1,78 @@
+import { browser } from 'wxt/browser';
+
+import { AUTO_BACKUP_ALARM_NAME, createBackupPayload, downloadBackupFromWebDav, isBackupReady, testWebDavConnection, uploadBackupToWebDav } from './newtab/backup';
+import { SETTINGS_STORAGE_KEY, SPACES_STORAGE_KEY } from './newtab/constants';
+import type { AppSettings, BackupSettings, SpaceStore } from './newtab/types';
+
+async function readStoredState() {
+  const payload = await browser.storage.local.get([SPACES_STORAGE_KEY, SETTINGS_STORAGE_KEY]);
+  return {
+    spaceStore: payload[SPACES_STORAGE_KEY] as SpaceStore | undefined,
+    settings: payload[SETTINGS_STORAGE_KEY] as AppSettings | undefined,
+  };
+}
+
+async function patchBackupMetadata(
+  mutator: (backup: BackupSettings) => BackupSettings,
+) {
+  const payload = await browser.storage.local.get(SETTINGS_STORAGE_KEY);
+  const settings = payload[SETTINGS_STORAGE_KEY] as AppSettings | undefined;
+  if (!settings?.backup) {
+    return;
+  }
+
+  await browser.storage.local.set({
+    [SETTINGS_STORAGE_KEY]: {
+      ...settings,
+      backup: mutator(settings.backup),
+    } satisfies AppSettings,
+  });
+}
+
+async function syncAutoBackupAlarm() {
+  const payload = await browser.storage.local.get(SETTINGS_STORAGE_KEY);
+  const settings = payload[SETTINGS_STORAGE_KEY] as AppSettings | undefined;
+  const backup = settings?.backup;
+
+  await chrome.alarms.clear(AUTO_BACKUP_ALARM_NAME);
+
+  if (!backup?.autoBackupEnabled || !isBackupReady(backup)) {
+    return;
+  }
+
+  const periodInMinutes = Math.max(60, backup.autoBackupIntervalHours * 60);
+  await chrome.alarms.create(AUTO_BACKUP_ALARM_NAME, {
+    delayInMinutes: periodInMinutes,
+    periodInMinutes,
+  });
+}
+
+async function runAutoBackup() {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return;
+  }
+
+  const { spaceStore, settings } = await readStoredState();
+  if (!spaceStore || !settings?.backup || !isBackupReady(settings.backup)) {
+    return;
+  }
+
+  try {
+    const payload = createBackupPayload(spaceStore, settings);
+    const result = await uploadBackupToWebDav(settings.backup, payload);
+    await patchBackupMetadata((backup) => ({
+      ...backup,
+      lastBackupAt: result.uploadedAt,
+      lastBackupError: undefined,
+    }));
+  } catch (error) {
+    await patchBackupMetadata((backup) => ({
+      ...backup,
+      lastBackupError: error instanceof Error ? error.message : String(error),
+    }));
+  }
+}
+
 export default defineBackground(() => {
   // Remove response headers that prevent framing, so iframe viewMode can load any site.
   const RULE_ID = 10001;
@@ -33,10 +108,74 @@ export default defineBackground(() => {
 
   // Service Worker 启动时立即应用（如果规则已存则 updateDynamicRules 会先删开再添加）
   applyFrameBypassRules();
-  chrome.runtime.onInstalled.addListener(applyFrameBypassRules);
-  chrome.runtime.onStartup.addListener(applyFrameBypassRules);
+  void syncAutoBackupAlarm();
+  chrome.runtime.onInstalled.addListener(() => {
+    applyFrameBypassRules();
+    void syncAutoBackupAlarm();
+  });
+  chrome.runtime.onStartup.addListener(() => {
+    applyFrameBypassRules();
+    void syncAutoBackupAlarm();
+  });
+
+  browser.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes[SETTINGS_STORAGE_KEY]) {
+      void syncAutoBackupAlarm();
+    }
+  });
+
+  chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === AUTO_BACKUP_ALARM_NAME) {
+      void runAutoBackup();
+    }
+  });
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'WEBDAV_UPLOAD') {
+      void (async () => {
+        try {
+          const result = await uploadBackupToWebDav(message.config, message.payload);
+          sendResponse({ success: true, uploadedAt: result.uploadedAt });
+        } catch (error) {
+          sendResponse({
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      })();
+      return true;
+    }
+
+    if (message.type === 'WEBDAV_DOWNLOAD') {
+      void (async () => {
+        try {
+          const payload = await downloadBackupFromWebDav(message.config);
+          sendResponse({ success: true, payload });
+        } catch (error) {
+          sendResponse({
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      })();
+      return true;
+    }
+
+    if (message.type === 'WEBDAV_TEST') {
+      void (async () => {
+        try {
+          await testWebDavConnection(message.config);
+          sendResponse({ success: true });
+        } catch (error) {
+          sendResponse({
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      })();
+      return true;
+    }
+
     if (message.type === 'CLEAR_SERVICE_WORKER' && message.origin) {
       if (chrome.browsingData && chrome.browsingData.remove) {
         chrome.browsingData.remove(
