@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CloudDownload, CloudUpload, Link2, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, CloudDownload, CloudUpload, Link2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -102,6 +102,14 @@ type WebDavBackupDialogProps = {
   onManualBackup: () => Promise<void>;
   onManualRestore: () => Promise<void>;
 };
+
+function clampBackupIntervalHours(value: number) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return 6;
+  }
+
+  return Math.max(1, Math.min(168, Math.round(value)));
+}
 
 export function WebDavBackupDialog({
   open,
@@ -337,23 +345,53 @@ export function WebDavBackupDialog({
                       <div className="text-sm font-medium">备份间隔</div>
                       <div className="text-xs text-muted-foreground">单位：小时</div>
                     </div>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={168}
-                      disabled={!accountUsable}
-                      value={backupSettings.autoBackupIntervalHours}
-                      onChange={(e) => {
-                        const value = Number(e.target.value);
-                        onUpdateBackupSettings({
-                          autoBackupIntervalHours:
-                            Number.isFinite(value) && value > 0
-                              ? Math.max(1, Math.min(168, Math.round(value)))
-                              : 6,
-                        });
-                      }}
-                      className="h-8 w-24 text-right"
-                    />
+                    <div className="flex h-8 w-20 overflow-hidden rounded-md border border-input bg-background shadow-sm transition-colors focus-within:ring-1 focus-within:ring-ring">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={168}
+                        disabled={!accountUsable}
+                        value={backupSettings.autoBackupIntervalHours}
+                        onChange={(e) => {
+                          onUpdateBackupSettings({
+                            autoBackupIntervalHours: clampBackupIntervalHours(Number(e.target.value)),
+                          });
+                        }}
+                        className="hide-number-spin h-full flex-1 rounded-none border-0 bg-transparent px-3 pr-2 text-right shadow-none focus-visible:ring-0"
+                      />
+                      <div className="flex w-4 flex-col border-l border-border/70 bg-muted/30">
+                        <button
+                          type="button"
+                          aria-label="增加备份间隔"
+                          disabled={!accountUsable}
+                          onClick={() => {
+                            onUpdateBackupSettings({
+                              autoBackupIntervalHours: clampBackupIntervalHours(
+                                backupSettings.autoBackupIntervalHours + 1,
+                              ),
+                            });
+                          }}
+                          className="flex flex-1 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <ChevronUp className="size-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="减少备份间隔"
+                          disabled={!accountUsable}
+                          onClick={() => {
+                            onUpdateBackupSettings({
+                              autoBackupIntervalHours: clampBackupIntervalHours(
+                                backupSettings.autoBackupIntervalHours - 1,
+                              ),
+                            });
+                          }}
+                          className="flex flex-1 items-center justify-center border-t border-border/70 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <ChevronDown className="size-3.5" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
