@@ -1,8 +1,10 @@
 import { browser } from 'wxt/browser';
 
-import { AUTO_BACKUP_ALARM_NAME, createBackupPayload, downloadBackupFromWebDav, isBackupReady, testWebDavConnection, uploadBackupToWebDav } from './newtab/backup';
+import { AUTO_BACKUP_ALARM_NAME, AUTO_BACKUP_CHECK_PERIOD_MINUTES, createBackupPayload, downloadBackupFromWebDav, isAutoBackupDue, isBackupReady, testWebDavConnection, uploadBackupToWebDav } from './newtab/backup';
 import { SETTINGS_STORAGE_KEY, SPACES_STORAGE_KEY } from './newtab/constants';
 import type { AppSettings, BackupSettings, SpaceStore } from './newtab/types';
+
+let autoBackupRunning = false;
 
 async function readStoredState() {
   const payload = await browser.storage.local.get([SPACES_STORAGE_KEY, SETTINGS_STORAGE_KEY]);
@@ -40,14 +42,17 @@ async function syncAutoBackupAlarm() {
     return;
   }
 
-  const periodInMinutes = Math.max(60, backup.autoBackupIntervalHours * 60);
   await chrome.alarms.create(AUTO_BACKUP_ALARM_NAME, {
-    delayInMinutes: periodInMinutes,
-    periodInMinutes,
+    delayInMinutes: AUTO_BACKUP_CHECK_PERIOD_MINUTES,
+    periodInMinutes: AUTO_BACKUP_CHECK_PERIOD_MINUTES,
   });
 }
 
-async function runAutoBackup() {
+async function runAutoBackup(trigger: 'alarm' | 'startup' | 'settings-change' | 'poke') {
+  if (autoBackupRunning) {
+    return;
+  }
+
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     return;
   }
@@ -57,6 +62,11 @@ async function runAutoBackup() {
     return;
   }
 
+  if (!isAutoBackupDue(settings.backup)) {
+    return;
+  }
+
+  autoBackupRunning = true;
   try {
     const payload = createBackupPayload(spaceStore, settings);
     const result = await uploadBackupToWebDav(settings.backup, payload);
@@ -68,8 +78,10 @@ async function runAutoBackup() {
   } catch (error) {
     await patchBackupMetadata((backup) => ({
       ...backup,
-      lastBackupError: error instanceof Error ? error.message : String(error),
+      lastBackupError: `[${trigger}] ${error instanceof Error ? error.message : String(error)}`,
     }));
+  } finally {
+    autoBackupRunning = false;
   }
 }
 
@@ -109,24 +121,28 @@ export default defineBackground(() => {
   // Service Worker 启动时立即应用（如果规则已存则 updateDynamicRules 会先删开再添加）
   applyFrameBypassRules();
   void syncAutoBackupAlarm();
+  void runAutoBackup('startup');
   chrome.runtime.onInstalled.addListener(() => {
     applyFrameBypassRules();
     void syncAutoBackupAlarm();
+    void runAutoBackup('startup');
   });
   chrome.runtime.onStartup.addListener(() => {
     applyFrameBypassRules();
     void syncAutoBackupAlarm();
+    void runAutoBackup('startup');
   });
 
   browser.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes[SETTINGS_STORAGE_KEY]) {
       void syncAutoBackupAlarm();
+      void runAutoBackup('settings-change');
     }
   });
 
   chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === AUTO_BACKUP_ALARM_NAME) {
-      void runAutoBackup();
+      void runAutoBackup('alarm');
     }
   });
 
@@ -172,6 +188,14 @@ export default defineBackground(() => {
             error: error instanceof Error ? error.message : String(error),
           });
         }
+      })();
+      return true;
+    }
+
+    if (message.type === 'AUTO_BACKUP_POKE') {
+      void (async () => {
+        await runAutoBackup('poke');
+        sendResponse({ success: true });
       })();
       return true;
     }

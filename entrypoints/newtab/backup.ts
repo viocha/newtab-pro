@@ -2,6 +2,7 @@ import type { AppSettings, BackupSettings, SpaceStore } from './types';
 
 export const BACKUP_PAYLOAD_VERSION = 2;
 export const AUTO_BACKUP_ALARM_NAME = 'newtab-pro:auto-backup';
+export const AUTO_BACKUP_CHECK_PERIOD_MINUTES = 15;
 
 export type BackupPayload = {
   version: typeof BACKUP_PAYLOAD_VERSION;
@@ -143,6 +144,24 @@ export function isBackupReady(config: BackupSettings) {
     config.password &&
     config.remotePath.trim()
   );
+}
+
+export function isAutoBackupDue(config: BackupSettings, now = Date.now()) {
+  if (!config.autoBackupEnabled) {
+    return false;
+  }
+
+  if (!config.lastBackupAt) {
+    return true;
+  }
+
+  const lastBackupAt = Date.parse(config.lastBackupAt);
+  if (Number.isNaN(lastBackupAt)) {
+    return true;
+  }
+
+  const intervalMs = Math.max(1, config.autoBackupIntervalHours) * 60 * 60 * 1000;
+  return now - lastBackupAt >= intervalMs;
 }
 
 export async function uploadBackupToWebDav(config: BackupSettings, payload: BackupPayload) {

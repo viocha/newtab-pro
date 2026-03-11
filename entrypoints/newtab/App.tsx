@@ -835,6 +835,26 @@ export default function App() {
     [settings.backup, updateSettings],
   );
 
+  useEffect(() => {
+    const pokeAutoBackup = () => {
+      void browser.runtime.sendMessage({ type: 'AUTO_BACKUP_POKE' }).catch(() => undefined);
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        pokeAutoBackup();
+      }
+    };
+
+    pokeAutoBackup();
+    window.addEventListener('online', pokeAutoBackup);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('online', pokeAutoBackup);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   // ── Space keyboard shortcuts ──────────────────────────────────────
   useEffect(() => {
     const parseShortcut = (shortcut: string) => {
