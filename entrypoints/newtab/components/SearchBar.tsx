@@ -1,17 +1,34 @@
-import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
-import { Search, ChevronDown, Check, X, Clock, Trash2 } from 'lucide-react';
+import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Search, ChevronDown, Check, X, Clock, Trash2, LayoutGrid, PanelsTopLeft } from 'lucide-react';
+import { toast } from 'sonner';
+import { browser } from 'wxt/browser';
 
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { FaviconImage } from './FaviconImage';
 import type { AppSettings, SearchEngine } from '../types';
+import {
+  openUrlsInGrid,
+  restoreOriginWindow,
+  useWindowOpenPrefs,
+  type GridOpenOriginWindow,
+} from '../window-open';
 
 // ── helpers ─────────────────────────────────────────────────────────
+
+const SEARCH_BAR_UI_PREFS_KEY = 'newtab-pro:search-bar-batch-prefs';
+
+type SearchBarUiPrefs = {
+  selectedBatchEngineIds?: string[];
+};
 
 function buildSearchUrl(engine: SearchEngine, query: string): string {
   return engine.searchUrl.replace('{query}', encodeURIComponent(query));
@@ -21,6 +38,33 @@ function buildSuggestUrl(engine: SearchEngine, query: string, defaultSuggestUrl 
   const url = engine.suggestUrl || defaultSuggestUrl;
   if (!url) return '';
   return url.replace('{query}', encodeURIComponent(query));
+}
+
+function readSearchBarUiPrefs(): SearchBarUiPrefs {
+  if (typeof window === 'undefined') {
+    return {};
+  }
+
+  try {
+    const raw = window.localStorage.getItem(SEARCH_BAR_UI_PREFS_KEY);
+    if (!raw) {
+      return {};
+    }
+    const parsed = JSON.parse(raw) as SearchBarUiPrefs;
+    return typeof parsed === 'object' && parsed !== null ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeSearchBarUiPrefs(prefs: SearchBarUiPrefs) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(SEARCH_BAR_UI_PREFS_KEY, JSON.stringify(prefs));
+  } catch {}
 }
 
 async function fetchSuggestions(
@@ -92,6 +136,12 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [engineMenuOpen, setEngineMenuOpen] = useState(false);
+  const [batchMenuOpen, setBatchMenuOpen] = useState(false);
+  const [batchWindowIds, setBatchWindowIds] = useState<number[]>([]);
+  const [selectedBatchEngineIds, setSelectedBatchEngineIds] = useState<string[]>(
+    () => readSearchBarUiPrefs().selectedBatchEngineIds?.slice(0, 6) ?? [],
+  );
+  const { compactGridWindows: useCompactGridWindows, setCompactGridWindows } = useWindowOpenPrefs();
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Merge internal ref with forwarded ref
@@ -110,6 +160,8 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
   const suggestTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
   const skipNextSuggestFetchRef = useRef(false);
+  const navigationBaseQueryRef = useRef<string | null>(null);
+  const batchOriginWindowRef = useRef<GridOpenOriginWindow | null>(null);
 
   const activeEngine =
     settings.searchEngines.find((e) => e.id === settings.activeSearchEngineId) ??
@@ -117,16 +169,32 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
 
   const history = settings.searchHistory ?? [];
   const openInNewTab = settings.openSearchInNewTab;
+  const dropdownQuery = navigationBaseQueryRef.current ?? query;
+  const selectedBatchEngines = useMemo(() => {
+    const selected = selectedBatchEngineIds
+      .map((id) => settings.searchEngines.find((engine) => engine.id === id))
+      .filter((engine): engine is SearchEngine => !!engine)
+      .slice(0, 6);
+
+    if (selected.length > 0) {
+      return selected;
+    }
+
+    return activeEngine ? [activeEngine] : [];
+  }, [activeEngine, selectedBatchEngineIds, settings.searchEngines]);
 
   // What the dropdown is currently showing
-  const showingHistory = !query.trim() && showDropdown && history.length > 0;
-  const showingSuggestions = !!query.trim() && showDropdown && suggestions.length > 0;
+  const showingHistory = !dropdownQuery.trim() && showDropdown && history.length > 0;
+  const showingSuggestions = !!dropdownQuery.trim() && showDropdown && suggestions.length > 0;
   // Unified list of items driving keyboard navigation
   const dropItems: string[] = showingHistory ? history : showingSuggestions ? suggestions : [];
 
   // Debounced suggestions fetch
   useEffect(() => {
     clearTimeout(suggestTimerRef.current);
+    if (navigationBaseQueryRef.current !== null) {
+      return;
+    }
     if (!query.trim()) {
       setSuggestions([]);
       return;
@@ -157,6 +225,11 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        if (navigationBaseQueryRef.current !== null) {
+          setQuery(navigationBaseQueryRef.current);
+          navigationBaseQueryRef.current = null;
+          setActiveIndex(-1);
+        }
         setShowDropdown(false);
       }
     };
@@ -164,14 +237,77 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  useEffect(() => {
+    setSelectedBatchEngineIds((prev) => {
+      const valid = prev.filter((id) => settings.searchEngines.some((engine) => engine.id === id)).slice(0, 6);
+      if (valid.length > 0) {
+        return valid;
+      }
+      return settings.searchEngines.slice(0, 2).map((engine) => engine.id);
+    });
+  }, [settings.searchEngines]);
+
+  useEffect(() => {
+    writeSearchBarUiPrefs({
+      selectedBatchEngineIds,
+    });
+  }, [selectedBatchEngineIds]);
+
+  useEffect(() => {
+    const handleWindowRemoved = (windowId: number) => {
+      setBatchWindowIds((prev) => prev.filter((id) => id !== windowId));
+    };
+
+    browser.windows.onRemoved.addListener(handleWindowRemoved);
+    return () => browser.windows.onRemoved.removeListener(handleWindowRemoved);
+  }, []);
+
+  const resetNavigationPreview = useCallback(() => {
+    setActiveIndex(-1);
+    if (navigationBaseQueryRef.current !== null) {
+      setQuery(navigationBaseQueryRef.current);
+      navigationBaseQueryRef.current = null;
+    }
+  }, []);
+
+  const commitQueryValue = useCallback((value: string) => {
+    navigationBaseQueryRef.current = null;
+    setQuery(value);
+    setActiveIndex(-1);
+  }, []);
+
+  const restoreBatchOriginWindow = useCallback(async (focus = true) => {
+    await restoreOriginWindow(batchOriginWindowRef.current, focus);
+    batchOriginWindowRef.current = null;
+  }, []);
+
+  const syncTrackedBatchWindows = useCallback(async () => {
+    if (batchWindowIds.length === 0) {
+      return [];
+    }
+
+    try {
+      const openWindows = await browser.windows.getAll();
+      const openIds = new Set(
+        openWindows
+          .map((windowItem) => windowItem.id)
+          .filter((windowId): windowId is number => typeof windowId === 'number'),
+      );
+      const nextIds = batchWindowIds.filter((windowId) => openIds.has(windowId));
+      setBatchWindowIds(nextIds);
+      return nextIds;
+    } catch {
+      return batchWindowIds;
+    }
+  }, [batchWindowIds]);
+
   const performSearch = useCallback(
     (searchQuery: string, forceCurrentTab = false) => {
       const q = searchQuery.trim();
       if (!q || !activeEngine) return;
       onAddToHistory(q);
       skipNextSuggestFetchRef.current = true;
-      setQuery(q);
-      setActiveIndex(-1);
+      commitQueryValue(q);
       setSuggestions([]);
       setShowDropdown(false);
       const url = buildSearchUrl(activeEngine, q);
@@ -181,14 +317,171 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
         window.location.href = url;
       }
     },
-    [activeEngine, openInNewTab, onAddToHistory],
+    [activeEngine, commitQueryValue, openInNewTab, onAddToHistory],
+  );
+
+  const prepareBatchSearch = useCallback(
+    (searchQuery: string) => {
+      const q = searchQuery.trim();
+      if (!q) {
+        toast('请输入搜索关键词');
+        inputRef.current?.focus();
+        return null;
+      }
+      if (selectedBatchEngines.length === 0) {
+        toast('请至少勾选一个搜索引擎');
+        return null;
+      }
+
+      onAddToHistory(q);
+      skipNextSuggestFetchRef.current = true;
+      commitQueryValue(q);
+      setSuggestions([]);
+      setShowDropdown(false);
+
+      return {
+        query: q,
+        urls: selectedBatchEngines.map((engine) => ({
+          engine,
+          url: buildSearchUrl(engine, q),
+        })),
+      };
+    },
+    [commitQueryValue, onAddToHistory, selectedBatchEngines],
+  );
+
+  const rememberBatchWindows = useCallback((ids: number[]) => {
+    if (ids.length === 0) return;
+    setBatchWindowIds((prev) => [...new Set([...prev, ...ids])]);
+  }, []);
+
+  const handleBatchOpen = useCallback(async () => {
+    const payload = prepareBatchSearch(activeIndex >= 0 ? dropItems[activeIndex] : query);
+    if (!payload) return;
+
+    const urls = payload.urls.map((item) => item.url);
+    try {
+      const created = await browser.windows.create({ url: urls, focused: true });
+      if (created && typeof created.id === 'number') {
+        rememberBatchWindows([created.id]);
+      }
+      toast('已批量打开', { description: `${payload.urls.length} 个搜索结果已在新窗口打开` });
+    } catch (error) {
+      toast('批量打开失败', {
+        description: error instanceof Error ? error.message : '无法打开批量搜索窗口',
+      });
+    }
+  }, [activeIndex, dropItems, prepareBatchSearch, query, rememberBatchWindows]);
+
+  const handleBatchGridOpen = useCallback(async () => {
+    const payload = prepareBatchSearch(activeIndex >= 0 ? dropItems[activeIndex] : query);
+    if (!payload) return;
+
+    try {
+      const targetUrls = payload.urls.map((item) => item.url);
+      const { windowIds: createdWindowIds, originWindow } = await openUrlsInGrid(
+        targetUrls,
+        useCompactGridWindows,
+      );
+      batchOriginWindowRef.current = originWindow ?? null;
+
+      if (createdWindowIds.length === 0) {
+        await restoreBatchOriginWindow();
+        toast('多窗口打开失败', {
+          description: '未能创建任何网格窗口',
+        });
+        return;
+      }
+
+      if (batchOriginWindowRef.current) {
+        try {
+          await browser.windows.update(batchOriginWindowRef.current.id, { state: 'minimized' });
+        } catch {}
+      }
+
+      const lastWindowId = createdWindowIds.at(-1);
+      if (typeof lastWindowId === 'number') {
+        try {
+          await browser.windows.update(lastWindowId, { focused: true });
+        } catch {}
+      }
+      rememberBatchWindows(createdWindowIds);
+      toast('已多窗口打开', {
+        description: `${payload.urls.length} 个窗口已按网格自动布局`,
+      });
+    } catch (error) {
+      await restoreBatchOriginWindow();
+      toast('多窗口打开失败', {
+        description: error instanceof Error ? error.message : '无法创建网格窗口',
+      });
+    }
+  }, [
+    activeIndex,
+    dropItems,
+    prepareBatchSearch,
+    query,
+    rememberBatchWindows,
+      restoreBatchOriginWindow,
+      useCompactGridWindows,
+  ]);
+
+  const handleCloseBatchWindows = useCallback(async () => {
+    const liveWindowIds = await syncTrackedBatchWindows();
+    if (liveWindowIds.length === 0) {
+      toast('没有可关闭的批量窗口');
+      return;
+    }
+
+    await Promise.all(
+      liveWindowIds.map(async (windowId) => {
+        try {
+          await browser.windows.remove(windowId);
+        } catch {}
+      }),
+    );
+    setBatchWindowIds([]);
+    await restoreBatchOriginWindow();
+    toast('已关闭全部批量窗口');
+  }, [restoreBatchOriginWindow, syncTrackedBatchWindows]);
+
+  const handleBatchMenuOpenChange = useCallback(
+    (open: boolean) => {
+      setBatchMenuOpen(open);
+      if (open) {
+        void syncTrackedBatchWindows();
+      }
+    },
+    [syncTrackedBatchWindows],
+  );
+
+  const toggleBatchEngine = useCallback(
+    (engineId: string, checked: boolean) => {
+      setSelectedBatchEngineIds((prev) => {
+        if (checked) {
+          if (prev.includes(engineId)) return prev;
+          if (prev.length >= 6) {
+            toast('最多只能勾选 6 个搜索引擎');
+            return prev;
+          }
+          return [...prev, engineId];
+        }
+
+        if (prev.length <= 1 && prev.includes(engineId)) {
+          toast('请至少保留一个搜索引擎');
+          return prev;
+        }
+
+        return prev.filter((id) => id !== engineId);
+      });
+    },
+    [],
   );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Escape') {
         setShowDropdown(false);
-        setActiveIndex(-1);
+        resetNavigationPreview();
         inputRef.current?.blur();
         return;
       }
@@ -197,12 +490,24 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
       if (hasItems && (showingHistory || showingSuggestions)) {
         if (e.key === 'ArrowDown') {
           e.preventDefault();
-          setActiveIndex((i) => Math.min(i + 1, dropItems.length - 1));
+          const baseQuery = navigationBaseQueryRef.current ?? query;
+          navigationBaseQueryRef.current = baseQuery;
+          const nextIndex = Math.min(activeIndex + 1, dropItems.length - 1);
+          setActiveIndex(nextIndex);
+          setQuery(dropItems[nextIndex] ?? baseQuery);
           return;
         }
         if (e.key === 'ArrowUp') {
           e.preventDefault();
-          setActiveIndex((i) => Math.max(i - 1, -1));
+          const baseQuery = navigationBaseQueryRef.current ?? query;
+          navigationBaseQueryRef.current = baseQuery;
+          const nextIndex = Math.max(activeIndex - 1, -1);
+          if (nextIndex === -1) {
+            resetNavigationPreview();
+            return;
+          }
+          setActiveIndex(nextIndex);
+          setQuery(dropItems[nextIndex] ?? baseQuery);
           return;
         }
       }
@@ -213,7 +518,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
         performSearch(q, e.altKey);
       }
     },
-    [showingHistory, showingSuggestions, dropItems, activeIndex, query, performSearch],
+    [showingHistory, showingSuggestions, dropItems, activeIndex, query, performSearch, resetNavigationPreview],
   );
 
   // Build href for a suggestion/history item
@@ -226,7 +531,12 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
   );
 
   return (
-    <div ref={containerRef} data-no-drag-switch className="relative w-full max-w-2xl mx-auto">
+    <div
+      ref={containerRef}
+      data-no-drag-switch
+      className="relative w-full max-w-2xl mx-auto"
+      onContextMenuCapture={(e) => e.stopPropagation()}
+    >
       {/* Engine chip row — quick switcher */}
       {settings.searchEngines.length > 1 && (
         <div className="mb-1.5 flex items-center gap-1 overflow-x-auto scrollbar-none pb-0.5">
@@ -295,11 +605,12 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
           value={query}
           onChange={(e) => {
             const val = e.target.value;
+            navigationBaseQueryRef.current = null;
+            setActiveIndex(-1);
             setQuery(val);
             if (!val.trim()) {
               setSuggestions([]);
               setShowDropdown(history.length > 0);
-              setActiveIndex(-1);
             }
           }}
           onFocus={() => {
@@ -321,10 +632,9 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
           <button
             type="button"
             onClick={() => {
-              setQuery('');
+              commitQueryValue('');
               setSuggestions([]);
               setShowDropdown(history.length > 0);
-              setActiveIndex(-1);
               inputRef.current?.focus();
             }}
             className="self-stretch px-2 flex items-center text-muted-foreground hover:text-foreground transition-colors shrink-0"
@@ -341,13 +651,82 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
         >
           <Search className="size-3.5" />
         </button>
+
+        <DropdownMenu open={batchMenuOpen} onOpenChange={handleBatchMenuOpenChange}>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                'self-stretch px-3 text-muted-foreground transition-colors border-l border-border/50 hover:bg-muted/40 hover:text-foreground shrink-0 flex items-center gap-1.5',
+                batchMenuOpen && 'bg-muted/40 text-foreground',
+              )}
+              title="批量搜索选项"
+            >
+              <LayoutGrid className="size-3.5" />
+              <ChevronDown className="size-3.5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuLabel className="flex items-center justify-between">
+              <span>批量搜索引擎</span>
+              <span className="text-[10px] font-normal text-muted-foreground">
+                {selectedBatchEngines.length}/6
+              </span>
+            </DropdownMenuLabel>
+            {settings.searchEngines.map((engine) => {
+              const checked = selectedBatchEngineIds.includes(engine.id);
+              const disabled = !checked && selectedBatchEngineIds.length >= 6;
+              return (
+                <DropdownMenuCheckboxItem
+                  key={engine.id}
+                  checked={checked}
+                  disabled={disabled}
+                  onSelect={(e) => e.preventDefault()}
+                  onCheckedChange={(next) => toggleBatchEngine(engine.id, !!next)}
+                  className="flex items-center gap-2"
+                >
+                  <EngineIcon engine={engine} className="size-3.5 rounded-sm shrink-0" />
+                  <span className="truncate">{engine.name}</span>
+                </DropdownMenuCheckboxItem>
+              );
+            })}
+            <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem
+              checked={useCompactGridWindows}
+              onSelect={(e) => e.preventDefault()}
+              onCheckedChange={(next) => setCompactGridWindows(!!next)}
+            >
+              简化窗口
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => void handleBatchOpen()}>
+              <LayoutGrid className="mr-2 size-3.5" />
+              在一个新窗口中批量打开
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={selectedBatchEngines.length === 0 || batchWindowIds.length > 0}
+              onSelect={() => void handleBatchGridOpen()}
+            >
+              <PanelsTopLeft className="mr-2 size-3.5" />
+              多窗口网格打开
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              disabled={batchWindowIds.length === 0}
+              onSelect={() => void handleCloseBatchWindows()}
+            >
+              <X className="mr-2 size-3.5" />
+              全部关闭
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Combined dropdown: history or suggestions */}
       {(showingHistory || showingSuggestions) && (
         <div
           className="absolute top-full left-0 right-0 z-50 mt-1 rounded-lg border border-border/70 bg-popover shadow-lg overflow-hidden"
-          onMouseLeave={() => setActiveIndex(-1)}
+          onMouseLeave={resetNavigationPreview}
         >
           {/* ── History panel ── */}
           {showingHistory && (
@@ -388,8 +767,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
                         return;
                       }
                       skipNextSuggestFetchRef.current = true;
-                      setQuery(item);
-                      setActiveIndex(-1);
+                      commitQueryValue(item);
                       setSuggestions([]);
                       setShowDropdown(false);
                       onAddToHistory(item);
@@ -431,8 +809,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
                     return;
                   }
                   skipNextSuggestFetchRef.current = true;
-                  setQuery(s);
-                  setActiveIndex(-1);
+                  commitQueryValue(s);
                   setSuggestions([]);
                   setShowDropdown(false);
                   onAddToHistory(s);

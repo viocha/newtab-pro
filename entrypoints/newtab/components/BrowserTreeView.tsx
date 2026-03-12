@@ -1,19 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { AppWindow, ChevronDown, ChevronRight, Copy, ExternalLink, EyeOff, Folder, FolderOpen, MapPin } from 'lucide-react';
+import { AppWindow, ChevronDown, ChevronRight, Copy, ExternalLink, EyeOff, Folder, FolderOpen, MapPin, PanelsTopLeft } from 'lucide-react';
 import { browser, type Browser } from 'wxt/browser';
 
 
 import {
   ContextMenu,
+  ContextMenuCheckboxItem,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
 
 import { BROWSER_TREE_DEFAULT_MAX_ITEMS } from '../constants';
 import { FaviconImage } from './FaviconImage';
+import { getGridOpenCounts, openUrlsInGrid, useWindowOpenPrefs } from '../window-open';
 
 /** 每行的近似高度（px），用于将 maxItems 换算成 maxHeight */
 const ITEM_HEIGHT_PX = 28;
@@ -55,6 +60,7 @@ export function BrowserTreeView({
   folderId,
   maxItems = BROWSER_TREE_DEFAULT_MAX_ITEMS,
 }: Props) {
+  const { compactGridWindows, setCompactGridWindows } = useWindowOpenPrefs();
   const [nodes, setNodes] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -180,6 +186,30 @@ export function BrowserTreeView({
                     <AppWindow className="mr-2 size-3.5" />
                     在新窗口打开全部
                   </ContextMenuItem>
+                  <ContextMenuSub>
+                    <ContextMenuSubTrigger>
+                      <PanelsTopLeft className="mr-2 size-3.5" />
+                      多窗口网格打开
+                    </ContextMenuSubTrigger>
+                    <ContextMenuSubContent className="w-44">
+                      <ContextMenuCheckboxItem
+                        checked={compactGridWindows}
+                        onSelect={(e) => e.preventDefault()}
+                        onCheckedChange={(next) => setCompactGridWindows(!!next)}
+                      >
+                        简化窗口
+                      </ContextMenuCheckboxItem>
+                      <ContextMenuSeparator />
+                      {getGridOpenCounts(folderUrls.length).map((count) => (
+                        <ContextMenuItem
+                          key={count}
+                          onSelect={() => void openUrlsInGrid(folderUrls.slice(0, count), compactGridWindows)}
+                        >
+                          打开前 {count} 个
+                        </ContextMenuItem>
+                      ))}
+                    </ContextMenuSubContent>
+                  </ContextMenuSub>
                   <ContextMenuItem onSelect={() => void browser.windows.create({ url: folderUrls, incognito: true })}>
                     <EyeOff className="mr-2 size-3.5" />
                     在隐私窗口打开全部

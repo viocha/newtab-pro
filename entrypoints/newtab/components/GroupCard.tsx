@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DragEvent } from 'react';
-import { Check, GripHorizontal, LayoutGrid, LayoutList, MoreHorizontal, FolderTree, FolderPlus, FolderOpen, BookOpen, Palette, Plus, Trash2, ExternalLink, AppWindow, EyeOff, FolderInput, Globe, Wrench, Play } from 'lucide-react';
+import { Check, GripHorizontal, LayoutGrid, LayoutList, MoreHorizontal, FolderTree, FolderPlus, FolderOpen, BookOpen, Palette, Plus, Trash2, ExternalLink, AppWindow, EyeOff, FolderInput, Globe, Wrench, Play, PanelsTopLeft } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { browser } from 'wxt/browser';
 
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -36,6 +37,7 @@ import { BrowserTreeView } from './BrowserTreeView';
 import { SubgroupPanel } from './SubgroupPanel';
 import { tryNormalizeUrl, createFaviconUrl } from '../utils';
 import { BROWSER_TREE_DEFAULT_MAX_ITEMS, IFRAME_DEFAULT_HEIGHT } from '../constants';
+import { getGridOpenCounts, openUrlsInGrid, useWindowOpenPrefs } from '../window-open';
 
 type GroupCardProps = {
   group: BookmarkGroup;
@@ -255,6 +257,7 @@ export function GroupCard({
   isActiveSpace,
   iframeAutoRun,
 }: GroupCardProps) {
+  const { compactGridWindows, setCompactGridWindows } = useWindowOpenPrefs();
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(group.title);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -778,6 +781,30 @@ export function GroupCard({
                   <AppWindow className="mr-2 size-3.5" />
                   在新窗口打开全部
                 </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger disabled={allUrls.length === 0}>
+                    <PanelsTopLeft className="mr-2 size-3.5" />
+                    多窗口网格打开
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-44">
+                    <DropdownMenuCheckboxItem
+                      checked={compactGridWindows}
+                      onSelect={(e) => e.preventDefault()}
+                      onCheckedChange={(next) => setCompactGridWindows(!!next)}
+                    >
+                      简化窗口
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuSeparator />
+                    {getGridOpenCounts(allUrls.length).map((count) => (
+                      <DropdownMenuItem
+                        key={count}
+                        onSelect={() => void openUrlsInGrid(allUrls.slice(0, count), compactGridWindows)}
+                      >
+                        打开前 {count} 个
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 <DropdownMenuItem
                   disabled={allUrls.length === 0}
                   onSelect={() => browser.windows.create({ url: allUrls, incognito: true })}

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, FolderTree, GripVertical, LayoutGrid, LayoutList, MoreHorizontal, Plus, Trash2, ExternalLink, AppWindow, EyeOff, FolderInput } from 'lucide-react';
+import { ChevronDown, ChevronRight, FolderTree, GripVertical, LayoutGrid, LayoutList, MoreHorizontal, Plus, Trash2, ExternalLink, AppWindow, EyeOff, FolderInput, PanelsTopLeft } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { browser } from 'wxt/browser';
 
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -30,6 +31,7 @@ import type {
 import { useDndUIStore } from '../drag';
 import { BookmarkRows } from './BookmarkRows';
 import { BookmarkIconGrid } from './BookmarkIconGrid';
+import { getGridOpenCounts, openUrlsInGrid, useWindowOpenPrefs } from '../window-open';
 
 type SubgroupPanelProps = {
   groupId: string;
@@ -87,6 +89,7 @@ export function SubgroupPanel({
   autoFocusEdit,
   onClearAutoFocus,
 }: SubgroupPanelProps) {
+  const { compactGridWindows, setCompactGridWindows } = useWindowOpenPrefs();
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(subgroup.title);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -330,6 +333,30 @@ export function SubgroupPanel({
                   <AppWindow className="mr-2 size-3.5" />
                   在新窗口打开全部
                 </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger disabled={subgroup.bookmarks.length === 0}>
+                    <PanelsTopLeft className="mr-2 size-3.5" />
+                    多窗口网格打开
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-44">
+                    <DropdownMenuCheckboxItem
+                      checked={compactGridWindows}
+                      onSelect={(e) => e.preventDefault()}
+                      onCheckedChange={(next) => setCompactGridWindows(!!next)}
+                    >
+                      简化窗口
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuSeparator />
+                    {getGridOpenCounts(subgroup.bookmarks.length).map((count) => (
+                      <DropdownMenuItem
+                        key={count}
+                        onSelect={() => void openUrlsInGrid(subgroup.bookmarks.slice(0, count).map((bookmark) => bookmark.url), compactGridWindows)}
+                      >
+                        打开前 {count} 个
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 <DropdownMenuItem
                   disabled={subgroup.bookmarks.length === 0}
                   onSelect={() => browser.windows.create({ url: subgroup.bookmarks.map(b => b.url), incognito: true })}
