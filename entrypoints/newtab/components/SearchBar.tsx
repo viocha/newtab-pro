@@ -109,6 +109,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
 
   const suggestTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
+  const skipNextSuggestFetchRef = useRef(false);
 
   const activeEngine =
     settings.searchEngines.find((e) => e.id === settings.activeSearchEngineId) ??
@@ -127,6 +128,11 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
   useEffect(() => {
     clearTimeout(suggestTimerRef.current);
     if (!query.trim()) {
+      setSuggestions([]);
+      return;
+    }
+    if (skipNextSuggestFetchRef.current) {
+      skipNextSuggestFetchRef.current = false;
       setSuggestions([]);
       return;
     }
@@ -163,15 +169,17 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
       const q = searchQuery.trim();
       if (!q || !activeEngine) return;
       onAddToHistory(q);
+      skipNextSuggestFetchRef.current = true;
+      setQuery(q);
+      setActiveIndex(-1);
+      setSuggestions([]);
+      setShowDropdown(false);
       const url = buildSearchUrl(activeEngine, q);
       if (!forceCurrentTab && openInNewTab) {
         window.open(url, '_blank', 'noreferrer');
       } else {
         window.location.href = url;
       }
-      setQuery('');
-      setSuggestions([]);
-      setShowDropdown(false);
     },
     [activeEngine, openInNewTab, onAddToHistory],
   );
@@ -376,15 +384,15 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
                     onClick={(e) => {
                       if (e.altKey) {
                         e.preventDefault();
-                        onAddToHistory(item);
-                        window.location.href = itemHref(item);
-                        setShowDropdown(false);
+                        performSearch(item, true);
                         return;
                       }
-                      onAddToHistory(item);
-                      setQuery('');
+                      skipNextSuggestFetchRef.current = true;
+                      setQuery(item);
+                      setActiveIndex(-1);
                       setSuggestions([]);
                       setShowDropdown(false);
+                      onAddToHistory(item);
                     }}
                     className="flex flex-1 min-w-0 items-center gap-2 px-3 py-2 text-sm"
                   >
@@ -419,17 +427,15 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
                 onClick={(e) => {
                   if (e.altKey) {
                     e.preventDefault();
-                    onAddToHistory(s);
-                    window.location.href = itemHref(s);
-                    setQuery('');
-                    setSuggestions([]);
-                    setShowDropdown(false);
+                    performSearch(s, true);
                     return;
                   }
-                  onAddToHistory(s);
-                  setQuery('');
+                  skipNextSuggestFetchRef.current = true;
+                  setQuery(s);
+                  setActiveIndex(-1);
                   setSuggestions([]);
                   setShowDropdown(false);
+                  onAddToHistory(s);
                 }}
                 onMouseEnter={() => setActiveIndex(i)}
                 className={cn(
