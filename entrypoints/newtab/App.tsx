@@ -59,6 +59,11 @@ import type { BackupSettings, BookmarkContainerTarget, BookmarkNodeTarget } from
 import { useBoardStore } from './use-board-store';
 import { useSettingsStore } from './use-settings-store';
 import { createBackupPayload, parseBackupPayload } from './backup';
+import {
+  compareBackupSnapshots,
+  createLocalBackupDiffSnapshot,
+  parseBackupDiffSnapshot,
+} from './backup-diff';
 import { BROWSER_TREE_DEFAULT_MAX_ITEMS, IFRAME_DEFAULT_HEIGHT } from './constants';
 import type { DndIndicator } from './drag';
 import { FaviconImage } from './components/FaviconImage';
@@ -784,6 +789,41 @@ export default function App() {
       toast('恢复失败', { description: errorMessage });
     }
   }, [applyBackupData, settings.backup, updateSettings]);
+
+  const handleOpenRemoteBackupDiff = useCallback(async () => {
+    try {
+      const response = await browser.runtime.sendMessage({
+        type: 'WEBDAV_DOWNLOAD',
+        config: settings.backup,
+      });
+
+      if (!response?.success) {
+        throw new Error(response?.error || '备份下载失败');
+      }
+
+      const localSnapshot = createLocalBackupDiffSnapshot(spaceStore, settings);
+      const remoteSnapshot = parseBackupDiffSnapshot(response.payload);
+
+      updateSettings({
+        backup: {
+          ...settings.backup,
+          lastBackupError: undefined,
+        },
+      });
+
+      return compareBackupSnapshots(localSnapshot, remoteSnapshot);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '读取云端差异失败';
+      updateSettings({
+        backup: {
+          ...settings.backup,
+          lastBackupError: errorMessage,
+        },
+      });
+      toast('读取云端差异失败', { description: errorMessage });
+      throw error;
+    }
+  }, [settings, spaceStore, updateSettings]);
 
   const handleTestWebDavConnection = useCallback(async (config: BackupSettings) => {
     const response = await browser.runtime.sendMessage({
@@ -2063,6 +2103,7 @@ export default function App() {
           onTestConnection={handleTestWebDavConnection}
           onManualBackup={handleManualBackup}
           onManualRestore={handleManualRestore}
+          onOpenRemoteDiff={handleOpenRemoteBackupDiff}
         />
 
         <Toaster />

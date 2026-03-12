@@ -11,8 +11,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
+import type { BackupDiffResult } from '../backup-diff';
 import { DEFAULT_SETTINGS } from '../constants';
 import type { BackupSettings } from '../types';
+import { BackupDiffDialog } from './BackupDiffDialog';
 import { ConfirmDialog } from './ConfirmDialog';
 
 function Toggle({
@@ -101,6 +103,7 @@ type WebDavBackupDialogProps = {
   onTestConnection: (config: BackupSettings) => Promise<void>;
   onManualBackup: () => Promise<void>;
   onManualRestore: () => Promise<void>;
+  onOpenRemoteDiff: () => Promise<BackupDiffResult>;
 };
 
 function clampBackupIntervalHours(value: number) {
@@ -121,6 +124,7 @@ export function WebDavBackupDialog({
   onTestConnection,
   onManualBackup,
   onManualRestore,
+  onOpenRemoteDiff,
 }: WebDavBackupDialogProps) {
   const hasSavedAccount = !!(
     backupSettings.webdavUrl.trim() &&
@@ -133,15 +137,19 @@ export function WebDavBackupDialog({
   const [draft, setDraft] = useState(() => getEditableAccount(backupSettings));
   const [lastTestedSignature, setLastTestedSignature] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
-  const [workingAction, setWorkingAction] = useState<null | 'backup' | 'restore'>(null);
+  const [workingAction, setWorkingAction] = useState<null | 'backup' | 'restore' | 'diff'>(null);
   const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
   const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
+  const [diffDialogOpen, setDiffDialogOpen] = useState(false);
+  const [diffResult, setDiffResult] = useState<BackupDiffResult | null>(null);
 
   useEffect(() => {
     if (!open) {
       setEditing(!hasSavedAccount);
       setDraft(getEditableAccount(backupSettings));
       setLastTestedSignature(null);
+      setDiffDialogOpen(false);
+      setDiffResult(null);
     }
   }, [backupSettings, hasSavedAccount, open]);
 
@@ -415,6 +423,24 @@ export function WebDavBackupDialog({
                   size="sm"
                   disabled={!accountUsable || workingAction !== null}
                   onClick={async () => {
+                    setWorkingAction('diff');
+                    try {
+                      const result = await onOpenRemoteDiff();
+                      setDiffResult(result);
+                      setDiffDialogOpen(true);
+                    } finally {
+                      setWorkingAction(null);
+                    }
+                  }}
+                >
+                  {workingAction === 'diff' ? '对比中…' : '查看与云端差异'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!accountUsable || workingAction !== null}
+                  onClick={async () => {
                     setWorkingAction('backup');
                     try {
                       await onManualBackup();
@@ -470,6 +496,12 @@ export function WebDavBackupDialog({
             setWorkingAction(null);
           });
         }}
+      />
+
+      <BackupDiffDialog
+        open={diffDialogOpen}
+        onOpenChange={setDiffDialogOpen}
+        result={diffResult}
       />
     </>
   );

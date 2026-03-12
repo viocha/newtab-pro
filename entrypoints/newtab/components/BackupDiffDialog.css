@@ -1,0 +1,53 @@
+.backup-diff-view,
+.backup-diff-view .jsondiffpatch-delta {
+  display: block;
+  min-width: 100%;
+  padding-left: 0;
+  color: hsl(var(--foreground));
+  font-family: monospace !important;
+  line-height: 1.3;
+  font-size: 11px;
+}
+
+.backup-diff-view ul.jsondiffpatch-delta,
+.backup-diff-view .jsondiffpatch-delta ul {
+  padding-left: 0.8rem;
+  margin: 0;
+}
+
+.backup-diff-view .jsondiffpatch-property-name {
+  color: hsl(var(--foreground));
+  font-family: monospace !important;
+}
+
+.backup-diff-view .jsondiffpatch-added .jsondiffpatch-property-name,
+.backup-diff-view .jsondiffpatch-added .jsondiffpatch-value pre,
+.backup-diff-view .jsondiffpatch-modified .jsondiffpatch-right-value pre,
+.backup-diff-view .jsondiffpatch-textdiff-added {
+  background: rgba(34, 197, 94, 0.18);
+}
+
+.backup-diff-view .jsondiffpatch-deleted .jsondiffpatch-property-name,
+.backup-diff-view .jsondiffpatch-deleted pre,
+.backup-diff-view .jsondiffpatch-modified .jsondiffpatch-left-value pre,
+.backup-diff-view .jsondiffpatch-textdiff-deleted {
+  background: rgba(239, 68, 68, 0.18);
+}
+
+.backup-diff-view .jsondiffpatch-moved .jsondiffpatch-moved-destination {
+  background: rgba(245, 158, 11, 0.18);
+  color: hsl(var(--foreground));
+}
+
+.backup-diff-view .jsondiffpatch-unchanged,
+.backup-diff-view .jsondiffpatch-movedestination {
+  color: hsl(var(--muted-foreground));
+}
+
+.backup-diff-view pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.3;
+  font-size: 11px;
+  font-family: monospace !important;
+}

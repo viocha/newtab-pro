@@ -2,7 +2,7 @@
   "name": "newtab-pro",
   "description": "高效美观的新标签页，支持多分组与小组管理、拖拽排序、左侧标签页快速拖入添加书签、数据导入导出。",
   "private": true,
-  "version": "1.13.2",
+  "version": "1.14.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",
@@ -26,6 +26,7 @@
     "@tailwindcss/vite": "^4.2.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "jsondiffpatch": "^0.7.3",
     "lucide-react": "^0.575.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
