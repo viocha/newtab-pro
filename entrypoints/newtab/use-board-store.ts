@@ -19,7 +19,7 @@ import type {
   Space,
   SpaceStore,
 } from './types';
-import { createFaviconUrl, createId, normalizeUrl, pickGroupGradient } from './utils';
+import { createId, normalizeUrl, pickGroupGradient } from './utils';
 import { GROUP_COLOR_PRESETS } from './constants';
 
 // ── helpers ──────────────────────────────────────────────────────────

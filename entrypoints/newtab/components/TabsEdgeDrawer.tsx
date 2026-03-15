@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowDownUp } from 'lucide-react';
+import { ArrowDownUp, PanelsTopLeft } from 'lucide-react';
 import { useDraggable } from '@dnd-kit/core';
 import { browser, type Browser } from 'wxt/browser';
 
@@ -63,33 +63,39 @@ function TabDraggableItem({
           type="button"
           title={`${title}\n${tab.url}`}
           className={cn(
-            'group flex w-full shrink-0 items-center gap-2.5 rounded-lg py-1.5',
-            'text-left transition-colors duration-100',
-            'hover:bg-accent/80 active:bg-accent',
+            'group flex w-full min-w-0 shrink-0 items-center rounded-xl border border-transparent py-1.5',
+            expanded ? 'gap-2.5 overflow-hidden' : 'justify-center gap-0 overflow-visible',
+            'text-left transition-[background-color,border-color,opacity] duration-150',
+            'hover:border-border/60 hover:bg-muted/45 active:bg-muted/55',
             'cursor-grab active:cursor-grabbing',
             isDragging && 'opacity-40',
-            menuOpen && 'bg-accent/80',
+            menuOpen && 'border-border/60 bg-muted/55',
           )}
-          style={{ paddingLeft: expanded ? 6 : 0, paddingRight: expanded ? 6 : 0 }}
+          style={{ paddingLeft: expanded ? 6 : 1, paddingRight: expanded ? 6 : 1 }}
         >
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-background/60 shadow-sm">
+          <span
+            className={cn(
+              'flex shrink-0 items-center justify-center rounded-lg bg-background/75 shadow-xs ring-1 ring-border/40',
+              expanded ? 'size-7' : 'size-[1.625rem]',
+            )}
+          >
             <FaviconImage
               url={tab.url || ''}
               tabIconUrl={tab.favIconUrl}
-              className="size-4 rounded-[3px] object-contain"
+              className={cn('rounded-[3px] object-contain', expanded ? 'size-4' : 'size-3.5')}
               onError={(e: any) => {
                 e.currentTarget.style.display = 'none';
               }}
             />
           </span>
-          <span
+          <div
             className={cn(
-              'min-w-0 flex-1 truncate text-[12px] text-foreground/85 transition-opacity duration-150 whitespace-nowrap',
-              expanded ? 'opacity-100' : 'opacity-0',
+              'block min-w-0 flex-1 truncate whitespace-nowrap text-[12px] text-foreground/85 transition-[opacity,transform] duration-200',
+              expanded ? 'opacity-100' : 'max-w-0 opacity-0',
             )}
           >
             {title}
-          </span>
+          </div>
         </button>
       </ContextMenuTrigger>
       <ContextMenuContent>
@@ -200,81 +206,100 @@ export function TabsEdgeDrawer() {
   return (
     <aside
       className={cn(
-        'fixed inset-y-0 left-0 z-50 flex flex-col',
-        'bg-card/92 backdrop-blur-md',
-        'border-r border-border/60',
-        'shadow-[2px_0_16px_rgba(0,0,0,0.06)]',
-        'transition-[width] duration-200 ease-out overflow-hidden',
+        'fixed inset-y-1.5 left-1.5 z-50 flex flex-col overflow-hidden rounded-2xl border border-border/60',
+        'bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(245,247,250,0.94))] backdrop-blur-xl',
+        'shadow-[0_12px_30px_rgba(15,23,42,0.08)]',
+        'transition-[width,box-shadow,transform] duration-250 ease-out',
+        expanded ? 'translate-x-0' : 'translate-x-0',
       )}
-      style={{ width: expanded ? EXPANDED_W : COLLAPSED_W }}
+      style={{ width: expanded ? EXPANDED_W : COLLAPSED_W, height: 'calc(100vh - 12px)' }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       {/* 顶部标题 */}
       <div
-        className="flex h-10 shrink-0 items-center justify-between border-b border-border/50 px-3"
-        style={{ width: EXPANDED_W }}
+        className={cn(
+          'flex h-12 shrink-0 items-center border-b border-border/50',
+          expanded ? 'justify-between px-3' : 'justify-center px-1.5',
+        )}
+        style={{ width: expanded ? EXPANDED_W : COLLAPSED_W }}
       >
-        <span
-          className={cn(
-            'whitespace-nowrap text-xs font-semibold text-muted-foreground tracking-wide transition-opacity duration-150',
-            expanded ? 'opacity-100' : 'opacity-0',
-          )}
-        >
-          打开的标签页
-        </span>
-        <Button
-          size="icon"
-          variant="ghost"
-          className={cn(
-            'size-6 transition-opacity duration-150',
-            expanded ? 'opacity-100' : 'opacity-0 pointer-events-none',
-            reversed
-              ? 'bg-primary/15 text-primary hover:bg-primary/25'
-              : 'text-muted-foreground hover:text-foreground',
-          )}
-          onClick={() => setReversed((prev) => {
-            const next = !prev;
-            try { localStorage.setItem(TABS_REVERSED_KEY, String(next)); } catch { }
-            return next;
-          })}
-          title={reversed ? '已颠倒顺序（点击恢复）' : '颠倒顺序'}
-        >
-          <ArrowDownUp className="size-3.5" />
-        </Button>
+        <div className={cn('flex items-center', expanded ? 'gap-2' : 'justify-center')}>
+          <span
+            className={cn(
+              'inline-flex shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary',
+              expanded ? 'size-7' : 'size-[1.625rem]',
+            )}
+          >
+            <PanelsTopLeft className="size-4" />
+          </span>
+          {expanded ? (
+            <div className="min-w-0 transition-[opacity,transform] duration-200">
+              <div className="whitespace-nowrap text-xs font-semibold tracking-wide text-foreground/85">
+                打开的标签页
+              </div>
+              <div className="whitespace-nowrap text-[10px] text-muted-foreground">
+                拖拽到右侧即可快速创建书签
+              </div>
+            </div>
+          ) : null}
+        </div>
+        {expanded ? (
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            className={cn(
+              'transition-[opacity,background-color,color] duration-150',
+              reversed
+                ? 'bg-primary/15 text-primary hover:bg-primary/25'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+            onClick={() => setReversed((prev) => {
+              const next = !prev;
+              try { localStorage.setItem(TABS_REVERSED_KEY, String(next)); } catch { }
+              return next;
+            })}
+            title={reversed ? '已颠倒顺序（点击恢复）' : '颠倒顺序'}
+          >
+            <ArrowDownUp className="size-3.5" />
+          </Button>
+        ) : null}
       </div>
 
       {/* 标签列表 */}
-      <div
-        className="flex flex-col gap-0.5 overflow-y-auto overflow-x-hidden py-2 flex-1"
-        style={{ paddingLeft: expanded ? 6 : 'calc((44px - 28px) / 2)', paddingRight: expanded ? 6 : 'calc((44px - 28px) / 2)' }}
-      >
-        {displayTabs.length === 0 && (
-          <div className="flex items-center justify-center py-6 text-[11px] text-muted-foreground">
-            …
-          </div>
-        )}
-        {displayTabs.map((tab) => (
-          <TabDraggableItem
-            key={tab.id}
-            tab={tab}
-            expanded={expanded}
-            onContextMenuOpenChange={setContextMenuOpen}
-          />
-        ))}
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <div
+          className="flex min-w-0 max-w-full flex-col gap-1 py-3"
+          style={{ paddingLeft: expanded ? 8 : 4, paddingRight: expanded ? 8 : 4 }}
+        >
+          {displayTabs.length === 0 && (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/15 px-3 py-6 text-center text-[11px] text-muted-foreground">
+              <PanelsTopLeft className="mb-2 size-4 opacity-60" />
+              {expanded ? '当前窗口没有可拖拽的普通标签页' : '…'}
+            </div>
+          )}
+          {displayTabs.map((tab) => (
+            <TabDraggableItem
+              key={tab.id}
+              tab={tab}
+              expanded={expanded}
+              onContextMenuOpenChange={setContextMenuOpen}
+            />
+          ))}
+        </div>
       </div>
 
       {/* 底部提示 */}
       <div
         className={cn(
-          'flex shrink-0 items-center border-t border-border/50 px-3 py-1.5',
-          'text-[10px] text-muted-foreground/70 whitespace-nowrap',
-          'transition-opacity duration-150',
+          'flex shrink-0 items-center border-t border-border/50 px-3 py-2',
+          'whitespace-nowrap text-[10px] text-muted-foreground/70',
+          'transition-[opacity,transform] duration-200',
           expanded ? 'opacity-100' : 'opacity-0 pointer-events-none',
         )}
         style={{ width: EXPANDED_W }}
       >
-        拖拽标签页到右侧，快速添加书签
+        右键可复制标题或 URL
       </div>
     </aside>
   );

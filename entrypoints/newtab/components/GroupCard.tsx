@@ -5,6 +5,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { browser } from 'wxt/browser';
 
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -35,7 +36,7 @@ import { BookmarkRows } from './BookmarkRows';
 import { BookmarkIconGrid } from './BookmarkIconGrid';
 import { BrowserTreeView } from './BrowserTreeView';
 import { SubgroupPanel } from './SubgroupPanel';
-import { tryNormalizeUrl, createFaviconUrl } from '../utils';
+import { tryNormalizeUrl } from '../utils';
 import { BROWSER_TREE_DEFAULT_MAX_ITEMS, IFRAME_DEFAULT_HEIGHT } from '../constants';
 import { getGridOpenCounts, openUrlsInGrid, useWindowOpenPrefs } from '../window-open';
 
@@ -154,7 +155,9 @@ function GroupEmptyZone({
 }: {
   groupId: string;
   onDropExternalBookmark: (
+    target: BookmarkContainerTarget,
     payload: { title: string; url: string },
+    insertIndex?: number,
   ) => void;
 }) {
   const target: BookmarkContainerTarget = useMemo(() => ({ groupId, subgroupId: undefined }), [groupId]);
@@ -171,8 +174,8 @@ function GroupEmptyZone({
       ref={setNodeRef}
       id={`dnd-${dndId}`}
       className={cn(
-        'flex h-8 items-center rounded-md px-2 text-[11px] text-muted-foreground',
-        isTarget && 'bg-primary/20',
+        'flex h-9 items-center rounded-lg border border-dashed border-border/70 bg-muted/15 px-3 text-[11px] text-muted-foreground transition-colors',
+        isTarget && 'border-primary/40 bg-primary/10 text-primary',
       )}
       onDragOver={(event) => {
         const payload = readExternalBookmarkFromDrop(event);
@@ -400,7 +403,7 @@ export function GroupCard({
               <GripHorizontal className="size-4" />
             </span>
             <button
-              className="inline-flex size-7 cursor-pointer items-center justify-center rounded-md text-black/80 hover:bg-black/10 hover:text-black"
+              className="inline-flex size-7 cursor-pointer items-center justify-center rounded-md text-black/80 transition-colors hover:bg-black/[0.06] hover:text-black"
               onClick={() => onToggleGroup(group.id)}
             >
               <svg
@@ -419,8 +422,8 @@ export function GroupCard({
             </button>
             <div className="min-w-0 flex-1">
               {editingTitle ? (
-                <input
-                  className="h-6 w-full rounded border border-black/20 bg-white/50 px-2 text-sm text-black outline-none ring-0 placeholder:text-black/50"
+                <Input
+                  className="h-7 border-black/15 bg-white/65 px-2 text-sm text-black shadow-none focus-visible:ring-black/15"
                   value={titleDraft}
                   onChange={(event) => setTitleDraft(event.target.value)}
                   onBlur={commitRename}
@@ -457,7 +460,7 @@ export function GroupCard({
             <Button
               size="icon"
               variant="ghost"
-              className="size-7 text-black/80 hover:bg-black/10 hover:text-black"
+              className="size-7 rounded-md text-black/80 hover:bg-black/[0.06] hover:text-black"
               onClick={() => onOpenManualAdd(groupRootTarget)}
               title="添加书签"
               style={group.viewMode === 'browser-tree' || group.viewMode === 'iframe' ? { display: 'none' } : undefined}
@@ -467,7 +470,7 @@ export function GroupCard({
             <Button
               size="icon"
               variant="ghost"
-              className="size-7 text-black/80 hover:bg-black/10 hover:text-black"
+              className="size-7 rounded-md text-black/80 hover:bg-black/[0.06] hover:text-black"
               onClick={() => onOpenImportAdd(groupRootTarget)}
               title="从书签导入"
               style={group.viewMode === 'browser-tree' || group.viewMode === 'iframe' ? { display: 'none' } : undefined}
@@ -480,8 +483,8 @@ export function GroupCard({
                   size="icon"
                   variant="ghost"
                   className={cn(
-                    'size-7 text-black/80 hover:bg-black/10 hover:text-black',
-                    menuOpen && 'bg-black/10 text-black',
+                    'size-7 rounded-md text-black/80 hover:bg-black/[0.06] hover:text-black',
+                    menuOpen && 'bg-black/[0.06] text-black',
                   )}
                 >
                   <MoreHorizontal className="size-4" />
@@ -553,10 +556,10 @@ export function GroupCard({
                       <div className="flex flex-col gap-1">
                         <span className="text-xs font-medium text-muted-foreground">URL</span>
                         <div className="flex gap-1">
-                          <input
+                          <Input
                             type="url"
                             placeholder="https://example.com"
-                            className="h-7 flex-1 rounded border border-border bg-muted/50 px-2 text-xs outline-none focus:ring-1 focus:ring-primary/50"
+                            className="h-8 flex-1 text-xs shadow-none"
                             value={iframeUrlDraft}
                             onChange={(e) => setIframeUrlDraft(e.target.value)}
                             onBlur={() => {
@@ -581,19 +584,24 @@ export function GroupCard({
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-muted-foreground">高度 (px)</span>
-                        <div className="flex items-center gap-0.5">
-                          <button
-                            className="flex size-6 items-center justify-center rounded text-base hover:bg-muted"
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon-xs"
+                            className="size-7"
                             onClick={() => {
                               const n = Math.max(100, (group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT) - 50);
                               onSetIframeConfig(group.id, iframeUrlDraft.trim(), n);
                             }}
-                          >−</button>
-                          <input
+                          >
+                            −
+                          </Button>
+                          <Input
                             type="number"
                             min={100}
                             max={2000}
-                            className="h-6 w-14 rounded border border-border bg-muted/50 px-1 text-center text-xs"
+                            className="hide-number-spin h-8 w-16 text-center text-xs shadow-none"
                             value={iframeHeightDraft}
                             onChange={(e) => setIframeHeightDraft(e.target.value)}
                             onBlur={() => {
@@ -616,13 +624,18 @@ export function GroupCard({
                               }
                             }}
                           />
-                          <button
-                            className="flex size-6 items-center justify-center rounded text-base hover:bg-muted"
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon-xs"
+                            className="size-7"
                             onClick={() => {
                               const n = Math.min(2000, (group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT) + 50);
                               onSetIframeConfig(group.id, iframeUrlDraft.trim(), n);
                             }}
-                          >+</button>
+                          >
+                            +
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -653,20 +666,25 @@ export function GroupCard({
                   <>
                     <div className="flex items-center justify-between px-2 py-1.5">
                       <span className="text-xs font-medium text-muted-foreground">最多条目数</span>
-                      <div className="flex items-center gap-0.5">
-                        <button
-                          className="flex size-6 items-center justify-center rounded text-base hover:bg-muted"
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon-xs"
+                          className="size-7"
                           onClick={() => {
                             const n = Math.max(5, (group.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS) - 5);
                             onSetBrowserTreeMaxItems(group.id, n);
                             setBtMaxDraft(String(n));
                           }}
-                        >−</button>
-                        <input
+                        >
+                          −
+                        </Button>
+                        <Input
                           type="number"
                           min={5}
                           max={300}
-                          className="h-6 w-12 rounded border border-border bg-muted/50 px-1 text-center text-xs"
+                          className="hide-number-spin h-8 w-14 text-center text-xs shadow-none"
                           value={btMaxDraft}
                           onChange={(e) => setBtMaxDraft(e.target.value)}
                           onBlur={() => {
@@ -689,14 +707,19 @@ export function GroupCard({
                             }
                           }}
                         />
-                        <button
-                          className="flex size-6 items-center justify-center rounded text-base hover:bg-muted"
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon-xs"
+                          className="size-7"
                           onClick={() => {
                             const n = Math.min(300, (group.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS) + 5);
                             onSetBrowserTreeMaxItems(group.id, n);
                             setBtMaxDraft(String(n));
                           }}
-                        >+</button>
+                        >
+                          +
+                        </Button>
                       </div>
                     </div>
                     <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onOpenBrowserFolderPicker(group.id); }}>
@@ -832,28 +855,31 @@ export function GroupCard({
                       allow="fullscreen *; autoplay *; camera *; microphone *; geolocation *; clipboard-read *; clipboard-write *; payment *; encrypted-media *; picture-in-picture *; display-capture *; web-share *; accelerometer *; gyroscope *; magnetometer *; midi *; usb *; bluetooth *; hid *; serial *; gamepad *; screen-wake-lock *; idle-detection *; storage-access *; xr-spatial-tracking *; publickey-credentials-get *"
                     />
                   ) : (
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-muted/30">
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/70 bg-muted/20 px-4">
                       <Globe className="size-8 text-muted-foreground/40" />
                       <p className="max-w-[80%] truncate text-xs text-muted-foreground" title={group.iframeUrl}>
                         {group.iframeUrl}
                       </p>
-                      <button
-                        className="flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20"
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
                         onClick={() => setIframeActivated(true)}
                       >
                         <Play className="size-3 fill-current" />
                         点击加载
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-2 py-4 px-3">
+                <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/70 bg-muted/15 px-4 py-5">
                   <p className="text-xs text-muted-foreground">请输入要嵌入的网页 URL</p>
-                  <input
+                  <Input
                     type="url"
                     placeholder="https://example.com"
-                    className="h-8 w-full max-w-sm rounded border border-border bg-muted/50 px-2 text-xs outline-none focus:ring-1 focus:ring-primary/50"
+                    className="h-9 w-full max-w-sm text-xs shadow-none"
                     value={iframeUrlDraft}
                     onChange={(e) => setIframeUrlDraft(e.target.value)}
                     onBlur={() => {
@@ -876,12 +902,14 @@ export function GroupCard({
                       }
                     }}
                   />
-                  <button
-                    className="text-xs text-primary underline underline-offset-2 hover:opacity-80"
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => onOpenIframeUrlPicker(group.id)}
                   >
                     或从书签选择
-                  </button>
+                  </Button>
                 </div>
               )
             ) : group.viewMode === 'browser-tree' ? (
@@ -891,14 +919,16 @@ export function GroupCard({
                   maxItems={group.browserTreeMaxItems}
                 />
               ) : (
-                <div className="flex flex-col items-center gap-2 py-4">
+                <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/70 bg-muted/15 px-4 py-5">
                   <p className="text-xs text-muted-foreground">尚未选择书签文件夹</p>
-                  <button
-                    className="text-xs text-primary underline underline-offset-2 hover:opacity-80"
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => onOpenBrowserFolderPicker(group.id)}
                   >
                     点此选择文件夹
-                  </button>
+                  </Button>
                 </div>
               )
             ) : group.bookmarks.length === 0 && group.subgroups.length === 0 ? (

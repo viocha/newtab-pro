@@ -170,7 +170,11 @@ export function SubgroupPanel({
           >
             <GripVertical className="size-3.5" />
           </span>
-          <button className="inline-flex size-5 cursor-pointer items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-accent-foreground" onClick={() => onToggleSubgroup(target)} title="折叠小组">
+          <button
+            className="inline-flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground"
+            onClick={() => onToggleSubgroup(target)}
+            title="折叠小组"
+          >
             {subgroup.collapsed ? <ChevronRight className="size-3.5" /> : <ChevronDown className="size-3.5" />}
           </button>
           <div className="min-w-0 flex-1">
@@ -209,10 +213,22 @@ export function SubgroupPanel({
             'flex items-center gap-0.5 transition-opacity',
             menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
           )}>
-            <Button size="icon" variant="ghost" className="size-6" title="手动添加" onClick={() => onOpenManualAdd(bookmarkTarget)}>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-6 rounded-md text-muted-foreground hover:bg-muted/45 hover:text-foreground"
+              title="手动添加"
+              onClick={() => onOpenManualAdd(bookmarkTarget)}
+            >
               <Plus className="size-3.5" />
             </Button>
-            <Button size="icon" variant="ghost" className="size-6" title="从书签导入" onClick={() => onOpenImportAdd(bookmarkTarget)}>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-6 rounded-md text-muted-foreground hover:bg-muted/45 hover:text-foreground"
+              title="从书签导入"
+              onClick={() => onOpenImportAdd(bookmarkTarget)}
+            >
               <FolderTree className="size-3.5" />
             </Button>
             <DropdownMenu onOpenChange={setMenuOpen}>
@@ -220,7 +236,10 @@ export function SubgroupPanel({
                 <Button
                   size="icon"
                   variant="ghost"
-                  className={cn('size-6', menuOpen && 'bg-accent text-accent-foreground')}
+                  className={cn(
+                    'size-6 rounded-md text-muted-foreground hover:bg-muted/45 hover:text-foreground',
+                    menuOpen && 'bg-muted/45 text-foreground',
+                  )}
                 >
                   <MoreHorizontal className="size-3.5" />
                 </Button>

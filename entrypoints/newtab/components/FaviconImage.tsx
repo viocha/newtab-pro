@@ -12,7 +12,7 @@ async function getChromePlaceholderSize() {
   if (!chromePlaceholderPromise) {
     chromePlaceholderPromise = (async () => {
       try {
-        const dummyUrl = browser.runtime.getURL(`/_favicon/?pageUrl=https://this-is-a-placeholder-check-${Date.now()}.com&size=64`);
+        const dummyUrl = runtimeGetUrl(`/_favicon/?pageUrl=https://this-is-a-placeholder-check-${Date.now()}.com&size=64`);
         const blob = await fetch(dummyUrl).then((r) => r.blob());
         return blob.size;
       } catch {
@@ -46,10 +46,12 @@ async function getGooglePlaceholderSize() {
 }
 
 // ── helpers ───────────────────────────────────────────────────────────
+function runtimeGetUrl(path: string) {
+  return browser.runtime?.getURL ? browser.runtime.getURL(path as never) : '';
+}
+
 function buildChromeFavUrl(url: string) {
-  return browser.runtime?.getURL
-    ? browser.runtime.getURL(`/_favicon/?pageUrl=${encodeURIComponent(url)}&size=64`)
-    : '';
+  return runtimeGetUrl(`/_favicon/?pageUrl=${encodeURIComponent(url)}&size=64`);
 }
 
 function buildGoogleFavUrl(hostname: string) {

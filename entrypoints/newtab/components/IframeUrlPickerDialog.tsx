@@ -18,6 +18,17 @@ import { FaviconImage } from './FaviconImage';
 
 type TreeNode = Browser.bookmarks.BookmarkTreeNode;
 
+function createTreeNode(node: Partial<TreeNode> & Pick<TreeNode, 'id' | 'title'>): TreeNode {
+  return {
+    dateAdded: 0,
+    dateGroupModified: 0,
+    index: 0,
+    parentId: '',
+    syncing: false,
+    ...node,
+  };
+}
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -55,20 +66,22 @@ function spacesToTreeNodes(spaces: Space[]): TreeNode[] {
       const children: TreeNode[] = [];
       // 分组直属书签
       for (const bm of group.bookmarks) {
-        children.push({ id: `app-bm-${bm.id}`, title: bm.title, url: bm.url });
+        children.push(createTreeNode({ id: `app-bm-${bm.id}`, title: bm.title, url: bm.url }));
       }
       // 小组（过滤空小组）
       for (const sg of group.subgroups) {
         if (sg.bookmarks.length === 0) continue;
-        const sgChildren: TreeNode[] = sg.bookmarks.map((bm) => ({
-          id: `app-bm-${bm.id}`,
-          title: bm.title,
-          url: bm.url,
-        }));
-        children.push({ id: `app-sg-${sg.id}`, title: sg.title, children: sgChildren });
+        const sgChildren: TreeNode[] = sg.bookmarks.map((bm) =>
+          createTreeNode({
+            id: `app-bm-${bm.id}`,
+            title: bm.title,
+            url: bm.url,
+          }),
+        );
+        children.push(createTreeNode({ id: `app-sg-${sg.id}`, title: sg.title, children: sgChildren }));
       }
       if (children.length === 0) continue; // 过滤空分组
-      result.push({ id: `app-gr-${group.id}`, title: group.title, children });
+      result.push(createTreeNode({ id: `app-gr-${group.id}`, title: group.title, children }));
     }
   }
   return result;

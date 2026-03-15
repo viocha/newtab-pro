@@ -1507,7 +1507,7 @@ export default function App() {
                 size="icon"
                 variant="ghost"
                 title="帮助"
-                className="text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:bg-muted/45 hover:text-foreground"
                 onClick={() => setHelpOpen(true)}
               >
                 <HelpCircle className="size-4" />
@@ -1520,8 +1520,8 @@ export default function App() {
                     variant="ghost"
                     title="设置"
                     className={cn(
-                      'text-muted-foreground hover:text-foreground',
-                      settingsMenuOpen && 'bg-accent text-accent-foreground',
+                      'text-muted-foreground hover:bg-muted/45 hover:text-foreground',
+                      settingsMenuOpen && 'bg-muted/45 text-foreground',
                     )}
                   >
                     <Settings className="size-4" />

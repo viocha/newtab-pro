@@ -128,7 +128,7 @@ export function BackupDiffDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] w-[min(96vw,960px)] flex-col gap-3 overflow-hidden" aria-describedby={undefined}>
+      <DialogContent className="flex max-h-[90vh] w-[min(96vw,1040px)] flex-col gap-3 overflow-hidden sm:max-w-[1040px]" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>与云端备份的差异</DialogTitle>
           <DialogDescription>

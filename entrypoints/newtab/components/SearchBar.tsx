@@ -667,12 +667,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuLabel className="flex items-center justify-between">
-              <span>批量搜索引擎</span>
-              <span className="text-[10px] font-normal text-muted-foreground">
-                {selectedBatchEngines.length}/6
-              </span>
-            </DropdownMenuLabel>
+            <DropdownMenuLabel>批量搜索引擎</DropdownMenuLabel>
             {settings.searchEngines.map((engine) => {
               const checked = selectedBatchEngineIds.includes(engine.id);
               const disabled = !checked && selectedBatchEngineIds.length >= 6;
@@ -752,7 +747,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
                   key={item}
                   className={cn(
                     'group relative flex items-center',
-                    i === activeIndex && 'bg-accent/75',
+                    i === activeIndex && 'bg-muted/40',
                   )}
                   onMouseEnter={() => setActiveIndex(i)}
                 >
@@ -816,8 +811,8 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
                 }}
                 onMouseEnter={() => setActiveIndex(i)}
                 className={cn(
-                  'flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent/75 transition-colors',
-                  i === activeIndex && 'bg-accent/75',
+                  'flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-muted/40',
+                  i === activeIndex && 'bg-muted/40',
                 )}
               >
                 <Search className="size-3.5 shrink-0 text-muted-foreground/60" />

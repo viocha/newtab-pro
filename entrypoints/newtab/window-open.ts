@@ -10,7 +10,7 @@ export type WindowOpenPrefs = {
 
 export type GridOpenOriginWindow = {
   id: number;
-  state?: chrome.windows.WindowState;
+  state?: 'normal' | 'minimized' | 'maximized' | 'fullscreen' | 'locked-fullscreen';
 };
 
 const DEFAULT_WINDOW_OPEN_PREFS: WindowOpenPrefs = {

@@ -1,12 +1,16 @@
-import { Button } from '@/components/ui/button';
+import { TriangleAlert } from 'lucide-react';
+
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -30,28 +34,36 @@ export function ConfirmDialog({
   onConfirm,
 }: ConfirmDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[min(88vw,340px)]" aria-describedby={undefined}>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {description ? <DialogDescription>{description}</DialogDescription> : null}
-        </DialogHeader>
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-            {cancelText}
-          </Button>
-          <Button
-            type="button"
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent
+        size="sm"
+        className="border-border/60 bg-background/95 shadow-xl"
+      >
+        <AlertDialogHeader>
+          <AlertDialogMedia
+            className={
+              destructive
+                ? 'bg-destructive/10 text-destructive'
+                : 'bg-primary/10 text-primary'
+            }
+          >
+            <TriangleAlert className="size-7" />
+          </AlertDialogMedia>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          {description ? (
+            <AlertDialogDescription>{description}</AlertDialogDescription>
+          ) : null}
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{cancelText}</AlertDialogCancel>
+          <AlertDialogAction
             variant={destructive ? 'destructive' : 'default'}
-            onClick={() => {
-              onConfirm();
-              onOpenChange(false);
-            }}
+            onClick={onConfirm}
           >
             {confirmText}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
