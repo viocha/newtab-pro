@@ -16,8 +16,6 @@ export type GridOpenOriginWindow = {
 const DEFAULT_WINDOW_OPEN_PREFS: WindowOpenPrefs = {
   compactGridWindows: false,
 };
-const GRID_WINDOW_OVERLAP_X = 8;
-const GRID_WINDOW_OVERLAP_Y = 8;
 
 function getGridDimensions(count: number) {
   const cols = Math.ceil(Math.sqrt(count));
@@ -25,23 +23,29 @@ function getGridDimensions(count: number) {
   return { cols, rows };
 }
 
+function getAxisSegmentBounds(index: number, segments: number, total: number) {
+  const start = Math.floor((total * index) / segments);
+  const end = index === segments - 1 ? total : Math.floor((total * (index + 1)) / segments);
+
+  return {
+    start,
+    size: Math.max(1, end - start),
+  };
+}
+
 function getGridBounds(index: number, count: number) {
   const { cols, rows } = getGridDimensions(count);
   const screenWithOffsets = window.screen as Screen & { availLeft?: number; availTop?: number };
   const leftBase = typeof screenWithOffsets.availLeft === 'number' ? screenWithOffsets.availLeft : 0;
   const topBase = typeof screenWithOffsets.availTop === 'number' ? screenWithOffsets.availTop : 0;
-  const totalWidth = Math.max(960, window.screen.availWidth);
-  const totalHeight = Math.max(640, window.screen.availHeight);
+  const totalWidth = window.screen.availWidth || window.screen.width || window.innerWidth || 1;
+  const totalHeight = window.screen.availHeight || window.screen.height || window.innerHeight || 1;
   const col = index % cols;
   const row = Math.floor(index / cols);
-  const leftEdge = Math.round((totalWidth * col) / cols);
-  const rightEdge = Math.round((totalWidth * (col + 1)) / cols);
-  const topEdge = Math.round((totalHeight * row) / rows);
-  const bottomEdge = Math.round((totalHeight * (row + 1)) / rows);
-  const left = leftBase + leftEdge - (col > 0 ? GRID_WINDOW_OVERLAP_X : 0);
-  const top = topBase + topEdge - (row > 0 ? GRID_WINDOW_OVERLAP_Y : 0);
-  const width = rightEdge - leftEdge + (col > 0 ? GRID_WINDOW_OVERLAP_X : 0);
-  const height = bottomEdge - topEdge + (row > 0 ? GRID_WINDOW_OVERLAP_Y : 0);
+  const { start: leftEdge, size: width } = getAxisSegmentBounds(col, cols, totalWidth);
+  const { start: topEdge, size: height } = getAxisSegmentBounds(row, rows, totalHeight);
+  const left = leftBase + leftEdge;
+  const top = topBase + topEdge;
 
   return { left, top, width, height };
 }
