@@ -60,7 +60,7 @@ function HelpSection({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="gap-0 overflow-hidden border-border/60 bg-background/95 shadow-sm">
+    <Card className="gap-0 overflow-hidden border-border/60 bg-background shadow-sm">
       <CardHeader className="gap-0 border-b border-border/60 bg-muted/20 px-5 py-4">
         <CardTitle className="flex items-center gap-2 text-sm">
           <span className="inline-flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -103,8 +103,8 @@ type HelpDialogProps = {
 export function HelpDialog({ open, onOpenChange, settings }: HelpDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[min(96vw,760px)] overflow-hidden border-border/60 bg-background/95 p-0 shadow-xl sm:max-w-[760px]">
-        <DialogHeader className="border-b border-border/60 bg-background/95 px-6 py-4">
+      <DialogContent className="w-[min(96vw,760px)] overflow-hidden border-border/60 bg-background p-0 shadow-xl sm:max-w-[760px]">
+        <DialogHeader className="border-b border-border/60 bg-background px-6 py-4">
           <DialogTitle className="flex items-center gap-2">
             <span className="inline-flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Info className="size-4" />

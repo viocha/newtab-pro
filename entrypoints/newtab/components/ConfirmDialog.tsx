@@ -37,7 +37,7 @@ export function ConfirmDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent
         size="sm"
-        className="border-border/60 bg-background/95 shadow-xl"
+        className="border-border/60 bg-background shadow-xl"
       >
         <AlertDialogHeader>
           <AlertDialogMedia

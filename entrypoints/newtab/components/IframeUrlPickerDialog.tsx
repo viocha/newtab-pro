@@ -265,7 +265,7 @@ export function IframeUrlPickerDialog({ open, onOpenChange, initialUrl, onConfir
               {visibleAppNodes.length > 0 && (
                 <>
                   {hasMultiSection && (
-                    <div className="sticky top-0 z-10 bg-background/95 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur-sm">
+                    <div className="sticky top-0 z-10 bg-background px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur-sm">
                       应用书签
                     </div>
                   )}
@@ -276,7 +276,7 @@ export function IframeUrlPickerDialog({ open, onOpenChange, initialUrl, onConfir
               {visibleTree.length > 0 && (
                 <>
                   {hasMultiSection && (
-                    <div className="sticky top-0 z-10 bg-background/95 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur-sm border-t border-border/40 mt-1">
+                    <div className="sticky top-0 z-10 bg-background px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur-sm border-t border-border/40 mt-1">
                       浏览器书签
                     </div>
                   )}

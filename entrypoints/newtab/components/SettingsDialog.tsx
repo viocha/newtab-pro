@@ -68,7 +68,7 @@ function SettingsSection({
   contentClassName?: string;
 }) {
   return (
-    <Card className={cn('gap-0 overflow-hidden border-border/60 bg-background/95 shadow-sm', className)}>
+    <Card className={cn('gap-0 overflow-hidden border-border/60 bg-background shadow-sm', className)}>
       <CardHeader className="gap-0 border-b border-border/50 bg-muted/15 px-4 py-2.5">
         <CardTitle className="text-sm">{title}</CardTitle>
       </CardHeader>
@@ -274,7 +274,7 @@ function EngineFormDialog({ state, onClose, onSubmit }: EngineFormDialogProps) {
 
   return (
     <Dialog open={!!state} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[min(94vw,440px)] border-border/60 bg-background/95 shadow-xl sm:max-w-[440px]" aria-describedby={undefined}>
+      <DialogContent className="w-[min(94vw,440px)] border-border/60 bg-background shadow-xl sm:max-w-[440px]" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>{isAdd ? '添加搜索引擎' : '编辑搜索引擎'}</DialogTitle>
         </DialogHeader>
@@ -535,7 +535,7 @@ export function SettingsDialog({
             if (document.querySelector('[data-shortcut-recording]')) e.preventDefault();
           }}
         >
-          <SheetHeader className="gap-0 border-b border-border/50 bg-background/95 px-4 py-2.5">
+          <SheetHeader className="gap-0 border-b border-border/50 bg-background px-4 py-2.5">
             <div className="flex min-h-8 items-center gap-2.5">
               {view === 'engines' ? (
                 <Button
@@ -558,7 +558,7 @@ export function SettingsDialog({
           </SheetHeader>
 
           <ScrollArea className="min-h-0 flex-1">
-            <div className="space-y-2 px-4 py-2.5">
+            <div className="space-y-2 p-4">
               {view === 'main' ? (
                 <>
                   <SettingsSection title="搜索栏">
@@ -654,7 +654,7 @@ export function SettingsDialog({
                 </>
               ) : (
                 <>
-                  <Card className="gap-0 overflow-hidden border-border/60 bg-background/95 shadow-sm">
+                  <Card className="gap-0 overflow-hidden border-border/60 bg-background shadow-sm">
                     <CardHeader className="items-center gap-0 border-b border-border/50 bg-muted/15 px-4 py-2.5">
                       <CardTitle className="text-sm">已配置引擎</CardTitle>
                       <CardAction>

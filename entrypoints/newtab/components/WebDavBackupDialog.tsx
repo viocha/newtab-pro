@@ -51,7 +51,7 @@ function SectionCard({
   contentClassName?: string;
 }) {
   return (
-    <Card className={cn('gap-0 overflow-hidden border-border/60 bg-background/95 shadow-sm', className)}>
+    <Card className={cn('gap-0 overflow-hidden border-border/60 bg-background shadow-sm', className)}>
       <CardHeader className="items-center gap-0 border-b border-border/50 bg-muted/15 px-4 py-2.5">
         <CardTitle className="text-sm">{title}</CardTitle>
         {action ? <CardAction>{action}</CardAction> : null}
@@ -218,15 +218,15 @@ export function WebDavBackupDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="w-[min(96vw,760px)] overflow-hidden border-border/60 bg-background/95 p-0 shadow-xl sm:max-w-[760px]"
+          className="w-[min(96vw,760px)] overflow-hidden border-border/60 bg-background p-0 shadow-xl sm:max-w-[760px]"
           aria-describedby={undefined}
         >
-          <DialogHeader className="border-b border-border/50 bg-background/95 px-5 py-3.5">
+          <DialogHeader className="border-b border-border/50 bg-background px-5 py-3.5">
             <DialogTitle>WebDAV 备份</DialogTitle>
           </DialogHeader>
 
           <ScrollArea className="max-h-[min(78vh,660px)]">
-            <div className="space-y-2 px-4 py-2.5">
+            <div className="space-y-2 p-4">
               <SectionCard
                 title="WebDAV 账户"
                 action={
