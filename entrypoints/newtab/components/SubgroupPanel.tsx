@@ -352,6 +352,13 @@ export function SubgroupPanel({
                   <AppWindow className="mr-2 size-3.5" />
                   在新窗口打开全部
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={subgroup.bookmarks.length === 0}
+                  onSelect={() => browser.windows.create({ url: subgroup.bookmarks.map(b => b.url), incognito: true })}
+                >
+                  <EyeOff className="mr-2 size-3.5" />
+                  在隐私窗口打开全部
+                </DropdownMenuItem>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger disabled={subgroup.bookmarks.length === 0}>
                     <PanelsTopLeft className="mr-2 size-3.5" />
@@ -376,13 +383,6 @@ export function SubgroupPanel({
                     ))}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
-                <DropdownMenuItem
-                  disabled={subgroup.bookmarks.length === 0}
-                  onSelect={() => browser.windows.create({ url: subgroup.bookmarks.map(b => b.url), incognito: true })}
-                >
-                  <EyeOff className="mr-2 size-3.5" />
-                  在隐私窗口打开全部
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

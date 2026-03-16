@@ -54,11 +54,17 @@ type Props = {
    * 实际高度 = maxItems × ITEM_HEIGHT_PX。
    */
   maxItems?: number;
+  /** 贴合父容器高度，由自身承担滚动 */
+  fitParentHeight?: boolean;
+  /** 关闭自定义上下文菜单，改用浏览器原生右键菜单 */
+  disableCustomContextMenu?: boolean;
 };
 
 export function BrowserTreeView({
   folderId,
   maxItems = BROWSER_TREE_DEFAULT_MAX_ITEMS,
+  fitParentHeight = false,
+  disableCustomContextMenu = false,
 }: Props) {
   const { compactGridWindows, setCompactGridWindows } = useWindowOpenPrefs();
   const [nodes, setNodes] = useState<TreeNode[]>([]);
@@ -138,42 +144,53 @@ export function BrowserTreeView({
 
       if (isFolder) {
         const folderUrls = collectNodeUrls(node);
+        const folderRow = (
+          <div
+            className={cn(
+              'flex cursor-pointer select-none items-center gap-1 overflow-hidden rounded px-1 py-1 text-xs hover:bg-accent/60',
+              contextOpenId === node.id && !disableCustomContextMenu && 'bg-accent/60',
+            )}
+            style={{ paddingLeft: `${indent}px` }}
+            onClick={() => hasChildren && toggleExpand(node.id)}
+          >
+            <span className="inline-flex size-4 shrink-0 items-center justify-center text-muted-foreground"
+              onClick={(e) => { e.stopPropagation(); if (hasChildren) toggleExpand(node.id); }}
+            >
+              {hasChildren ? (
+                isExpanded
+                  ? <ChevronDown className="size-3" />
+                  : <ChevronRight className="size-3" />
+              ) : (
+                <span className="size-3" />
+              )}
+            </span>
+
+            <span className="inline-flex size-4 shrink-0 items-center justify-center">
+              {isExpanded
+                ? <FolderOpen className="size-3.5 text-amber-500" />
+                : <Folder className="size-3.5 text-amber-500" />}
+            </span>
+
+            <span className="min-w-0 flex-1 truncate text-foreground/90">
+              {node.title || '未命名文件夹'}
+            </span>
+          </div>
+        );
+
+        if (disableCustomContextMenu) {
+          return (
+            <React.Fragment key={key}>
+              {folderRow}
+              {hasChildren && isExpanded && renderNodes(node.children!, depth + 1)}
+            </React.Fragment>
+          );
+        }
+
         return (
           <React.Fragment key={key}>
           <ContextMenu onOpenChange={(open) => setContextOpenId(open ? node.id : null)}>
             <ContextMenuTrigger asChild>
-              <div
-                className={cn(
-                  'flex cursor-pointer select-none items-center gap-1 overflow-hidden rounded px-1 py-1 text-xs hover:bg-accent/60',
-                  contextOpenId === node.id && 'bg-accent/60',
-                )}
-                style={{ paddingLeft: `${indent}px` }}
-                onClick={() => hasChildren && toggleExpand(node.id)}
-              >
-                {/* 展开箭头 */}
-                <span className="inline-flex size-4 shrink-0 items-center justify-center text-muted-foreground"
-                  onClick={(e) => { e.stopPropagation(); if (hasChildren) toggleExpand(node.id); }}
-                >
-                  {hasChildren ? (
-                    isExpanded
-                      ? <ChevronDown className="size-3" />
-                      : <ChevronRight className="size-3" />
-                  ) : (
-                    <span className="size-3" />
-                  )}
-                </span>
-
-                {/* 文件夹图标 */}
-                <span className="inline-flex size-4 shrink-0 items-center justify-center">
-                  {isExpanded
-                    ? <FolderOpen className="size-3.5 text-amber-500" />
-                    : <Folder className="size-3.5 text-amber-500" />}
-                </span>
-
-                <span className="min-w-0 flex-1 truncate text-foreground/90">
-                  {node.title || '未命名文件夹'}
-                </span>
-              </div>
+              {folderRow}
             </ContextMenuTrigger>
             <ContextMenuContent>
               {folderUrls.length > 0 && (
@@ -185,6 +202,10 @@ export function BrowserTreeView({
                   <ContextMenuItem onSelect={() => void browser.windows.create({ url: folderUrls })}>
                     <AppWindow className="mr-2 size-3.5" />
                     在新窗口打开全部
+                  </ContextMenuItem>
+                  <ContextMenuItem onSelect={() => void browser.windows.create({ url: folderUrls, incognito: true })}>
+                    <EyeOff className="mr-2 size-3.5" />
+                    在隐私窗口打开全部
                   </ContextMenuItem>
                   <ContextMenuSub>
                     <ContextMenuSubTrigger>
@@ -210,10 +231,6 @@ export function BrowserTreeView({
                       ))}
                     </ContextMenuSubContent>
                   </ContextMenuSub>
-                  <ContextMenuItem onSelect={() => void browser.windows.create({ url: folderUrls, incognito: true })}>
-                    <EyeOff className="mr-2 size-3.5" />
-                    在隐私窗口打开全部
-                  </ContextMenuItem>
                   <ContextMenuSeparator />
                 </>
               )}
@@ -229,40 +246,46 @@ export function BrowserTreeView({
       }
 
       // 书签节点：左键在新标签页打开，中键后台打开，右键显示菜单
+      const bookmarkRow = (
+        <a
+          href={node.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={node.url ? `${node.title}\n${node.url}` : node.title}
+          className={cn(
+            'flex select-none items-center gap-1 overflow-hidden rounded px-1 py-1 text-xs hover:bg-accent/60',
+            contextOpenId === node.id && !disableCustomContextMenu && 'bg-accent/60',
+          )}
+          style={{ paddingLeft: `${indent + 4}px`, textDecoration: 'none', color: 'inherit' }}
+          onClick={(e) => {
+            e.preventDefault();
+            if (node.url) void browser.tabs.create({ url: node.url });
+          }}
+        >
+          <span className="inline-flex size-4 shrink-0 items-center justify-center" />
+
+          <span className="inline-flex size-4 shrink-0 items-center justify-center">
+            <FaviconImage
+              url={node.url || ''}
+              className="size-3.5 rounded-[3px]"
+              loading="lazy"
+            />
+          </span>
+
+          <span className="min-w-0 flex-1 truncate text-foreground/80">
+            {node.title || node.url || '未命名'}
+          </span>
+        </a>
+      );
+
+      if (disableCustomContextMenu) {
+        return <React.Fragment key={key}>{bookmarkRow}</React.Fragment>;
+      }
+
       return (
         <ContextMenu key={key} onOpenChange={(open) => setContextOpenId(open ? node.id : null)}>
           <ContextMenuTrigger asChild>
-            <a
-              href={node.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={node.url ? `${node.title}\n${node.url}` : node.title}
-              className={cn(
-                'flex select-none items-center gap-1 overflow-hidden rounded px-1 py-1 text-xs hover:bg-accent/60',
-                contextOpenId === node.id && 'bg-accent/60',
-              )}
-              style={{ paddingLeft: `${indent + 4}px`, textDecoration: 'none', color: 'inherit' }}
-              onClick={(e) => {
-                e.preventDefault();
-                if (node.url) void browser.tabs.create({ url: node.url });
-              }}
-            >
-              {/* 占位，与展开箭头列对齐 */}
-              <span className="inline-flex size-4 shrink-0 items-center justify-center" />
-
-              {/* Favicon */}
-              <span className="inline-flex size-4 shrink-0 items-center justify-center">
-                <FaviconImage
-                  url={node.url || ''}
-                  className="size-3.5 rounded-[3px]"
-                  loading="lazy"
-                />
-              </span>
-
-              <span className="min-w-0 flex-1 truncate text-foreground/80">
-                {node.title || node.url || '未命名'}
-              </span>
-            </a>
+            {bookmarkRow}
           </ContextMenuTrigger>
           <ContextMenuContent>
             <ContextMenuItem onSelect={() => navigator.clipboard.writeText(node.url ?? '')}>
@@ -297,7 +320,9 @@ export function BrowserTreeView({
 
   // 初次加载时用固定高度占位，避免高度闪烁
   if (loading && nodes.length === 0) {
-    return <div style={{ height: maxHeight }} className="rounded" />;
+    return fitParentHeight
+      ? <div className="h-full min-h-0 rounded" />
+      : <div style={{ height: maxHeight }} className="rounded" />;
   }
 
   if (error) {
@@ -317,7 +342,10 @@ export function BrowserTreeView({
   }
 
   return (
-    <div style={{ maxHeight, overflowY: 'auto' }} className="rounded">
+    <div
+      style={fitParentHeight ? { height: '100%', overflowY: 'auto' } : { maxHeight, overflowY: 'auto' }}
+      className="min-h-0 rounded"
+    >
       <div className="overflow-x-hidden py-0.5 pr-1">
         {renderNodes(nodes, 0)}
       </div>

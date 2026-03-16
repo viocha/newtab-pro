@@ -804,6 +804,13 @@ export function GroupCard({
                   <AppWindow className="mr-2 size-3.5" />
                   在新窗口打开全部
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={allUrls.length === 0}
+                  onSelect={() => browser.windows.create({ url: allUrls, incognito: true })}
+                >
+                  <EyeOff className="mr-2 size-3.5" />
+                  在隐私窗口打开全部
+                </DropdownMenuItem>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger disabled={allUrls.length === 0}>
                     <PanelsTopLeft className="mr-2 size-3.5" />
@@ -828,13 +835,6 @@ export function GroupCard({
                     ))}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
-                <DropdownMenuItem
-                  disabled={allUrls.length === 0}
-                  onSelect={() => browser.windows.create({ url: allUrls, incognito: true })}
-                >
-                  <EyeOff className="mr-2 size-3.5" />
-                  在隐私窗口打开全部
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
