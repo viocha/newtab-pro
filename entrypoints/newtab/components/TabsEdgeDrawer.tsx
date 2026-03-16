@@ -272,12 +272,6 @@ export function TabsEdgeDrawer() {
           className="flex min-w-0 max-w-full flex-col gap-1 py-3"
           style={{ paddingLeft: expanded ? 8 : 4, paddingRight: expanded ? 8 : 4 }}
         >
-          {displayTabs.length === 0 && (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/15 px-3 py-6 text-center text-[11px] text-muted-foreground">
-              <PanelsTopLeft className="mb-2 size-4 opacity-60" />
-              {expanded ? '当前窗口没有可拖拽的普通标签页' : '…'}
-            </div>
-          )}
           {displayTabs.map((tab) => (
             <TabDraggableItem
               key={tab.id}
