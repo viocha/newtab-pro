@@ -133,7 +133,7 @@ export function BackupDiffDialog({
           <DialogTitle>与云端备份的差异</DialogTitle>
           <DialogDescription>
             {result?.remoteExportedAt
-              ? `云端备份时间 ${new Date(result.remoteExportedAt).toLocaleString('zh-CN')}，当前方向为 ${direction === 'local-to-remote' ? '本地 -> 云端' : '云端 -> 本地'}。`
+              ? `云端备份时间 ${new Date(result.remoteExportedAt).toLocaleString('zh-CN')}`
               : `当前方向为 ${direction === 'local-to-remote' ? '本地 -> 云端' : '云端 -> 本地'}。`}
           </DialogDescription>
         </DialogHeader>
@@ -234,11 +234,6 @@ export function BackupDiffDialog({
                 </div>
               </div>
             )}
-
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <History className="size-3.5" />
-              已忽略备份时间戳，且默认折叠未变化项。
-            </div>
           </>
         ) : null}
       </DialogContent>
