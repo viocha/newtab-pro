@@ -155,6 +155,7 @@ export function WebDavBackupDialog({
   const [lastTestedSignature, setLastTestedSignature] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
   const [workingAction, setWorkingAction] = useState<null | 'backup' | 'restore' | 'diff'>(null);
+  const [intervalDraft, setIntervalDraft] = useState(() => String(backupSettings.autoBackupIntervalHours));
   const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
   const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
   const [diffDialogOpen, setDiffDialogOpen] = useState(false);
@@ -170,6 +171,10 @@ export function WebDavBackupDialog({
     }
   }, [backupSettings, hasSavedAccount, open]);
 
+  useEffect(() => {
+    setIntervalDraft(String(backupSettings.autoBackupIntervalHours));
+  }, [backupSettings.autoBackupIntervalHours]);
+
   const currentSignature = useMemo(() => toSignature(draft), [draft]);
   const connectionVerified = currentSignature === lastTestedSignature;
   const accountUsable = hasSavedAccount && !editing;
@@ -178,6 +183,12 @@ export function WebDavBackupDialog({
     setDraft((prev) => ({ ...prev, ...partial }));
     setLastTestedSignature(null);
   }, []);
+
+  const commitIntervalDraft = useCallback(() => {
+    const normalized = clampBackupIntervalHours(Number(intervalDraft));
+    setIntervalDraft(String(normalized));
+    onUpdateBackupSettings({ autoBackupIntervalHours: normalized });
+  }, [intervalDraft, onUpdateBackupSettings]);
 
   const handleTestConnection = useCallback(async () => {
     setTesting(true);
@@ -359,11 +370,19 @@ export function WebDavBackupDialog({
                           min={1}
                           max={168}
                           disabled={!accountUsable}
-                          value={backupSettings.autoBackupIntervalHours}
+                          value={intervalDraft}
                           onChange={(e) => {
-                            onUpdateBackupSettings({
-                              autoBackupIntervalHours: clampBackupIntervalHours(Number(e.target.value)),
-                            });
+                            const next = e.target.value;
+                            if (!/^\d*$/.test(next)) {
+                              return;
+                            }
+                            setIntervalDraft(next);
+                          }}
+                          onBlur={commitIntervalDraft}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              commitIntervalDraft();
+                            }
                           }}
                           className="hide-number-spin h-full flex-1 rounded-none border-0 bg-transparent px-3 pr-2 text-right shadow-none focus-visible:ring-0"
                         />
@@ -373,11 +392,10 @@ export function WebDavBackupDialog({
                             aria-label="增加备份间隔"
                             disabled={!accountUsable}
                             onClick={() => {
-                              onUpdateBackupSettings({
-                                autoBackupIntervalHours: clampBackupIntervalHours(
-                                  backupSettings.autoBackupIntervalHours + 1,
-                                ),
-                              });
+                              const base = intervalDraft ? Number(intervalDraft) : backupSettings.autoBackupIntervalHours;
+                              const next = clampBackupIntervalHours(base + 1);
+                              setIntervalDraft(String(next));
+                              onUpdateBackupSettings({ autoBackupIntervalHours: next });
                             }}
                             className="flex flex-1 items-center justify-center text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                           >
@@ -388,11 +406,10 @@ export function WebDavBackupDialog({
                             aria-label="减少备份间隔"
                             disabled={!accountUsable}
                             onClick={() => {
-                              onUpdateBackupSettings({
-                                autoBackupIntervalHours: clampBackupIntervalHours(
-                                  backupSettings.autoBackupIntervalHours - 1,
-                                ),
-                              });
+                              const base = intervalDraft ? Number(intervalDraft) : backupSettings.autoBackupIntervalHours;
+                              const next = clampBackupIntervalHours(base - 1);
+                              setIntervalDraft(String(next));
+                              onUpdateBackupSettings({ autoBackupIntervalHours: next });
                             }}
                             className="flex flex-1 items-center justify-center border-t border-border/70 text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                           >

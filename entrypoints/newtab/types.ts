@@ -136,6 +136,7 @@ export type BackupSettings = {
   autoBackupEnabled: boolean;
   autoBackupIntervalHours: number;
   lastBackupAt?: string;
+  lastBackupAttemptAt?: string;
   lastBackupError?: string;
 };
 

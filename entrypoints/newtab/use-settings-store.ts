@@ -41,6 +41,10 @@ function sanitizeBackupSettings(raw: unknown): BackupSettings {
         : DEFAULT_SETTINGS.backup.autoBackupIntervalHours,
     lastBackupAt:
       typeof raw.lastBackupAt === 'string' && raw.lastBackupAt ? raw.lastBackupAt : undefined,
+    lastBackupAttemptAt:
+      typeof raw.lastBackupAttemptAt === 'string' && raw.lastBackupAttemptAt
+        ? raw.lastBackupAttemptAt
+        : undefined,
     lastBackupError:
       typeof raw.lastBackupError === 'string' && raw.lastBackupError ? raw.lastBackupError : undefined,
   };

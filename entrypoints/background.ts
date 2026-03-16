@@ -48,7 +48,7 @@ async function syncAutoBackupAlarm() {
   });
 }
 
-async function runAutoBackup(trigger: 'alarm' | 'startup' | 'settings-change' | 'poke') {
+async function runAutoBackup(trigger: 'alarm' | 'startup' | 'poke') {
   if (autoBackupRunning) {
     return;
   }
@@ -73,11 +73,14 @@ async function runAutoBackup(trigger: 'alarm' | 'startup' | 'settings-change' | 
     await patchBackupMetadata((backup) => ({
       ...backup,
       lastBackupAt: result.uploadedAt,
+      lastBackupAttemptAt: result.uploadedAt,
       lastBackupError: undefined,
     }));
   } catch (error) {
+    const attemptedAt = new Date().toISOString();
     await patchBackupMetadata((backup) => ({
       ...backup,
+      lastBackupAttemptAt: attemptedAt,
       lastBackupError: `[${trigger}] ${error instanceof Error ? error.message : String(error)}`,
     }));
   } finally {
@@ -136,7 +139,6 @@ export default defineBackground(() => {
   browser.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes[SETTINGS_STORAGE_KEY]) {
       void syncAutoBackupAlarm();
-      void runAutoBackup('settings-change');
     }
   });
 

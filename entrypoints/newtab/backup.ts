@@ -151,17 +151,25 @@ export function isAutoBackupDue(config: BackupSettings, now = Date.now()) {
     return false;
   }
 
-  if (!config.lastBackupAt) {
+  const lastSuccessAt = config.lastBackupAt ? Date.parse(config.lastBackupAt) : Number.NaN;
+  const lastAttemptAt = config.lastBackupAttemptAt
+    ? Date.parse(config.lastBackupAttemptAt)
+    : Number.NaN;
+
+  const hasLastSuccessAt = Number.isFinite(lastSuccessAt);
+  const hasLastAttemptAt = Number.isFinite(lastAttemptAt);
+
+  if (!hasLastSuccessAt && !hasLastAttemptAt) {
     return true;
   }
 
-  const lastBackupAt = Date.parse(config.lastBackupAt);
-  if (Number.isNaN(lastBackupAt)) {
-    return true;
-  }
+  const lastRunAt = Math.max(
+    hasLastSuccessAt ? lastSuccessAt : Number.NEGATIVE_INFINITY,
+    hasLastAttemptAt ? lastAttemptAt : Number.NEGATIVE_INFINITY,
+  );
 
   const intervalMs = Math.max(1, config.autoBackupIntervalHours) * 60 * 60 * 1000;
-  return now - lastBackupAt >= intervalMs;
+  return now - lastRunAt >= intervalMs;
 }
 
 export async function uploadBackupToWebDav(config: BackupSettings, payload: BackupPayload) {
