@@ -5,8 +5,8 @@
   "version": "1.17.2",
   "type": "module",
   "scripts": {
-    "dev": "wxt --host 127.0.0.1 --port 3001",
-    "dev:firefox": "wxt -b firefox --host 127.0.0.1 --port 3001",
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
     "build": "wxt build",
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
