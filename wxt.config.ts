@@ -11,6 +11,13 @@ export default defineConfig({
       default_title: 'Newtab Pro',
       default_popup: 'popup.html',
     },
+    commands: {
+      _execute_action: {
+        suggested_key: {
+          default: 'Alt+E',
+        },
+      },
+    },
     permissions: ['bookmarks', 'tabs', 'storage', 'favicon', 'management', 'history', 'declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'browsingData', 'alarms'],
     host_permissions: ['<all_urls>'],
   },
