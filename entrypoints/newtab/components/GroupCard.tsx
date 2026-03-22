@@ -355,6 +355,9 @@ export function GroupCard({
   const isDragging = activeId === dndId;
   const isTarget = dropIndicator?.id === dndId && dropIndicator.type === 'group';
   const allUrls = group.viewMode === 'browser-tree' ? btUrls : collectGroupUrls(group);
+  const keepIframeMounted = group.viewMode === 'iframe';
+  const shouldRenderGroupBody = keepIframeMounted || !group.collapsed;
+  const isIframeBodyHidden = keepIframeMounted && group.collapsed;
 
   return (
     <div className="relative flex flex-col">
@@ -840,8 +843,15 @@ export function GroupCard({
           </div>
         </header>
 
-        {!group.collapsed && (
-          <div className={cn('flex flex-1 flex-col', group.viewMode !== 'browser-tree' && group.viewMode !== 'iframe' ? 'p-2' : 'py-1')}>
+        {shouldRenderGroupBody && (
+          <div
+            className={cn(
+              'flex flex-1 flex-col overflow-hidden',
+              group.viewMode !== 'browser-tree' && group.viewMode !== 'iframe' ? 'p-2' : 'py-1',
+              isIframeBodyHidden && 'h-0 min-h-0 flex-none py-0 opacity-0 pointer-events-none',
+            )}
+            aria-hidden={isIframeBodyHidden || undefined}
+          >
             {group.viewMode === 'iframe' ? (
               group.iframeUrl ? (
                 <div className="rounded-md" style={{ height: group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT, overflow: 'clip' }}>

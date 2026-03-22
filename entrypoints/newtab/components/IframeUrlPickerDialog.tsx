@@ -234,7 +234,7 @@ export function IframeUrlPickerDialog({ open, onOpenChange, initialUrl, onConfir
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[min(96vw,720px)]">
+      <DialogContent className="flex max-h-[85vh] w-[min(96vw,720px)] flex-col gap-3 overflow-hidden sm:max-w-[720px] [&>*]:min-w-0">
         <DialogHeader>
           <DialogTitle>从书签选择 URL</DialogTitle>
         </DialogHeader>
@@ -265,7 +265,7 @@ export function IframeUrlPickerDialog({ open, onOpenChange, initialUrl, onConfir
               {visibleAppNodes.length > 0 && (
                 <>
                   {hasMultiSection && (
-                    <div className="sticky top-0 z-10 bg-background px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur-sm">
+                    <div className="bg-background px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       应用书签
                     </div>
                   )}
@@ -276,7 +276,7 @@ export function IframeUrlPickerDialog({ open, onOpenChange, initialUrl, onConfir
               {visibleTree.length > 0 && (
                 <>
                   {hasMultiSection && (
-                    <div className="sticky top-0 z-10 bg-background px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur-sm border-t border-border/40 mt-1">
+                    <div className="border-t border-border/40 bg-background px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       浏览器书签
                     </div>
                   )}
@@ -289,7 +289,7 @@ export function IframeUrlPickerDialog({ open, onOpenChange, initialUrl, onConfir
 
         {/* 已选 URL 预览（始终占位，避免点击时布局跳动） */}
         <div className={cn(
-          'flex items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors',
+          'flex min-w-0 items-center gap-2 overflow-hidden rounded-md px-3 py-1.5 text-xs transition-colors',
           selectedUrl ? 'bg-muted/50 text-muted-foreground' : 'bg-muted/20 text-muted-foreground/40',
         )}>
           <Link2 className="size-3 shrink-0" />
