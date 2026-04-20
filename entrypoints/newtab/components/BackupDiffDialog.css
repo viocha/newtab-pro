@@ -51,3 +51,11 @@
   font-size: 11px;
   font-family: monospace !important;
 }
+
+.backup-diff-view.jsondiffpatch-unchanged-visible .jsondiffpatch-unchanged,
+.backup-diff-view.jsondiffpatch-unchanged-visible
+  .jsondiffpatch-movedestination
+  > .jsondiffpatch-value {
+  max-height: none;
+  overflow-y: visible;
+}

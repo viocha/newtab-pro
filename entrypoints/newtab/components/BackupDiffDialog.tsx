@@ -134,7 +134,7 @@ export function BackupDiffDialog({
           <DialogDescription>
             {result?.remoteExportedAt
               ? `云端备份时间 ${new Date(result.remoteExportedAt).toLocaleString('zh-CN')}`
-              : `当前方向为 ${direction === 'local-to-remote' ? '本地 -> 云端' : '云端 -> 本地'}。`}
+              : `当前方向为 ${direction === 'local-to-remote' ? '本地 → 云端' : '云端 → 本地'}。`}
           </DialogDescription>
         </DialogHeader>
 
