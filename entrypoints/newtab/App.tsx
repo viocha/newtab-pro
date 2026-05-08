@@ -116,6 +116,70 @@ function getTargetLabel(
   return `${group.title} / ${subgroup.title}`;
 }
 
+type GroupDropTarget = { id: string; zone: 'before' | 'after' };
+type GroupDragCandidate = { id: string; rect: DOMRect };
+type GroupDragRow = { top: number; bottom: number; items: GroupDragCandidate[] };
+
+const GROUP_ROW_TOP_TOLERANCE = 4;
+
+function getVerticalDistanceToRow(row: GroupDragRow, y: number) {
+  if (y < row.top) return row.top - y;
+  if (y > row.bottom) return y - row.bottom;
+  return 0;
+}
+
+function resolveGroupDropTarget(pointer: { x: number; y: number }, activeId: string): GroupDropTarget | null {
+  const activeDomId = `dnd-${activeId}`;
+  const candidates = Array.from(document.querySelectorAll<HTMLElement>('[id^="dnd-group|"]'))
+    .filter((el) => el.id !== activeDomId)
+    .map((el) => ({ id: el.id.slice(4), rect: el.getBoundingClientRect() }))
+    .filter(({ rect }) => rect.width > 0 && rect.height > 0);
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const rows: GroupDragRow[] = [];
+  for (const item of candidates.sort((a, b) => a.rect.top - b.rect.top || a.rect.left - b.rect.left)) {
+    const row = rows.find((candidateRow) => Math.abs(candidateRow.top - item.rect.top) <= GROUP_ROW_TOP_TOLERANCE);
+    if (!row) {
+      rows.push({ top: item.rect.top, bottom: item.rect.bottom, items: [item] });
+      continue;
+    }
+    row.top = Math.min(row.top, item.rect.top);
+    row.bottom = Math.max(row.bottom, item.rect.bottom);
+    row.items.push(item);
+  }
+
+  let bestRow = rows[0];
+  let bestRowDistance = getVerticalDistanceToRow(bestRow, pointer.y);
+  let bestRowCenterDistance = Math.abs(pointer.y - (bestRow.top + bestRow.bottom) / 2);
+
+  for (const row of rows.slice(1)) {
+    const distance = getVerticalDistanceToRow(row, pointer.y);
+    const centerDistance = Math.abs(pointer.y - (row.top + row.bottom) / 2);
+    if (distance < bestRowDistance || (distance === bestRowDistance && centerDistance < bestRowCenterDistance)) {
+      bestRow = row;
+      bestRowDistance = distance;
+      bestRowCenterDistance = centerDistance;
+    }
+  }
+
+  let bestItem = bestRow.items[0];
+  let bestItemDistance = Math.abs(pointer.x - (bestItem.rect.left + bestItem.rect.width / 2));
+  for (const item of bestRow.items.slice(1)) {
+    const centerX = item.rect.left + item.rect.width / 2;
+    const distance = Math.abs(pointer.x - centerX);
+    if (distance < bestItemDistance) {
+      bestItem = item;
+      bestItemDistance = distance;
+    }
+  }
+
+  const centerX = bestItem.rect.left + bestItem.rect.width / 2;
+  return { id: bestItem.id, zone: pointer.x > centerX ? 'after' : 'before' };
+}
+
 /** Wrapper that passes correct size to DragOverlay depending on target container style */
 const SmartDragOverlay = () => {
   const { overContainerData, activeData } = useDndUIStore();
@@ -1075,31 +1139,17 @@ export default function App() {
 
     if (!activeData) return;
 
-    // ── group drag: compute indicator purely from DOM position (X axis) ──
-    // This gives continuous 50/50 before-after coverage regardless of gaps.
+    // Group cards are laid out in a CSS grid, so resolve the visual row from
+    // pointer Y first, then resolve before/after inside that row from pointer X.
     if (activeData.type === 'group') {
-      const px = pointerRef.current.x;
-      const draggedDomId = `dnd-${String(active.id)}`;
-      const els = Array.from(document.querySelectorAll('[id^="dnd-group|"]')) as HTMLElement[];
-      let bestId: string | null = null;
-      let bestZone: 'before' | 'after' = 'before';
-      let bestDist = Infinity;
-      for (const el of els) {
-        if (el.id === draggedDomId) continue;
-        const rect = el.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const dist = Math.abs(px - cx);
-        if (dist < bestDist) {
-          bestDist = dist;
-          bestId = el.id.slice(4); // strip "dnd-"
-          bestZone = px > cx ? 'after' : 'before';
-        }
-      }
-      if (bestId) {
-        const ind = { id: bestId, zone: bestZone, type: 'group' as const };
+      const target = resolveGroupDropTarget(pointerRef.current, String(active.id));
+      if (target) {
+        const ind = { id: target.id, zone: target.zone, type: 'group' as const };
         if (dropIndicatorRef.current?.id !== ind.id || dropIndicatorRef.current?.zone !== ind.zone) {
           setDropIndicator((dropIndicatorRef.current = ind));
         }
+      } else {
+        setDropIndicator((dropIndicatorRef.current = null));
       }
       return;
     }
@@ -1358,12 +1408,6 @@ export default function App() {
       return;
     }
 
-    // ── all other drag types need `over` ─────────────────────────────
-    if (!over || active.id === over.id) return;
-
-    const overData = over.data.current;
-    if (!overData) return;
-
     if (activeData.type === 'group' && dropInd.type === 'group') {
       // Parse target group ID from dropInd.id (format: "group|<groupId>")
       const targetGroupId = dropInd.id.split('|')[1];
@@ -1380,6 +1424,7 @@ export default function App() {
       } else {
         moveGroupBefore(activeData.groupId, targetGroupId);
       }
+      return;
     } else if (activeData.type === 'subgroup' && dropInd.type === 'subgroup') {
       // Parse from dropInd.id (format: "subgroup|<groupId>|<subgroupId>")
       const parts = dropInd.id.split('|');
@@ -1400,7 +1445,16 @@ export default function App() {
       } else {
         moveSubgroupBefore(source, { groupId: targetGroupId, subgroupId: targetSubgroupId });
       }
-    } else if (activeData.type === 'space' && overData.type === 'space') {
+      return;
+    }
+
+    // ── remaining drag types still need `over` ───────────────────────
+    if (!over || active.id === over.id) return;
+
+    const overData = over.data.current;
+    if (!overData) return;
+
+    if (activeData.type === 'space' && overData.type === 'space') {
       if (dropInd.zone === 'after') {
         const targetIndex = spaces.findIndex((s) => s.id === overData.spaceId);
         if (targetIndex === spaces.length - 1) {
