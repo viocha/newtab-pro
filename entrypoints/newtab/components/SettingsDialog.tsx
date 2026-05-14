@@ -278,39 +278,43 @@ function EngineFormDialog({ state, onClose, onSubmit }: EngineFormDialogProps) {
         <DialogHeader>
           <DialogTitle>{isAdd ? '添加搜索引擎' : '编辑搜索引擎'}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">名称</label>
+        <form onSubmit={handleSubmit} className="grid gap-3 pt-3">
+          <div className="grid gap-1">
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="search-engine-name">名称</label>
             <Input
+              id="search-engine-name"
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Google"
             />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">搜索 URL</label>
+          <div className="grid gap-1">
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="search-engine-search-url">搜索 URL</label>
             <Input
+              id="search-engine-search-url"
               value={searchUrl}
               onChange={(e) => setSearchUrl(e.target.value)}
               placeholder="https://www.google.com/search?q={query}"
             />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
+          <div className="grid gap-1">
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="search-engine-suggest-url">
               搜索建议 URL（可选）
             </label>
             <Input
+              id="search-engine-suggest-url"
               value={suggestUrl}
               onChange={(e) => setSuggestUrl(e.target.value)}
               placeholder="https://suggestqueries.google.com/complete/search?output=toolbar&q={query}"
             />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
+          <div className="grid gap-1">
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="search-engine-icon-url">
               图标链接（可选）
             </label>
             <Input
+              id="search-engine-icon-url"
               value={iconUrl}
               onChange={(e) => setIconUrl(e.target.value)}
               placeholder="https://example.com/favicon.ico"

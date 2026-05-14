@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { TriangleAlert } from 'lucide-react';
 
 import {
@@ -33,6 +34,17 @@ export function ConfirmDialog({
   onOpenChange,
   onConfirm,
 }: ConfirmDialogProps) {
+  const contentRef = useRef({ title, description });
+
+  useEffect(() => {
+    if (open) {
+      contentRef.current = { title, description };
+    }
+  }, [description, open, title]);
+
+  const displayTitle = open ? title : contentRef.current.title;
+  const displayDescription = open ? description : contentRef.current.description;
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent
@@ -49,9 +61,9 @@ export function ConfirmDialog({
           >
             <TriangleAlert className="size-7" />
           </AlertDialogMedia>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          {description ? (
-            <AlertDialogDescription>{description}</AlertDialogDescription>
+          <AlertDialogTitle>{displayTitle}</AlertDialogTitle>
+          {displayDescription ? (
+            <AlertDialogDescription>{displayDescription}</AlertDialogDescription>
           ) : null}
         </AlertDialogHeader>
         <AlertDialogFooter>
