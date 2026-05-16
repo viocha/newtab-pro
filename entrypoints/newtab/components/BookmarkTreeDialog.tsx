@@ -212,7 +212,7 @@ export function BookmarkTreeDialog({ open, targetLabel, onOpenChange, onAddBookm
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[min(96vw,720px)]">
+      <DialogContent className="w-[min(96vw,720px)] gap-3">
         <DialogHeader>
           <DialogTitle>从浏览器书签导入</DialogTitle>
           <DialogDescription>
