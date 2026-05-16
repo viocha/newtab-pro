@@ -1,4 +1,5 @@
-import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useRef, useMemo, useState, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import { Check, LayoutGrid, Plus, ChevronDown, ChevronRight, GripVertical, GripHorizontal, Settings, Download, Upload, Columns, Pencil, Trash2, X, HelpCircle, Sliders, Search, Globe, Cloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { browser } from 'wxt/browser';
@@ -420,7 +421,8 @@ function SpaceTab({
   const [editValue, setEditValue] = useState(title);
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const blurTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const renameAfterMenuCloseRef = useRef(false);
+  const pendingSelectRef = useRef(false);
 
   // dnd-kit draggable + droppable
   const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
@@ -443,29 +445,52 @@ function SpaceTab({
   const showBefore = dropIndicator?.type === 'space' && dropIndicator.id === `space|${id}` && dropIndicator.zone === 'before';
   const showAfter = dropIndicator?.type === 'space' && dropIndicator.id === `space|${id}` && dropIndicator.zone === 'after';
 
+  const focusEditInput = useCallback((node = inputRef.current) => {
+    if (!node) {
+      return false;
+    }
+    node.focus({ preventScroll: true });
+    node.select();
+    return true;
+  }, []);
+
+  const setInputNode = useCallback((node: HTMLInputElement | null) => {
+    inputRef.current = node;
+    if (node && pendingSelectRef.current && focusEditInput(node)) {
+      pendingSelectRef.current = false;
+    }
+  }, [focusEditInput]);
+
   const startEditing = useCallback(() => {
     setEditValue(title);
+    pendingSelectRef.current = true;
     setEditing(true);
   }, [title]);
+
+  const requestRenameFromMenu = useCallback(() => {
+    renameAfterMenuCloseRef.current = true;
+  }, []);
+
+  const handleContextMenuOpenChange = useCallback((open: boolean) => {
+    setContextMenuOpen(open);
+  }, []);
 
   // Enter edit mode when autoFocus is requested (e.g. after addSpace)
   useEffect(() => {
     if (autoFocus) {
       setEditValue(title);
+      pendingSelectRef.current = true;
       setEditing(true);
       onAutoFocusDone?.();
     }
   }, [autoFocus]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Focus + select all once the input is mounted
-  useEffect(() => {
-    if (editing) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      }, 0);
+  // Focus + select all once the input is mounted.
+  useLayoutEffect(() => {
+    if (editing && pendingSelectRef.current && focusEditInput()) {
+      pendingSelectRef.current = false;
     }
-  }, [editing]);
+  }, [editing, focusEditInput]);
 
   const commitEdit = useCallback(() => {
     const trimmed = editValue.trim();
@@ -475,22 +500,12 @@ function SpaceTab({
     setEditing(false);
   }, [editValue, title, id, onRename]);
 
-  // Delayed blur: prevents ContextMenu focus-restoration from killing edit mode
   const handleInputBlur = useCallback(() => {
-    blurTimeout.current = setTimeout(() => {
-      commitEdit();
-    }, 120);
+    commitEdit();
   }, [commitEdit]);
 
-  const handleInputFocus = useCallback(() => {
-    if (blurTimeout.current) {
-      clearTimeout(blurTimeout.current);
-      blurTimeout.current = undefined;
-    }
-  }, []);
-
   return (
-    <ContextMenu onOpenChange={setContextMenuOpen}>
+    <ContextMenu onOpenChange={handleContextMenuOpenChange}>
       <ContextMenuTrigger asChild>
         <button
           ref={mergedRef}
@@ -521,18 +536,15 @@ function SpaceTab({
           )}
           {editing ? (
             <input
-              ref={inputRef}
+              ref={setInputNode}
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               onBlur={handleInputBlur}
-              onFocus={handleInputFocus}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  clearTimeout(blurTimeout.current);
                   commitEdit();
                 }
                 if (e.key === 'Escape') {
-                  clearTimeout(blurTimeout.current);
                   setEditing(false);
                 }
               }}
@@ -549,8 +561,21 @@ function SpaceTab({
           )}
         </button>
       </ContextMenuTrigger>
-      <ContextMenuContent className="w-44">
-        <ContextMenuItem onSelect={startEditing}>
+      <ContextMenuContent
+        className="w-44"
+        onCloseAutoFocus={(event) => {
+          if (renameAfterMenuCloseRef.current) {
+            event.preventDefault();
+            flushSync(() => {
+              startEditing();
+            });
+            focusEditInput();
+            pendingSelectRef.current = false;
+            renameAfterMenuCloseRef.current = false;
+          }
+        }}
+      >
+        <ContextMenuItem onSelect={requestRenameFromMenu}>
           <Pencil className="mr-2 size-3.5" />
           重命名
         </ContextMenuItem>
