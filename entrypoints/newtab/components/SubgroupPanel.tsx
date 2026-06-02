@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, FolderTree, GripVertical, LayoutGrid, LayoutList, MoreHorizontal, Plus, Trash2, ExternalLink, AppWindow, EyeOff, FolderInput, PanelsTopLeft } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { browser } from 'wxt/browser';
@@ -90,20 +90,45 @@ export function SubgroupPanel({
   onClearAutoFocus,
 }: SubgroupPanelProps) {
   const { compactGridWindows, setCompactGridWindows } = useWindowOpenPrefs();
-  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(!!autoFocusEdit);
   const [titleDraft, setTitleDraft] = useState(subgroup.title);
   const [menuOpen, setMenuOpen] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const pendingTitleFocusRef = useRef(!!autoFocusEdit);
+
+  const focusTitleInput = useCallback((node = titleInputRef.current) => {
+    if (!node) {
+      return false;
+    }
+    node.focus({ preventScroll: true });
+    node.select();
+    return true;
+  }, []);
+
+  const setTitleInputNode = useCallback((node: HTMLInputElement | null) => {
+    titleInputRef.current = node;
+    if (node && pendingTitleFocusRef.current && focusTitleInput(node)) {
+      pendingTitleFocusRef.current = false;
+    }
+  }, [focusTitleInput]);
+
+  const startEditingTitle = useCallback(() => {
+    setTitleDraft(subgroup.title);
+    pendingTitleFocusRef.current = true;
+    setEditingTitle(true);
+  }, [subgroup.title]);
 
   useEffect(() => {
     if (autoFocusEdit) {
-      // Delay to let the dropdown menu close and release focus
-      const timer = setTimeout(() => {
-        setEditingTitle(true);
-        setTitleDraft(subgroup.title);
-      }, 50);
-      return () => clearTimeout(timer);
+      startEditingTitle();
     }
-  }, [autoFocusEdit, subgroup.title]);
+  }, [autoFocusEdit, startEditingTitle]);
+
+  useLayoutEffect(() => {
+    if (editingTitle && pendingTitleFocusRef.current && focusTitleInput()) {
+      pendingTitleFocusRef.current = false;
+    }
+  }, [editingTitle, focusTitleInput]);
 
   const target = useMemo<InsertTarget>(
     () => ({
@@ -121,6 +146,7 @@ export function SubgroupPanel({
   );
 
   const commitRename = () => {
+    pendingTitleFocusRef.current = false;
     const nextTitle = titleDraft.trim();
     if (!nextTitle) {
       setTitleDraft(subgroup.title);
@@ -180,6 +206,7 @@ export function SubgroupPanel({
           <div className="min-w-0 flex-1">
             {editingTitle ? (
               <input
+                ref={setTitleInputNode}
                 className="h-6 w-full rounded border border-input bg-background px-2 text-xs outline-none ring-0"
                 value={titleDraft}
                 onChange={(event) => setTitleDraft(event.target.value)}
@@ -188,6 +215,7 @@ export function SubgroupPanel({
                   if (event.key === 'Enter') {
                     commitRename();
                   } else if (event.key === 'Escape') {
+                    pendingTitleFocusRef.current = false;
                     setTitleDraft(subgroup.title);
                     setEditingTitle(false);
                   }
@@ -198,10 +226,7 @@ export function SubgroupPanel({
             ) : (
               <p
                 className="truncate text-xs font-semibold text-foreground cursor-text"
-                onClick={() => {
-                  setTitleDraft(subgroup.title);
-                  setEditingTitle(true);
-                }}
+                onClick={startEditingTitle}
                 title="点击重命名"
               >
                 {subgroup.title}

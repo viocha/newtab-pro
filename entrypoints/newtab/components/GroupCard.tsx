@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DragEvent } from 'react';
+import { flushSync } from 'react-dom';
 import { Check, GripHorizontal, LayoutGrid, LayoutList, MoreHorizontal, FolderTree, FolderPlus, FolderOpen, BookOpen, Palette, Plus, Trash2, ExternalLink, AppWindow, EyeOff, FolderInput, Globe, Wrench, Play, PanelsTopLeft } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { browser } from 'wxt/browser';
@@ -264,6 +265,7 @@ export function GroupCard({
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(group.title);
   const [menuOpen, setMenuOpen] = useState(false);
+  const addSubgroupAfterMenuCloseRef = useRef(false);
   const [btUrls, setBtUrls] = useState<string[]>([]);
   const [btMaxDraft, setBtMaxDraft] = useState<string>(
     String(group.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS),
@@ -493,7 +495,19 @@ export function GroupCard({
                   <MoreHorizontal className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-58">
+              <DropdownMenuContent
+                align="end"
+                className="w-58"
+                onCloseAutoFocus={(event) => {
+                  if (addSubgroupAfterMenuCloseRef.current) {
+                    event.preventDefault();
+                    addSubgroupAfterMenuCloseRef.current = false;
+                    flushSync(() => {
+                      onAddSubgroup(group.id);
+                    });
+                  }
+                }}
+              >
                 {/* View mode segmented */}
                 <DropdownMenuLabel className="pb-1 text-xs font-medium text-muted-foreground">视图模式</DropdownMenuLabel>
                 <div className="px-2 pb-2">
@@ -733,7 +747,11 @@ export function GroupCard({
                 )}
                 <DropdownMenuSeparator />
                 {group.viewMode !== 'browser-tree' && group.viewMode !== 'iframe' && (
-                  <DropdownMenuItem onSelect={() => onAddSubgroup(group.id)}>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      addSubgroupAfterMenuCloseRef.current = true;
+                    }}
+                  >
                     <FolderPlus className="mr-2 size-3.5" />
                     添加小组
                   </DropdownMenuItem>
