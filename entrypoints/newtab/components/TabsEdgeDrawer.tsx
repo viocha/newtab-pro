@@ -20,6 +20,7 @@ type BrowserTab = Browser.tabs.Tab;
 
 const COLLAPSED_W = 44;
 const EXPANDED_W = 280;
+const CLOSE_DELAY_MS = 180;
 const TABS_REVERSED_KEY = 'newtab-pro-tabs-reversed';
 
 function TabDraggableItem({
@@ -187,7 +188,7 @@ export function TabsEdgeDrawer() {
     mouseInsideRef.current = false;
     if (contextMenuOpen) return;
     clearTimer();
-    closeTimer.current = window.setTimeout(() => setManualExpanded(false), 180);
+    closeTimer.current = window.setTimeout(() => setManualExpanded(false), CLOSE_DELAY_MS);
   };
 
   // 右键菜单关闭后，若鼠标已离开侧栏，则触发收缩
@@ -198,7 +199,7 @@ export function TabsEdgeDrawer() {
       window.clearTimeout(closeTimer.current);
       closeTimer.current = null;
     }
-    closeTimer.current = window.setTimeout(() => setManualExpanded(false), 180);
+    closeTimer.current = window.setTimeout(() => setManualExpanded(false), CLOSE_DELAY_MS);
   }, [contextMenuOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const displayTabs = reversed ? [...tabs].reverse() : tabs;

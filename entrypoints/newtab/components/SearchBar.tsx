@@ -25,6 +25,8 @@ import {
 // ── helpers ─────────────────────────────────────────────────────────
 
 const SEARCH_BAR_UI_PREFS_KEY = 'newtab-pro:search-bar-batch-prefs';
+const SUGGESTION_DEBOUNCE_MS = 250;
+const SUGGESTION_REQUEST_TIMEOUT_MS = 2000;
 
 type SearchBarUiPrefs = {
   selectedBatchEngineIds?: string[];
@@ -75,7 +77,7 @@ async function fetchSuggestions(
   const url = buildSuggestUrl(engine, query, defaultSuggestUrl);
   if (!url || !query.trim()) return [];
   try {
-    const resp = await fetch(url, { signal: AbortSignal.timeout(2000) });
+    const resp = await fetch(url, { signal: AbortSignal.timeout(SUGGESTION_REQUEST_TIMEOUT_MS) });
     if (!resp.ok) return [];
     const data = await resp.json();
     // Baidu sugrec format: {q, p, g: [{q: string, ...}]}
@@ -216,7 +218,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
         setShowDropdown(true);
         setActiveIndex(-1);
       }
-    }, 250);
+    }, SUGGESTION_DEBOUNCE_MS);
 
     return () => clearTimeout(suggestTimerRef.current);
   }, [query, activeEngine, settings.defaultSuggestUrl]);

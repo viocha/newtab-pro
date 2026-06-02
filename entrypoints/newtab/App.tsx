@@ -780,6 +780,7 @@ export default function App() {
   const importInputRef = useRef<HTMLInputElement>(null);
   const searchBarInputRef = useRef<HTMLInputElement>(null);
   const dragSwitchRef = useRef<{ startX: number; startY: number; switched: boolean } | null>(null);
+  const addGroupAfterContextMenuCloseRef = useRef(false);
 
   const applyBackupData = useCallback(
     (raw: unknown) => {
@@ -1885,10 +1886,23 @@ export default function App() {
           })}
               </div>
             </ContextMenuTrigger>
-            <ContextMenuContent className="w-52">
+            <ContextMenuContent
+              className="w-52"
+              onCloseAutoFocus={(event) => {
+                if (addGroupAfterContextMenuCloseRef.current) {
+                  event.preventDefault();
+                  addGroupAfterContextMenuCloseRef.current = false;
+                  flushSync(() => {
+                    const newGroupId = addGroup();
+                    if (newGroupId) {
+                      setAutoEditGroupId(newGroupId);
+                    }
+                  });
+                }
+              }}
+            >
               <ContextMenuItem onSelect={() => {
-                const newGroupId = addGroup();
-                if (newGroupId) setTimeout(() => setAutoEditGroupId(newGroupId), 150);
+                addGroupAfterContextMenuCloseRef.current = true;
               }}>
                 <Plus className="mr-2 size-3.5" />
                 添加分组

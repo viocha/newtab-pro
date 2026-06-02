@@ -16,6 +16,8 @@ import { cn } from '@/lib/utils';
 import type { Space } from '../types';
 import { FaviconImage } from './FaviconImage';
 
+const FILTER_QUERY_DEBOUNCE_MS = 300;
+
 type TreeNode = Browser.bookmarks.BookmarkTreeNode;
 
 function createTreeNode(node: Partial<TreeNode> & Pick<TreeNode, 'id' | 'title'>): TreeNode {
@@ -99,7 +101,7 @@ export function IframeUrlPickerDialog({ open, onOpenChange, initialUrl, onConfir
 
   // 搜索防抖
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(query), 300);
+    const t = setTimeout(() => setDebouncedQuery(query), FILTER_QUERY_DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [query]);
 

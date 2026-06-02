@@ -16,6 +16,8 @@ import { Input } from '@/components/ui/input';
 
 import { FaviconImage } from './FaviconImage';
 
+const FILTER_QUERY_DEBOUNCE_MS = 300;
+
 type BookmarkTreeDialogProps = {
   open: boolean;
   targetLabel?: string;
@@ -67,7 +69,7 @@ export function BookmarkTreeDialog({ open, targetLabel, onOpenChange, onAddBookm
 
   // Debounce the query so filterTree only runs after typing pauses
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQuery(query), 300);
+    const timer = setTimeout(() => setDebouncedQuery(query), FILTER_QUERY_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [query]);
 

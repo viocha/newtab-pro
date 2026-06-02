@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DragEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { Check, GripHorizontal, LayoutGrid, LayoutList, MoreHorizontal, FolderTree, FolderPlus, FolderOpen, BookOpen, Palette, Plus, Trash2, ExternalLink, AppWindow, EyeOff, FolderInput, Globe, Wrench, Play, PanelsTopLeft } from 'lucide-react';
@@ -262,7 +262,7 @@ export function GroupCard({
   iframeAutoRun,
 }: GroupCardProps) {
   const { compactGridWindows, setCompactGridWindows } = useWindowOpenPrefs();
-  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(!!autoFocusEdit);
   const [titleDraft, setTitleDraft] = useState(group.title);
   const [menuOpen, setMenuOpen] = useState(false);
   const addSubgroupAfterMenuCloseRef = useRef(false);
