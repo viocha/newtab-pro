@@ -2013,7 +2013,7 @@ export default function App() {
           targetLabel={formTargetLabel}
           onOpenChange={(next) => {
             if (!next) {
-              setFormState(DEFAULT_FORM_STATE);
+              setFormState((prev) => ({ ...prev, open: false }));
             } else {
               setFormState((prev) => ({ ...prev, open: true }));
             }
