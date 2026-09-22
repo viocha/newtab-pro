@@ -15,14 +15,14 @@
 ## 开发
 
 ```bash
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 ## 构建
 
 ```bash
-npm run build
+bun run build
 ```
 
 构建产物输出到 `.output/chrome-mv3`，可在 Chrome 扩展页以“加载已解压的扩展程序”方式加载。

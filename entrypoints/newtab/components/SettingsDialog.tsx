@@ -571,68 +571,62 @@ export function SettingsDialog({
                       onCheckedChange={(next) => onUpdateSettings({ showSearchBar: next })}
                       label="显示搜索栏"
                     />
-                    {settings.showSearchBar ? (
-                      <>
-                        <Separator />
-                        <SettingsSwitchRow
-                          checked={settings.openSearchInNewTab}
-                          onCheckedChange={(next) => onUpdateSettings({ openSearchInNewTab: next })}
-                          label="在新标签页中打开搜索结果"
-                        />
-                        <Separator />
-                        <SettingsActionRow
-                          label="管理搜索引擎"
-                          value={`${settings.searchEngines.length} 个引擎`}
-                          onClick={() => setView('engines')}
-                        />
-                      </>
-                    ) : null}
+                    <Separator />
+                    <SettingsSwitchRow
+                      checked={settings.openSearchInNewTab}
+                      onCheckedChange={(next) => onUpdateSettings({ openSearchInNewTab: next })}
+                      label="在新标签页中打开搜索结果"
+                    />
+                    <Separator />
+                    <SettingsActionRow
+                      label="管理搜索引擎"
+                      value={`${settings.searchEngines.length} 个引擎`}
+                      onClick={() => setView('engines')}
+                    />
                   </SettingsSection>
 
-                  {settings.showSearchBar ? (
-                    <SettingsSection title="默认搜索建议">
-                      <div className="space-y-2.5 px-4 py-2.5">
-                        <div className="flex flex-wrap gap-2">
-                          {[...SUGGEST_URL_PRESETS, { label: '自定义', value: null as unknown as string }].map((preset) => {
-                            const isActive = preset.value === null
-                              ? isCustomSuggestUrl
-                              : currentSuggestUrl === preset.value;
-                            return (
-                              <Button
-                                key={preset.label}
-                                type="button"
-                                variant={isActive ? 'default' : 'outline'}
-                                size="xs"
-                                className="rounded-full px-3"
-                                onClick={() => {
-                                  if (preset.value === null) {
-                                    if (!isCustomSuggestUrl) {
-                                      onUpdateSettings({ defaultSuggestUrl: '' });
-                                    }
-                                  } else {
-                                    onUpdateSettings({ defaultSuggestUrl: preset.value });
+                  <SettingsSection title="默认搜索建议">
+                    <div className="space-y-2.5 px-4 py-2.5">
+                      <div className="flex flex-wrap gap-2">
+                        {[...SUGGEST_URL_PRESETS, { label: '自定义', value: null as unknown as string }].map((preset) => {
+                          const isActive = preset.value === null
+                            ? isCustomSuggestUrl
+                            : currentSuggestUrl === preset.value;
+                          return (
+                            <Button
+                              key={preset.label}
+                              type="button"
+                              variant={isActive ? 'default' : 'outline'}
+                              size="xs"
+                              className="rounded-full px-3"
+                              onClick={() => {
+                                if (preset.value === null) {
+                                  if (!isCustomSuggestUrl) {
+                                    onUpdateSettings({ defaultSuggestUrl: '' });
                                   }
-                                }}
-                              >
-                                {preset.label}
-                              </Button>
-                            );
-                          })}
-                        </div>
-                        <Input
-                          autoFocus={isCustomSuggestUrl}
-                          readOnly={!isCustomSuggestUrl}
-                          value={currentSuggestUrl}
-                          onChange={(e) => onUpdateSettings({ defaultSuggestUrl: e.target.value })}
-                          placeholder="自定义 URL，用 {query} 代表搜索词"
-                          className={cn(
-                            'text-xs',
-                            !isCustomSuggestUrl && 'cursor-default select-all text-muted-foreground',
-                          )}
-                        />
+                                } else {
+                                  onUpdateSettings({ defaultSuggestUrl: preset.value });
+                                }
+                              }}
+                            >
+                              {preset.label}
+                            </Button>
+                          );
+                        })}
                       </div>
-                    </SettingsSection>
-                  ) : null}
+                      <Input
+                        autoFocus={isCustomSuggestUrl}
+                        readOnly={!isCustomSuggestUrl}
+                        value={currentSuggestUrl}
+                        onChange={(e) => onUpdateSettings({ defaultSuggestUrl: e.target.value })}
+                        placeholder="自定义 URL，用 {query} 代表搜索词"
+                        className={cn(
+                          'text-xs',
+                          !isCustomSuggestUrl && 'cursor-default select-all text-muted-foreground',
+                        )}
+                      />
+                    </div>
+                  </SettingsSection>
 
                   <SettingsSection title="Space 切换快捷键">
                     <ShortcutInput

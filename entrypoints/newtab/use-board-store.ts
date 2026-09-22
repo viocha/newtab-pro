@@ -301,12 +301,12 @@ export function useBoardStore() {
   const [store, setStore] = useState<SpaceStore>(() => createDefaultSpaceStore());
   const [loading, setLoading] = useState(true);
   const storeRef = useRef(store);
+  const pendingLocalWritesRef = useRef<string[]>([]);
+  const persistQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     storeRef.current = store;
   }, [store]);
-
-  const skipNextExternalUpdate = useRef(false);
 
   // Load on mount
   useEffect(() => {
@@ -335,12 +335,14 @@ export function useBoardStore() {
       ) => {
         if (area !== 'local') return;
         if (!changes[SPACES_STORAGE_KEY]) return;
-        if (skipNextExternalUpdate.current) {
-          skipNextExternalUpdate.current = false;
-          return;
-        }
         const newValue = changes[SPACES_STORAGE_KEY].newValue;
         const next = sanitizeSpaceStore(newValue);
+        const signature = JSON.stringify(next);
+        const ownWriteIndex = pendingLocalWritesRef.current.indexOf(signature);
+        if (ownWriteIndex >= 0) {
+          pendingLocalWritesRef.current.splice(ownWriteIndex, 1);
+          return;
+        }
         storeRef.current = next;
         setStore(next);
       };
@@ -371,15 +373,31 @@ export function useBoardStore() {
 
   // ── commit primitives ──────────────────────────────────────────────
 
+  const enqueuePersist = useCallback((next: SpaceStore) => {
+    if (!hasChromeStorage()) {
+      void persistSpaceStore(next);
+      return;
+    }
+
+    const signature = JSON.stringify(next);
+    pendingLocalWritesRef.current.push(signature);
+    const task = persistQueueRef.current.then(() => persistSpaceStore(next));
+    persistQueueRef.current = task.catch(() => {
+      const index = pendingLocalWritesRef.current.indexOf(signature);
+      if (index >= 0) {
+        pendingLocalWritesRef.current.splice(index, 1);
+      }
+    });
+  }, []);
+
   const commit = useCallback((mutator: (draft: SpaceStore) => void) => {
     const draft = cloneSpaceStore(storeRef.current);
     mutator(draft);
     const next = sanitizeSpaceStore(draft);
     storeRef.current = next;
     setStore(next);
-    skipNextExternalUpdate.current = true;
-    void persistSpaceStore(next);
-  }, []);
+    enqueuePersist(next);
+  }, [enqueuePersist]);
 
   const commitWithResult = useCallback(
     <T,>(mutator: (draft: SpaceStore) => T): T => {
@@ -388,11 +406,10 @@ export function useBoardStore() {
       const next = sanitizeSpaceStore(draft);
       storeRef.current = next;
       setStore(next);
-      skipNextExternalUpdate.current = true;
-      void persistSpaceStore(next);
+      enqueuePersist(next);
       return result;
     },
-    [],
+    [enqueuePersist],
   );
 
   // ── derived values ─────────────────────────────────────────────────
@@ -672,10 +689,10 @@ export function useBoardStore() {
   );
 
   const setGroupIframeConfig = useCallback(
-    (groupId: string, url: string, height: number) => {
+    (spaceId: string, groupId: string, url: string, height: number) => {
       commit((draft) => {
-        const board = getActiveBoard(draft);
-        const group = board.groups.find((item) => item.id === groupId);
+        const space = draft.spaces.find((item) => item.id === spaceId);
+        const group = space?.board.groups.find((item) => item.id === groupId);
         if (group) {
           group.iframeUrl = url || undefined;
           group.iframeHeight = Math.max(100, Math.min(2000, Math.round(height)));
@@ -1034,10 +1051,9 @@ export function useBoardStore() {
       const next = sanitizeSpaceStore(raw);
       storeRef.current = next;
       setStore(next);
-      skipNextExternalUpdate.current = true;
-      void persistSpaceStore(next);
+      enqueuePersist(next);
     },
-    [],
+    [enqueuePersist],
   );
 
   // ── space reorder ──────────────────────────────────────────────────

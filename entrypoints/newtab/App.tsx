@@ -776,7 +776,7 @@ export default function App() {
   const [autoEditSubgroupId, setAutoEditSubgroupId] = useState<string | null>(null);
   const [autoEditSpaceId, setAutoEditSpaceId] = useState<string | null>(null);
   const [browserFolderPickerGroupId, setBrowserFolderPickerGroupId] = useState<string | null>(null);
-  const [iframeUrlPickerGroupId, setIframeUrlPickerGroupId] = useState<string | null>(null);
+  const [iframeUrlPickerTarget, setIframeUrlPickerTarget] = useState<{ spaceId: string; groupId: string } | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const searchBarInputRef = useRef<HTMLInputElement>(null);
   const dragSwitchRef = useRef<{ startX: number; startY: number; switched: boolean } | null>(null);
@@ -1826,8 +1826,12 @@ export default function App() {
                       setGroupBrowserTreeConfig(groupId, grp?.browserTreeFolderId ?? null, maxItems);
                     }}
                     onOpenBrowserFolderPicker={setBrowserFolderPickerGroupId}
-                    onSetIframeConfig={setGroupIframeConfig}
-                    onOpenIframeUrlPicker={setIframeUrlPickerGroupId}
+                    onSetIframeConfig={(groupId, url, height) => {
+                      setGroupIframeConfig(space.id, groupId, url, height);
+                    }}
+                    onOpenIframeUrlPicker={(groupId) => {
+                      setIframeUrlPickerTarget({ spaceId: space.id, groupId });
+                    }}
                     autoFocusEdit={autoEditGroupId === group.id}
                     autoFocusSubgroupId={autoEditSubgroupId}
                     onClearAutoFocus={() => {
@@ -2058,23 +2062,27 @@ export default function App() {
         />
 
         <IframeUrlPickerDialog
-          open={!!iframeUrlPickerGroupId}
-          onOpenChange={(v) => { if (!v) setIframeUrlPickerGroupId(null); }}
+          open={!!iframeUrlPickerTarget}
+          onOpenChange={(v) => { if (!v) setIframeUrlPickerTarget(null); }}
           spaces={spaceStore.spaces}
           initialUrl={
-            iframeUrlPickerGroupId
-              ? board.groups.find((g) => g.id === iframeUrlPickerGroupId)?.iframeUrl
+            iframeUrlPickerTarget
+              ? spaceStore.spaces
+                  .find((space) => space.id === iframeUrlPickerTarget.spaceId)
+                  ?.board.groups.find((g) => g.id === iframeUrlPickerTarget.groupId)?.iframeUrl
               : undefined
           }
           onConfirm={(url) => {
-            if (iframeUrlPickerGroupId) {
-              const g = board.groups.find((grp) => grp.id === iframeUrlPickerGroupId);
+            if (iframeUrlPickerTarget) {
+              const space = spaceStore.spaces.find((item) => item.id === iframeUrlPickerTarget.spaceId);
+              const g = space?.board.groups.find((grp) => grp.id === iframeUrlPickerTarget.groupId);
               setGroupIframeConfig(
-                iframeUrlPickerGroupId,
+                iframeUrlPickerTarget.spaceId,
+                iframeUrlPickerTarget.groupId,
                 url,
                 g?.iframeHeight ?? IFRAME_DEFAULT_HEIGHT,
               );
-              setIframeUrlPickerGroupId(null);
+              setIframeUrlPickerTarget(null);
             }
           }}
         />
