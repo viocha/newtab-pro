@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DragEvent } from 'react';
 import { flushSync } from 'react-dom';
-import { Check, GripHorizontal, LayoutGrid, LayoutList, MoreHorizontal, FolderTree, FolderPlus, FolderOpen, BookOpen, Palette, Plus, Trash2, ExternalLink, AppWindow, EyeOff, FolderInput, Globe, Wrench, Play, PanelsTopLeft } from 'lucide-react';
+import { Check, GripHorizontal, LayoutGrid, LayoutList, MoreHorizontal, FolderTree, FolderPlus, FolderOpen, BookOpen, Palette, Plus, Trash2, ExternalLink, AppWindow, EyeOff, FolderInput, Globe, Wrench, Play, PanelsTopLeft, RefreshCw, RotateCcw } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { browser } from 'wxt/browser';
 
@@ -278,6 +278,23 @@ export function GroupCard({
   // 如果 iframeAutoRun=false，则初始不激活，需要手动点击 play 按钮
   const [iframeActivated, setIframeActivated] = useState(isActiveSpace && iframeAutoRun);
   const [iframeReloadKey, setIframeReloadKey] = useState(0);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const refreshIframe = () => {
+    if (!iframeActivated) {
+      setIframeActivated(true);
+      return;
+    }
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: 'NEWTAB_PRO_IFRAME_REFRESH' },
+      '*',
+    );
+  };
+
+  const resetIframe = () => {
+    setIframeActivated(true);
+    setIframeReloadKey((key) => key + 1);
+  };
 
   useEffect(() => {
     if (isActiveSpace && iframeAutoRun && !iframeActivated) setIframeActivated(true);
@@ -462,6 +479,32 @@ export function GroupCard({
             'flex shrink-0 items-center justify-end gap-0.5 transition-opacity',
             menuOpen ? 'opacity-100' : 'opacity-0 group-hover/header:opacity-100',
           )}>
+            {group.viewMode === 'iframe' && group.iframeUrl && (
+              <>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="size-7 cursor-pointer rounded-md text-black/80 hover:bg-black/[0.06] hover:text-black"
+                  onClick={refreshIframe}
+                  title="刷新当前网页"
+                  aria-label="刷新当前网页"
+                >
+                  <RefreshCw />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="size-7 cursor-pointer rounded-md text-black/80 hover:bg-black/[0.06] hover:text-black"
+                  onClick={resetIframe}
+                  title="重置到配置网址"
+                  aria-label="重置到配置网址"
+                >
+                  <RotateCcw />
+                </Button>
+              </>
+            )}
             <Button
               size="icon"
               variant="ghost"
@@ -875,6 +918,7 @@ export function GroupCard({
                 <div className="rounded-md" style={{ height: group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT, overflow: 'clip' }}>
                   {iframeActivated ? (
                     <iframe
+                      ref={iframeRef}
                       key={iframeReloadKey}
                       src={group.iframeUrl}
                       title={group.title}
