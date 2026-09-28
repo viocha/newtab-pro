@@ -2,15 +2,22 @@
 .backup-diff-view .jsondiffpatch-delta {
   display: block;
   min-width: 100%;
-  padding-left: 0;
   color: hsl(var(--foreground));
   font-family: monospace !important;
   line-height: 1.3;
   font-size: 11px;
 }
 
-.backup-diff-view ul.jsondiffpatch-delta,
-.backup-diff-view .jsondiffpatch-delta ul {
+.backup-diff-view > .jsondiffpatch-delta {
+  padding-left: 0;
+}
+
+.backup-diff-view .jsondiffpatch-delta > ul {
+  padding-left: 0;
+  margin: 0;
+}
+
+.backup-diff-view .jsondiffpatch-delta ul ul {
   padding-left: 0.8rem;
   margin: 0;
 }
