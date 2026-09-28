@@ -245,12 +245,11 @@ export function BrowserTreeView({
       );
       }
 
-      // 书签节点：左键在新标签页打开，中键后台打开，右键显示菜单
+      // 书签节点：普通点击在当前标签页打开，修饰键和中键沿用浏览器行为
       const bookmarkRow = (
         <a
           href={node.url}
-          target="_blank"
-          rel="noopener noreferrer"
+          target="_self"
           title={node.url ? `${node.title}\n${node.url}` : node.title}
           className={cn(
             'flex select-none items-center gap-1 overflow-hidden rounded px-1 py-1 text-xs hover:bg-accent/60',
@@ -258,8 +257,20 @@ export function BrowserTreeView({
           )}
           style={{ paddingLeft: `${indent + 4}px`, textDecoration: 'none', color: 'inherit' }}
           onClick={(e) => {
+            const url = node.url;
+            if (!url || !/^(?:edge|chrome|about):/.test(url)) return;
             e.preventDefault();
-            if (node.url) void browser.tabs.create({ url: node.url });
+            if (e.altKey) return;
+            if (e.ctrlKey && e.shiftKey) void browser.tabs.create({ url, active: true });
+            else if (e.ctrlKey || e.metaKey) void browser.tabs.create({ url, active: false });
+            else if (e.shiftKey) void browser.windows.create({ url });
+            else void browser.tabs.update({ url });
+          }}
+          onAuxClick={(e) => {
+            const url = node.url;
+            if (e.button !== 1 || !url || !/^(?:edge|chrome|about):/.test(url)) return;
+            e.preventDefault();
+            void browser.tabs.create({ url, active: e.shiftKey });
           }}
         >
           <span className="inline-flex size-4 shrink-0 items-center justify-center" />

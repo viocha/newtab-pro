@@ -36,6 +36,14 @@ function buildSearchUrl(engine: SearchEngine, query: string): string {
   return engine.searchUrl.replace('{query}', encodeURIComponent(query));
 }
 
+type SearchOpenMode = 'default' | 'current' | 'background' | 'foreground';
+
+function getSearchOpenMode(event: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }): SearchOpenMode {
+  if (event.altKey) return 'current';
+  if (event.ctrlKey || event.metaKey) return event.shiftKey ? 'foreground' : 'background';
+  return 'default';
+}
+
 function buildSuggestUrl(engine: SearchEngine, query: string, defaultSuggestUrl = ''): string {
   const url = engine.suggestUrl || defaultSuggestUrl;
   if (!url) return '';
@@ -304,7 +312,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
   }, [batchWindowIds]);
 
   const performSearch = useCallback(
-    (searchQuery: string, forceCurrentTab = false) => {
+    (searchQuery: string, openMode: SearchOpenMode = 'default') => {
       const q = searchQuery.trim();
       if (!q || !activeEngine) return;
       onAddToHistory(q);
@@ -313,7 +321,9 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
       setSuggestions([]);
       setShowDropdown(false);
       const url = buildSearchUrl(activeEngine, q);
-      if (!forceCurrentTab && openInNewTab) {
+      if (openMode === 'foreground' || openMode === 'background') {
+        void browser.tabs.create({ url, active: openMode === 'foreground' });
+      } else if (openMode === 'default' && openInNewTab) {
         window.open(url, '_blank', 'noreferrer');
       } else {
         window.location.href = url;
@@ -517,7 +527,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
       if (e.key === 'Enter') {
         e.preventDefault();
         const q = activeIndex >= 0 ? dropItems[activeIndex] : query;
-        performSearch(q, e.altKey);
+        performSearch(q, getSearchOpenMode(e));
       }
     },
     [showingHistory, showingSuggestions, dropItems, activeIndex, query, performSearch, resetNavigationPreview],
@@ -648,7 +658,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
         {/* Search button — always shows Search icon */}
         <button
           type="button"
-          onClick={() => performSearch(activeIndex >= 0 ? dropItems[activeIndex] : query)}
+          onClick={(event) => performSearch(activeIndex >= 0 ? dropItems[activeIndex] : query, getSearchOpenMode(event))}
           className="self-stretch px-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors border-l border-border/50 hover:bg-muted/40 shrink-0 flex items-center gap-1"
         >
           <Search className="size-3.5" />
@@ -757,12 +767,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
                     href={itemHref(item)}
                     target={openInNewTab ? '_blank' : '_self'}
                     rel="noreferrer"
-                    onClick={(e) => {
-                      if (e.altKey) {
-                        e.preventDefault();
-                        performSearch(item, true);
-                        return;
-                      }
+                    onClick={() => {
                       skipNextSuggestFetchRef.current = true;
                       commitQueryValue(item);
                       setSuggestions([]);
@@ -799,12 +804,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
                 href={itemHref(s)}
                 target={openInNewTab ? '_blank' : '_self'}
                 rel="noreferrer"
-                onClick={(e) => {
-                  if (e.altKey) {
-                    e.preventDefault();
-                    performSearch(s, true);
-                    return;
-                  }
+                onClick={() => {
                   skipNextSuggestFetchRef.current = true;
                   commitQueryValue(s);
                   setSuggestions([]);

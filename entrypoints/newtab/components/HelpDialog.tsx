@@ -112,7 +112,7 @@ export function HelpDialog({ open, onOpenChange, settings }: HelpDialogProps) {
             帮助中心
           </DialogTitle>
           <DialogDescription>
-            汇总快捷键、鼠标操作、右键入口以及与 Bookmark Pro 的联动方式。
+            快捷键与鼠标操作。
           </DialogDescription>
         </DialogHeader>
 
@@ -128,19 +128,25 @@ export function HelpDialog({ open, onOpenChange, settings }: HelpDialogProps) {
               <ShortcutRow label="切换到上一个 Space" shortcut={settings.spacePrevShortcut} />
             </HelpSection>
 
-            {settings.showSearchBar ? (
-              <HelpSection
-                icon={Search}
-                title="搜索栏快捷键"
-                description="搜索框启用时可使用这些操作快速切换打开方式。"
-              >
+            <HelpSection
+              icon={Search}
+              title="搜索栏快捷键"
+              description="搜索框启用时，按键可切换搜索结果的打开方式。"
+            >
                 <ShortcutRow label="聚焦搜索框" shortcut="/" />
+                <Separator />
+                <ShortcutRow label="按设置的方式搜索" shortcut="Enter" />
                 <Separator />
                 <ShortcutRow label="强制当前标签搜索" shortcut="Alt + Enter" />
                 <Separator />
-                <ShortcutRow label="历史当前标签打开" shortcut="Alt + 点击" />
-              </HelpSection>
-            ) : null}
+                <ShortcutRow label="后台新标签搜索" shortcut="Ctrl + Enter" />
+                <Separator />
+                <ShortcutRow label="前台新标签搜索" shortcut="Ctrl + Shift + Enter" />
+                <Separator />
+                <ShortcutRow label="选择历史或建议" shortcut="↑ / ↓" />
+                <Separator />
+                <ShortcutRow label="关闭建议并退出搜索框" shortcut="Esc" />
+            </HelpSection>
 
             <HelpSection
               icon={MousePointer2}
@@ -153,6 +159,7 @@ export function HelpDialog({ open, onOpenChange, settings }: HelpDialogProps) {
                   ['拖拽排序', '按住分组标题栏或书签条目拖动，调整分组和书签顺序。'],
                   ['拖动切换', '在分组外空白区域按住左右拖动，即可切换到上一个或下一个 Space。'],
                   ['点击重命名', '双击 Space 标签，或点击分组/小组标题，可直接进入编辑状态。'],
+                  ['打开书签', '普通点击在当前标签页打开；Ctrl/⌘ + 点击或中键在新标签页打开。'],
                 ].map(([action, desc]) => (
                   <div
                     key={action}
@@ -171,7 +178,7 @@ export function HelpDialog({ open, onOpenChange, settings }: HelpDialogProps) {
               description="这些区域都提供上下文操作，不同对象会显示不同能力。"
             >
               <div className="flex flex-wrap gap-2 px-5 py-4">
-                {['Space 标签', 'Space 空白区域', '书签条目', '侧栏标签条目'].map((area) => (
+                {['Space 标签', 'Space 空白区域', '书签条目', '书签树文件夹', '侧栏标签条目'].map((area) => (
                   <span
                     key={area}
                     className="rounded-full border border-border/60 bg-muted/20 px-3 py-1 text-xs text-foreground/80"
