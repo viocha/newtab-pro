@@ -1718,6 +1718,9 @@ export default function App() {
 
           {spaces.map((space) => {
             const spaceGroups = space.board.groups;
+            const groupOrder = new Map(spaceGroups.map((group, index) => [group.id, index]));
+            // DOM 按稳定 ID 排列，视觉顺序由 CSS 控制，避免移动节点使 iframe 重新加载。
+            const mountedGroups = [...spaceGroups].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
             const spaceEff = space.columns ?? columns;
             const spaceGridCols = spaceEff === 'auto'
               ? 'repeat(auto-fill, minmax(320px, 1fr))'
@@ -1732,8 +1735,8 @@ export default function App() {
               className="grid items-start gap-3"
               style={{ gridTemplateColumns: spaceGridCols }}
             >
-              {spaceGroups.map((group) => (
-                <div key={group.id} className="relative" data-group-card="true" onContextMenu={(e) => e.stopPropagation()}>
+              {mountedGroups.map((group) => (
+                <div key={group.id} className="relative" style={{ order: groupOrder.get(group.id) }} data-group-card="true" onContextMenu={(e) => e.stopPropagation()}>
                   <GroupCard
                     group={group}
                     spaces={spaces}
