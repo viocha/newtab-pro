@@ -15,6 +15,7 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { BROWSER_TREE_DEFAULT_MAX_ITEMS } from '../constants';
 import { FaviconImage } from './FaviconImage';
@@ -353,13 +354,16 @@ export function BrowserTreeView({
   }
 
   return (
-    <div
-      style={fitParentHeight ? { height: '100%', overflowY: 'auto' } : { maxHeight, overflowY: 'auto' }}
-      className="min-h-0 rounded"
+    <ScrollArea
+      style={fitParentHeight ? { height: '100%' } : { maxHeight }}
+      className={cn(
+        'bookmark-scroll-area min-h-0 min-w-0 max-w-full rounded',
+        !fitParentHeight && '[&>[data-slot=scroll-area-viewport]]:h-auto',
+      )}
     >
-      <div className="overflow-x-hidden py-0.5 pr-1">
+      <div className="min-w-0 max-w-full overflow-x-hidden px-2.5 py-0.5">
         {renderNodes(nodes, 0)}
       </div>
-    </div>
+    </ScrollArea>
   );
 }

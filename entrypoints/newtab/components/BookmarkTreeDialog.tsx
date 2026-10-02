@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 
@@ -232,7 +233,7 @@ export function BookmarkTreeDialog({ open, targetLabel, onOpenChange, onAddBookm
           />
         </div>
 
-        <div className="h-[min(62vh,540px)] overflow-y-auto rounded-lg border border-border/70 bg-background/60">
+        <ScrollArea className="bookmark-scroll-area h-[min(62vh,540px)] min-w-0 rounded-lg border border-border/70 bg-background/60">
           {error ? (
             <div className="flex h-32 items-center justify-center px-4 text-xs text-destructive">{error}</div>
           ) : visibleTree.length === 0 ? (
@@ -243,7 +244,7 @@ export function BookmarkTreeDialog({ open, targetLabel, onOpenChange, onAddBookm
           ) : (
             <div className="py-1">{renderNodes(visibleTree, 0)}</div>
           )}
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

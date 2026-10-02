@@ -88,6 +88,23 @@
     linear-gradient(180deg, oklch(0.97 0.008 95) 0%, oklch(0.95 0.015 230) 100%);
 }
 
+/* 约束 ScrollArea 内容宽度，避免长标题撑开分组网格。 */
+.board-scroll-area [data-slot='scroll-area-viewport'] > div,
+.bookmark-scroll-area [data-slot='scroll-area-viewport'] > div {
+  display: block !important;
+  max-width: 100%;
+}
+
+.board-scroll-area [data-slot='scroll-area-viewport'] > div {
+  display: flex !important;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.bookmark-scroll-area [data-slot='scroll-area-viewport'] {
+  max-height: inherit;
+}
+
 /* Prevent dnd-kit from overriding cursor during drag */
 body.dragging-pointer,
 body.dragging-pointer * {

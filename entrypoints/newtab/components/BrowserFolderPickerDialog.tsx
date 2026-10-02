@@ -3,6 +3,7 @@ import { Check, ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-rea
 import { browser, type Browser } from 'wxt/browser';
 
 import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog,
   DialogContent,
@@ -164,13 +165,13 @@ export function BrowserFolderPickerDialog({
             {error}
           </div>
         ) : (
-          <div className="h-[420px] shrink-0 overflow-y-auto rounded-md border border-border/50">
-            <div className="p-1">
+          <ScrollArea className="bookmark-scroll-area h-[420px] min-w-0 shrink-0 rounded-md border border-border/50">
+            <div className="px-2.5 py-1">
               {!loading && tree.length === 0
                 ? <p className="px-2 py-3 text-xs text-muted-foreground">没有找到书签文件夹</p>
                 : renderFolders(tree, 0)}
             </div>
-          </div>
+          </ScrollArea>
         )}
 
         <DialogFooter>

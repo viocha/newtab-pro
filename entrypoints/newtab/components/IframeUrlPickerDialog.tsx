@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
 import type { Space } from '../types';
@@ -251,7 +252,7 @@ export function IframeUrlPickerDialog({ open, onOpenChange, initialUrl, onConfir
           />
         </div>
 
-        <div className="h-[min(60vh,480px)] overflow-y-auto rounded-lg border border-border/70 bg-background/60">
+        <ScrollArea className="bookmark-scroll-area h-[min(60vh,480px)] min-w-0 rounded-lg border border-border/70 bg-background/60">
           {loading ? (
             <div className="flex h-32 items-center justify-center text-xs text-muted-foreground">加载中…</div>
           ) : error ? (
@@ -287,7 +288,7 @@ export function IframeUrlPickerDialog({ open, onOpenChange, initialUrl, onConfir
               )}
             </div>
           )}
-        </div>
+        </ScrollArea>
 
         {/* 已选 URL 预览（始终占位，避免点击时布局跳动） */}
         <div className={cn(

@@ -42,6 +42,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/sonner';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
 import { BookmarkFormDialog } from './components/BookmarkFormDialog';
@@ -1532,17 +1533,17 @@ export default function App() {
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="min-h-screen bg-page text-foreground">
+      <div className="h-dvh overflow-hidden bg-page text-foreground">
         <TabsEdgeDrawer />
 
         <div
-          className={cn('mx-auto max-w-[1680px] px-5 py-4 pl-14 sm:px-6 sm:pl-14')}
+          className={cn('mx-auto flex h-full max-w-[1680px] flex-col gap-3 px-5 py-4 pl-14 sm:px-6 sm:pl-14')}
           onPointerDown={handleBoardPointerDown}
           onPointerMove={handleBoardPointerMove}
           onPointerUp={handleBoardPointerUp}
           onPointerCancel={handleBoardPointerUp}
         >
-          <header data-no-drag-switch className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-card/85 px-4 py-2.5 shadow-sm">
+          <header data-no-drag-switch className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-card/85 px-4 py-2.5 shadow-sm">
             {/* Space tabs */}
             <div className="flex min-w-0 items-center gap-1 overflow-x-auto pl-1">
               {spaces.map((space) => (
@@ -1701,8 +1702,9 @@ export default function App() {
           </header>
 
           <ContextMenu>
+            <ScrollArea className="board-scroll-area -mx-3 min-h-0 min-w-0 flex-1">
             <ContextMenuTrigger asChild>
-              <div>
+              <div className="min-w-0 max-w-full flex-1 px-3 pb-3">
           {effectiveShowSearch && (
             <div className="mt-3">
               <SearchBar
@@ -1893,6 +1895,7 @@ export default function App() {
           })}
               </div>
             </ContextMenuTrigger>
+            </ScrollArea>
             <ContextMenuContent
               className="w-52"
               onCloseAutoFocus={(event) => {
