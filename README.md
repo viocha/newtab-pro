@@ -1,4 +1,4 @@
-# Newtab Pro (WXT + shadcn + TypeScript)
+# Newtab Pro (WXT + shadcn base-nova + TypeScript)
 
 浏览器新标签页扩展，支持紧凑多列分组布局、分组内小组折叠、以及三种书签添加方式。
 
@@ -26,3 +26,15 @@ bun run build
 ```
 
 构建产物输出到 `.output/chrome-mv3`，可在 Chrome 扩展页以“加载已解压的扩展程序”方式加载。
+
+## 界面组件
+
+界面采用 shadcn 的 `base-nova` 风格，底层为 Base UI，使用 neutral 浅色主题，默认字体为浏览器配置的 `sans-serif`。通用组件由 shadcn CLI 生成，表单位于 Field / FieldGroup，视图模式使用 Toggle Group，通知使用 Base UI Toast。
+
+```bash
+bunx --bun shadcn@latest add <组件名>
+bun run typecheck
+bun run build:reload
+```
+
+`build` 包含类型检查；`reload` 通过 reload-extension 重载浏览器中名为 Newtab Pro 的扩展。

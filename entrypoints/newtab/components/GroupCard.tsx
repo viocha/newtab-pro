@@ -1,13 +1,38 @@
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DragEvent } from 'react';
 import { flushSync } from 'react-dom';
-import { Check, GripHorizontal, LayoutGrid, LayoutList, MoreHorizontal, FolderTree, FolderPlus, FolderOpen, BookOpen, Palette, Plus, Trash2, ExternalLink, AppWindow, EyeOff, FolderInput, Globe, Wrench, Play, PanelsTopLeft, RefreshCw, RotateCcw } from 'lucide-react';
+import {
+  Check,
+  GripHorizontal,
+  LayoutGrid,
+  LayoutList,
+  MoreHorizontal,
+  FolderTree,
+  FolderPlus,
+  FolderOpen,
+  BookOpen,
+  Palette,
+  Plus,
+  Trash2,
+  ExternalLink,
+  AppWindow,
+  EyeOff,
+  FolderInput,
+  Globe,
+  Wrench,
+  Play,
+  PanelsTopLeft,
+  RefreshCw,
+  RotateCcw,
+} from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { browser } from 'wxt/browser';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+  DropdownMenuGroup,
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -38,8 +63,15 @@ import { BookmarkIconGrid } from './BookmarkIconGrid';
 import { BrowserTreeView } from './BrowserTreeView';
 import { SubgroupPanel } from './SubgroupPanel';
 import { tryNormalizeUrl } from '../utils';
-import { BROWSER_TREE_DEFAULT_MAX_ITEMS, IFRAME_DEFAULT_HEIGHT } from '../constants';
-import { getGridOpenCounts, openUrlsInGrid, useWindowOpenPrefs } from '../window-open';
+import {
+  BROWSER_TREE_DEFAULT_MAX_ITEMS,
+  IFRAME_DEFAULT_HEIGHT,
+} from '../constants';
+import {
+  getGridOpenCounts,
+  openUrlsInGrid,
+  useWindowOpenPrefs,
+} from '../window-open';
 
 type GroupCardProps = {
   group: BookmarkGroup;
@@ -67,8 +99,14 @@ type GroupCardProps = {
   onDeleteSubgroup: (target: InsertTarget) => void;
   onOpenManualAdd: (target: BookmarkContainerTarget) => void;
   onOpenImportAdd: (target: BookmarkContainerTarget) => void;
-  onOpenEditBookmark: (target: BookmarkContainerTarget, bookmark: BookmarkItem) => void;
-  onDeleteBookmark: (target: BookmarkContainerTarget, bookmarkId: string) => void;
+  onOpenEditBookmark: (
+    target: BookmarkContainerTarget,
+    bookmark: BookmarkItem,
+  ) => void;
+  onDeleteBookmark: (
+    target: BookmarkContainerTarget,
+    bookmarkId: string,
+  ) => void;
   onMoveBookmark: (
     source: BookmarkNodeTarget,
     target: BookmarkContainerTarget,
@@ -105,7 +143,9 @@ function readExternalBookmarkFromDrop(event: DragEvent) {
   if (tabPayload?.url) {
     return tabPayload;
   }
-  const uriList = event.dataTransfer.getData('text/uri-list') || event.dataTransfer.getData('text/plain');
+  const uriList =
+    event.dataTransfer.getData('text/uri-list') ||
+    event.dataTransfer.getData('text/plain');
   if (!uriList) return null;
   const normalizedUrl = tryNormalizeUrl(uriList);
   if (!normalizedUrl) return null;
@@ -124,10 +164,16 @@ function collectGroupUrls(group: BookmarkGroup): string[] {
   return urls;
 }
 
-interface BmNode { url?: string; children?: BmNode[] }
+interface BmNode {
+  url?: string;
+  children?: BmNode[];
+}
 function collectBmUrls(nodes: BmNode[]): string[] {
   const urls: string[] = [];
-  const walk = (n: BmNode) => { if (n.url) urls.push(n.url); n.children?.forEach(walk); };
+  const walk = (n: BmNode) => {
+    if (n.url) urls.push(n.url);
+    n.children?.forEach(walk);
+  };
   nodes.forEach(walk);
   return urls;
 }
@@ -139,7 +185,8 @@ function SubgroupEndNode({ groupId }: { groupId: string }) {
     data: { type: 'subgroup-end', target: { groupId } },
   });
   const { dropIndicator } = useDndUIStore();
-  const isTarget = dropIndicator?.id === dndId && dropIndicator.type === 'subgroup';
+  const isTarget =
+    dropIndicator?.id === dndId && dropIndicator.type === 'subgroup';
 
   return (
     <div ref={setNodeRef} id={`dnd-${dndId}`} className="relative h-0">
@@ -161,14 +208,18 @@ function GroupEmptyZone({
     insertIndex?: number,
   ) => void;
 }) {
-  const target: BookmarkContainerTarget = useMemo(() => ({ groupId, subgroupId: undefined }), [groupId]);
+  const target: BookmarkContainerTarget = useMemo(
+    () => ({ groupId, subgroupId: undefined }),
+    [groupId],
+  );
   const dndId = `bookmark-end|${groupId}|${undefined}`;
   const { setNodeRef } = useDroppable({
     id: dndId,
     data: { type: 'bookmark-end', target, index: 0 },
   });
   const { dropIndicator } = useDndUIStore();
-  const isTarget = dropIndicator?.id === dndId && dropIndicator.type === 'bookmark';
+  const isTarget =
+    dropIndicator?.id === dndId && dropIndicator.type === 'bookmark';
 
   return (
     <div
@@ -198,14 +249,23 @@ function GroupEmptyZone({
   );
 }
 
-function ColorPickerButton({ currentColor, onChange }: { currentColor: string; onChange: (color: string) => void }) {
+function ColorPickerButton({
+  currentColor,
+  onChange,
+}: {
+  currentColor: string;
+  onChange: (color: string) => void;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const isCustom = !GROUP_COLOR_PRESETS.includes(currentColor);
 
   return (
     <button
       className="relative size-6 rounded-full transition-transform hover:scale-110"
-      style={{ background: 'conic-gradient(#f87171, #fbbf24, #34d399, #60a5fa, #a78bfa, #f472b6, #f87171)' }}
+      style={{
+        background:
+          'conic-gradient(#f87171, #fbbf24, #34d399, #60a5fa, #a78bfa, #f472b6, #f87171)',
+      }}
       onClick={(e) => {
         e.stopPropagation();
         inputRef.current?.click();
@@ -265,6 +325,7 @@ export function GroupCard({
   const [editingTitle, setEditingTitle] = useState(!!autoFocusEdit);
   const [titleDraft, setTitleDraft] = useState(group.title);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuInputEditing, setMenuInputEditing] = useState(false);
   const addSubgroupAfterMenuCloseRef = useRef(false);
   const [btUrls, setBtUrls] = useState<string[]>([]);
   const [btMaxDraft, setBtMaxDraft] = useState<string>(
@@ -276,7 +337,9 @@ export function GroupCard({
   );
   // iframe 懒加载：只有 Space 被激活过才真正渲染 iframe，避免页面加载时所有 Space 的 iframe 同时请求
   // 如果 iframeAutoRun=false，则初始不激活，需要手动点击 play 按钮
-  const [iframeActivated, setIframeActivated] = useState(isActiveSpace && iframeAutoRun);
+  const [iframeActivated, setIframeActivated] = useState(
+    isActiveSpace && iframeAutoRun,
+  );
   const [iframeReloadKey, setIframeReloadKey] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -297,7 +360,8 @@ export function GroupCard({
   };
 
   useEffect(() => {
-    if (isActiveSpace && iframeAutoRun && !iframeActivated) setIframeActivated(true);
+    if (isActiveSpace && iframeAutoRun && !iframeActivated)
+      setIframeActivated(true);
     // iframeActivated 故意不加入依赖——单向激活闸，防止无限循环
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActiveSpace, iframeAutoRun]);
@@ -311,7 +375,9 @@ export function GroupCard({
 
   // 同步外部 browserTreeMaxItems 到草稿
   useEffect(() => {
-    setBtMaxDraft(String(group.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS));
+    setBtMaxDraft(
+      String(group.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS),
+    );
   }, [group.browserTreeMaxItems]);
 
   // 同步外部 iframeUrl / iframeHeight 到草稿
@@ -329,11 +395,18 @@ export function GroupCard({
       return;
     }
     let alive = true;
-    void browser.bookmarks.getSubTree(group.browserTreeFolderId).then(([folder]) => {
-      if (!alive) return;
-      setBtUrls(collectBmUrls((folder?.children ?? []) as BmNode[]));
-    }).catch(() => { if (alive) setBtUrls([]); });
-    return () => { alive = false; };
+    void browser.bookmarks
+      .getSubTree(group.browserTreeFolderId)
+      .then(([folder]) => {
+        if (!alive) return;
+        setBtUrls(collectBmUrls((folder?.children ?? []) as BmNode[]));
+      })
+      .catch(() => {
+        if (alive) setBtUrls([]);
+      });
+    return () => {
+      alive = false;
+    };
   }, [group.viewMode, group.browserTreeFolderId]);
 
   const groupRootTarget = useMemo<BookmarkContainerTarget>(
@@ -361,7 +434,11 @@ export function GroupCard({
   const dndId = `group|${group.id}`;
   const { activeId, dropIndicator } = useDndUIStore();
 
-  const { setNodeRef: setDragRef, listeners, attributes } = useDraggable({
+  const {
+    setNodeRef: setDragRef,
+    listeners,
+    attributes,
+  } = useDraggable({
     id: dndId,
     data: { type: 'group', groupId: group.id, group },
   });
@@ -372,8 +449,10 @@ export function GroupCard({
   });
 
   const isDragging = activeId === dndId;
-  const isTarget = dropIndicator?.id === dndId && dropIndicator.type === 'group';
-  const allUrls = group.viewMode === 'browser-tree' ? btUrls : collectGroupUrls(group);
+  const isTarget =
+    dropIndicator?.id === dndId && dropIndicator.type === 'group';
+  const allUrls =
+    group.viewMode === 'browser-tree' ? btUrls : collectGroupUrls(group);
   const keepIframeMounted = group.viewMode === 'iframe';
   const shouldRenderGroupBody = keepIframeMounted || !group.collapsed;
   const isIframeBodyHidden = keepIframeMounted && group.collapsed;
@@ -437,7 +516,10 @@ export function GroupCard({
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className={cn('transition-transform', group.collapsed && '-rotate-90')}
+                className={cn(
+                  'transition-transform',
+                  group.collapsed && '-rotate-90',
+                )}
               >
                 <path d="m6 9 6 6 6-6" />
               </svg>
@@ -475,10 +557,14 @@ export function GroupCard({
             </div>
           </div>
 
-          <div className={cn(
-            'flex shrink-0 items-center justify-end gap-0.5 transition-opacity',
-            menuOpen ? 'opacity-100' : 'opacity-0 group-hover/header:opacity-100',
-          )}>
+          <div
+            className={cn(
+              'flex shrink-0 items-center justify-end gap-0.5 transition-opacity',
+              menuOpen
+                ? 'opacity-100'
+                : 'opacity-0 group-hover/header:opacity-100',
+            )}
+          >
             {group.viewMode === 'iframe' && group.iframeUrl && (
               <>
                 <Button
@@ -511,7 +597,11 @@ export function GroupCard({
               className="size-7 rounded-md text-black/80 hover:bg-black/[0.06] hover:text-black"
               onClick={() => onOpenManualAdd(groupRootTarget)}
               title="添加书签"
-              style={group.viewMode === 'browser-tree' || group.viewMode === 'iframe' ? { display: 'none' } : undefined}
+              style={
+                group.viewMode === 'browser-tree' || group.viewMode === 'iframe'
+                  ? { display: 'none' }
+                  : undefined
+              }
             >
               <Plus className="size-3.5" />
             </Button>
@@ -521,129 +611,310 @@ export function GroupCard({
               className="size-7 rounded-md text-black/80 hover:bg-black/[0.06] hover:text-black"
               onClick={() => onOpenImportAdd(groupRootTarget)}
               title="从书签导入"
-              style={group.viewMode === 'browser-tree' || group.viewMode === 'iframe' ? { display: 'none' } : undefined}
+              style={
+                group.viewMode === 'browser-tree' || group.viewMode === 'iframe'
+                  ? { display: 'none' }
+                  : undefined
+              }
             >
               <FolderTree className="size-3.5" />
             </Button>
-            <DropdownMenu onOpenChange={setMenuOpen}>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className={cn(
-                    'size-7 rounded-md text-black/80 hover:bg-black/[0.06] hover:text-black',
-                    menuOpen && 'bg-black/[0.06] text-black',
-                  )}
-                >
-                  <MoreHorizontal className="size-4" />
-                </Button>
+            <DropdownMenu
+              highlightItemOnHover={!menuInputEditing}
+              onOpenChange={(open) => {
+                if (open) setMenuOpen(true);
+              }}
+              onOpenChangeComplete={(open) => {
+                if (open) return;
+                setMenuOpen(false);
+                if (addSubgroupAfterMenuCloseRef.current) {
+                  addSubgroupAfterMenuCloseRef.current = false;
+                  flushSync(() => {
+                    onAddSubgroup(group.id);
+                  });
+                }
+              }}
+            >
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className={cn(
+                      'size-7 rounded-md text-black/80 hover:bg-black/[0.06] hover:text-black aria-expanded:bg-black/[0.06] aria-expanded:text-black',
+                      menuOpen && 'bg-black/[0.06] text-black',
+                    )}
+                  />
+                }
+              >
+                <MoreHorizontal className="size-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent
+                onFocusCapture={(event) =>
+                  setMenuInputEditing(event.target instanceof HTMLInputElement)
+                }
+                onBlurCapture={(event) => {
+                  if (!(event.relatedTarget instanceof HTMLInputElement))
+                    setMenuInputEditing(false);
+                }}
                 align="end"
                 className="w-58"
-                onCloseAutoFocus={(event) => {
-                  if (addSubgroupAfterMenuCloseRef.current) {
-                    event.preventDefault();
-                    addSubgroupAfterMenuCloseRef.current = false;
-                    flushSync(() => {
-                      onAddSubgroup(group.id);
-                    });
-                  }
-                }}
+                finalFocus={false}
               >
-                {/* View mode segmented */}
-                <DropdownMenuLabel className="pb-1 text-xs font-medium text-muted-foreground">视图模式</DropdownMenuLabel>
-                <div className="px-2 pb-2">
-                  <div className="flex items-center rounded-md bg-muted p-0.5">
-                    {(
-                      [['list', <LayoutList className="size-3.5" />, '列表'],
-                      ['icon', <LayoutGrid className="size-3.5" />, '图标'],
-                      ['browser-tree', <BookOpen className="size-3.5" />, '书签树'],
-                      ['iframe', <Globe className="size-3.5" />, '内嵌网页']] as const
-                    ).map(([val, icon, label]) => {
-                      const isGroupEmpty =
-                        group.bookmarks.length === 0 &&
-                        group.subgroups.every((s) => s.bookmarks.length === 0);
-                      const isDisabled = (val === 'browser-tree' || val === 'iframe') && !isGroupEmpty;
-                      return (
-                        <button
-                          key={val}
-                          disabled={isDisabled}
-                          title={isDisabled ? `${label}（分组内容不为空时无法切换）` : label}
-                          className={cn(
-                            'flex flex-1 items-center justify-center rounded px-1.5 py-1.5 transition-all',
-                            group.viewMode === val
-                              ? 'bg-background text-foreground shadow-sm'
-                              : 'text-muted-foreground hover:text-foreground',
-                            isDisabled && 'cursor-not-allowed opacity-40 hover:text-muted-foreground',
-                          )}
-                          onClick={() => !isDisabled && onSetViewMode(val as BookmarkViewMode)}
-                        >
-                          {icon}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                {/* Icon size segmented – only in icon mode */}
-                {group.viewMode === 'icon' && (
-                  <>
-                    <DropdownMenuLabel className="pb-1 text-xs font-medium text-muted-foreground">图标尺寸</DropdownMenuLabel>
-                    <div className="px-2 pb-2">
-                      <div className="flex items-center rounded-md bg-muted p-0.5">
-                        {([['sm', '小'], ['md', '中'], ['lg', '大']] as const).map(([val, label]) => (
-                          <button
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>视图模式</DropdownMenuLabel>
+                  <div className="px-1.5 pb-1">
+                    <ToggleGroup
+                      value={[group.viewMode ?? 'list']}
+                      onValueChange={(value) => {
+                        if (value[0])
+                          onSetViewMode(value[0] as BookmarkViewMode);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      spacing={0}
+                      className="w-full"
+                      aria-label="视图模式"
+                    >
+                      {(
+                        [
+                          ['list', <LayoutList />, '列表'],
+                          ['icon', <LayoutGrid />, '图标'],
+                          ['browser-tree', <BookOpen />, '书签树'],
+                          ['iframe', <Globe />, '内嵌网页'],
+                        ] as const
+                      ).map(([val, icon, label]) => {
+                        const isDisabled =
+                          (val === 'browser-tree' || val === 'iframe') &&
+                          (group.bookmarks.length > 0 ||
+                            group.subgroups.some(
+                              (item) => item.bookmarks.length > 0,
+                            ));
+                        return (
+                          <ToggleGroupItem
                             key={val}
-                            className={cn(
-                              'flex flex-1 items-center justify-center rounded py-1 text-xs font-medium transition-all',
-                              group.iconSize === val
-                                ? 'bg-background text-foreground shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground',
-                            )}
-                            onClick={() => onSetIconSize(val as IconSize)}
+                            value={val}
+                            disabled={isDisabled}
+                            aria-label={label}
+                            title={
+                              isDisabled
+                                ? `${label}（分组内容不为空时无法切换）`
+                                : label
+                            }
+                            className="flex-1"
                           >
-                            {label}
-                          </button>
-                        ))}
+                            {icon}
+                          </ToggleGroupItem>
+                        );
+                      })}
+                    </ToggleGroup>
+                  </div>
+                  {/* Icon size segmented – only in icon mode */}
+                  {group.viewMode === 'icon' && (
+                    <>
+                      <DropdownMenuLabel>图标尺寸</DropdownMenuLabel>
+                      <div className="px-1.5 pb-1">
+                        <ToggleGroup
+                          value={[group.iconSize ?? 'md']}
+                          onValueChange={(value) => {
+                            if (value[0]) onSetIconSize(value[0] as IconSize);
+                          }}
+                          variant="outline"
+                          size="sm"
+                          spacing={0}
+                          className="w-full"
+                          aria-label="图标尺寸"
+                        >
+                          {(
+                            [
+                              ['sm', '小'],
+                              ['md', '中'],
+                              ['lg', '大'],
+                            ] as const
+                          ).map(([val, label]) => (
+                            <ToggleGroupItem
+                              key={val}
+                              value={val}
+                              className="flex-1"
+                            >
+                              {label}
+                            </ToggleGroupItem>
+                          ))}
+                        </ToggleGroup>
                       </div>
-                    </div>
-                  </>
-                )}
-                {/* Iframe config – only in iframe mode */}
-                {group.viewMode === 'iframe' && (
-                  <>
-                    <div className="px-2 py-1.5 space-y-2">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs font-medium text-muted-foreground">URL</span>
-                        <div className="flex gap-1">
-                          <Input
-                            type="url"
-                            placeholder="https://example.com"
-                            className="h-8 flex-1 text-xs shadow-none"
-                            value={iframeUrlDraft}
-                            onChange={(e) => setIframeUrlDraft(e.target.value)}
-                            onBlur={() => {
-                              onSetIframeConfig(
-                                group.id,
-                                iframeUrlDraft.trim(),
-                                group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT,
-                              );
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
+                    </>
+                  )}
+
+                  {/* Iframe config – only in iframe mode */}
+                  {group.viewMode === 'iframe' && (
+                    <>
+                      <div className="px-2 py-1.5 flex flex-col gap-2">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            URL
+                          </span>
+                          <div className="flex gap-1">
+                            <Input
+                              type="url"
+                              placeholder="https://example.com"
+                              className="h-8 flex-1 text-xs shadow-none"
+                              value={iframeUrlDraft}
+                              onChange={(e) =>
+                                setIframeUrlDraft(e.target.value)
+                              }
+                              onBlur={() => {
                                 onSetIframeConfig(
                                   group.id,
                                   iframeUrlDraft.trim(),
                                   group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT,
                                 );
-                                (e.target as HTMLInputElement).blur();
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  onSetIframeConfig(
+                                    group.id,
+                                    iframeUrlDraft.trim(),
+                                    group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT,
+                                  );
+                                  (e.target as HTMLInputElement).blur();
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            高度 (px)
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon-xs"
+                              className="size-7"
+                              onClick={() => {
+                                const n = Math.max(
+                                  100,
+                                  (group.iframeHeight ??
+                                    IFRAME_DEFAULT_HEIGHT) - 50,
+                                );
+                                onSetIframeConfig(
+                                  group.id,
+                                  iframeUrlDraft.trim(),
+                                  n,
+                                );
+                              }}
+                            >
+                              −
+                            </Button>
+                            <Input
+                              type="number"
+                              min={100}
+                              max={2000}
+                              className="hide-number-spin h-8 w-16 text-center text-xs shadow-none"
+                              value={iframeHeightDraft}
+                              onChange={(e) =>
+                                setIframeHeightDraft(e.target.value)
                               }
-                            }}
-                          />
+                              onBlur={() => {
+                                const v = parseInt(iframeHeightDraft, 10);
+                                if (!isNaN(v) && v >= 100) {
+                                  onSetIframeConfig(
+                                    group.id,
+                                    iframeUrlDraft.trim(),
+                                    Math.min(2000, v),
+                                  );
+                                } else {
+                                  setIframeHeightDraft(
+                                    String(
+                                      group.iframeHeight ??
+                                        IFRAME_DEFAULT_HEIGHT,
+                                    ),
+                                  );
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  const v = parseInt(iframeHeightDraft, 10);
+                                  if (!isNaN(v) && v >= 100) {
+                                    onSetIframeConfig(
+                                      group.id,
+                                      iframeUrlDraft.trim(),
+                                      Math.min(2000, v),
+                                    );
+                                  } else {
+                                    setIframeHeightDraft(
+                                      String(
+                                        group.iframeHeight ??
+                                          IFRAME_DEFAULT_HEIGHT,
+                                      ),
+                                    );
+                                  }
+                                  (e.target as HTMLInputElement).blur();
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon-xs"
+                              className="size-7"
+                              onClick={() => {
+                                const n = Math.min(
+                                  2000,
+                                  (group.iframeHeight ??
+                                    IFRAME_DEFAULT_HEIGHT) + 50,
+                                );
+                                onSetIframeConfig(
+                                  group.id,
+                                  iframeUrlDraft.trim(),
+                                  n,
+                                );
+                              }}
+                            >
+                              +
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-muted-foreground">高度 (px)</span>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onOpenIframeUrlPicker(group.id);
+                        }}
+                      >
+                        <BookOpen className="mr-2 size-3.5" />
+                        从书签选择
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          if (group.iframeUrl) {
+                            try {
+                              const urlObj = new URL(group.iframeUrl);
+                              browser.runtime
+                                .sendMessage({
+                                  type: 'CLEAR_SERVICE_WORKER',
+                                  origin: urlObj.origin,
+                                })
+                                .then(() => {
+                                  setIframeReloadKey((k) => k + 1);
+                                });
+                            } catch (err) {}
+                          }
+                        }}
+                      >
+                        <Wrench className="mr-2 size-3.5" />
+                        清除该站 SW 缓存
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {/* Browser-tree config – only in browser-tree mode */}
+                  {group.viewMode === 'browser-tree' && (
+                    <>
+                      <div className="flex items-center justify-between px-2 py-1.5">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          最多条目数
+                        </span>
                         <div className="flex items-center gap-1">
                           <Button
                             type="button"
@@ -651,34 +922,55 @@ export function GroupCard({
                             size="icon-xs"
                             className="size-7"
                             onClick={() => {
-                              const n = Math.max(100, (group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT) - 50);
-                              onSetIframeConfig(group.id, iframeUrlDraft.trim(), n);
+                              const n = Math.max(
+                                5,
+                                (group.browserTreeMaxItems ??
+                                  BROWSER_TREE_DEFAULT_MAX_ITEMS) - 5,
+                              );
+                              onSetBrowserTreeMaxItems(group.id, n);
+                              setBtMaxDraft(String(n));
                             }}
                           >
                             −
                           </Button>
                           <Input
                             type="number"
-                            min={100}
-                            max={2000}
-                            className="hide-number-spin h-8 w-16 text-center text-xs shadow-none"
-                            value={iframeHeightDraft}
-                            onChange={(e) => setIframeHeightDraft(e.target.value)}
+                            min={5}
+                            max={300}
+                            className="hide-number-spin h-8 w-14 text-center text-xs shadow-none"
+                            value={btMaxDraft}
+                            onChange={(e) => setBtMaxDraft(e.target.value)}
                             onBlur={() => {
-                              const v = parseInt(iframeHeightDraft, 10);
-                              if (!isNaN(v) && v >= 100) {
-                                onSetIframeConfig(group.id, iframeUrlDraft.trim(), Math.min(2000, v));
+                              const v = parseInt(btMaxDraft, 10);
+                              if (!isNaN(v) && v >= 5) {
+                                onSetBrowserTreeMaxItems(
+                                  group.id,
+                                  Math.min(300, v),
+                                );
                               } else {
-                                setIframeHeightDraft(String(group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT));
+                                setBtMaxDraft(
+                                  String(
+                                    group.browserTreeMaxItems ??
+                                      BROWSER_TREE_DEFAULT_MAX_ITEMS,
+                                  ),
+                                );
                               }
                             }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
-                                const v = parseInt(iframeHeightDraft, 10);
-                                if (!isNaN(v) && v >= 100) {
-                                  onSetIframeConfig(group.id, iframeUrlDraft.trim(), Math.min(2000, v));
+                                const v = parseInt(btMaxDraft, 10);
+                                if (!isNaN(v) && v >= 5) {
+                                  onSetBrowserTreeMaxItems(
+                                    group.id,
+                                    Math.min(300, v),
+                                  );
                                 } else {
-                                  setIframeHeightDraft(String(group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT));
+                                  setBtMaxDraft(
+                                    String(
+                                      group.browserTreeMaxItems ??
+                                        BROWSER_TREE_DEFAULT_MAX_ITEMS,
+                                    ),
+                                  );
                                 }
                                 (e.target as HTMLInputElement).blur();
                               }
@@ -690,215 +982,162 @@ export function GroupCard({
                             size="icon-xs"
                             className="size-7"
                             onClick={() => {
-                              const n = Math.min(2000, (group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT) + 50);
-                              onSetIframeConfig(group.id, iframeUrlDraft.trim(), n);
+                              const n = Math.min(
+                                300,
+                                (group.browserTreeMaxItems ??
+                                  BROWSER_TREE_DEFAULT_MAX_ITEMS) + 5,
+                              );
+                              onSetBrowserTreeMaxItems(group.id, n);
+                              setBtMaxDraft(String(n));
                             }}
                           >
                             +
                           </Button>
                         </div>
                       </div>
-                    </div>
-                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onOpenIframeUrlPicker(group.id); }}>
-                      <BookOpen className="mr-2 size-3.5" />
-                      从书签选择
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={(e) => {
-                      if (group.iframeUrl) {
-                        try {
-                          const urlObj = new URL(group.iframeUrl);
-                          browser.runtime.sendMessage({
-                            type: 'CLEAR_SERVICE_WORKER',
-                            origin: urlObj.origin
-                          }).then(() => {
-                            setIframeReloadKey(k => k + 1);
-                          });
-                        } catch (err) { }
-                      }
-                    }}>
-                      <Wrench className="mr-2 size-3.5" />
-                      清除该站 SW 缓存
-                    </DropdownMenuItem>
-                  </>
-                )}
-                {/* Browser-tree config – only in browser-tree mode */}
-                {group.viewMode === 'browser-tree' && (
-                  <>
-                    <div className="flex items-center justify-between px-2 py-1.5">
-                      <span className="text-xs font-medium text-muted-foreground">最多条目数</span>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon-xs"
-                          className="size-7"
-                          onClick={() => {
-                            const n = Math.max(5, (group.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS) - 5);
-                            onSetBrowserTreeMaxItems(group.id, n);
-                            setBtMaxDraft(String(n));
-                          }}
-                        >
-                          −
-                        </Button>
-                        <Input
-                          type="number"
-                          min={5}
-                          max={300}
-                          className="hide-number-spin h-8 w-14 text-center text-xs shadow-none"
-                          value={btMaxDraft}
-                          onChange={(e) => setBtMaxDraft(e.target.value)}
-                          onBlur={() => {
-                            const v = parseInt(btMaxDraft, 10);
-                            if (!isNaN(v) && v >= 5) {
-                              onSetBrowserTreeMaxItems(group.id, Math.min(300, v));
-                            } else {
-                              setBtMaxDraft(String(group.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS));
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              const v = parseInt(btMaxDraft, 10);
-                              if (!isNaN(v) && v >= 5) {
-                                onSetBrowserTreeMaxItems(group.id, Math.min(300, v));
-                              } else {
-                                setBtMaxDraft(String(group.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS));
-                              }
-                              (e.target as HTMLInputElement).blur();
-                            }
-                          }}
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon-xs"
-                          className="size-7"
-                          onClick={() => {
-                            const n = Math.min(300, (group.browserTreeMaxItems ?? BROWSER_TREE_DEFAULT_MAX_ITEMS) + 5);
-                            onSetBrowserTreeMaxItems(group.id, n);
-                            setBtMaxDraft(String(n));
-                          }}
-                        >
-                          +
-                        </Button>
-                      </div>
-                    </div>
-                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onOpenBrowserFolderPicker(group.id); }}>
-                      <FolderOpen className="mr-2 size-3.5" />
-                      {group.browserTreeFolderId ? '重新选择文件夹' : '选择文件夹'}
-                    </DropdownMenuItem>
-                  </>
-                )}
-                <DropdownMenuSeparator />
-                {group.viewMode !== 'browser-tree' && group.viewMode !== 'iframe' && (
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onOpenBrowserFolderPicker(group.id);
+                        }}
+                      >
+                        <FolderOpen className="mr-2 size-3.5" />
+                        {group.browserTreeFolderId
+                          ? '重新选择文件夹'
+                          : '选择文件夹'}
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
+                  {group.viewMode !== 'browser-tree' &&
+                    group.viewMode !== 'iframe' && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          addSubgroupAfterMenuCloseRef.current = true;
+                        }}
+                      >
+                        <FolderPlus className="mr-2 size-3.5" />
+                        添加小组
+                      </DropdownMenuItem>
+                    )}
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <Palette className="mr-2 size-3.5" />
+                      标题颜色
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="p-2">
+                      <DropdownMenuGroup>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {GROUP_COLOR_PRESETS.map((color) => (
+                            <button
+                              key={color}
+                              className="relative size-6 rounded-full transition-transform hover:scale-110"
+                              style={{ background: color }}
+                              onClick={() => onSetGroupColor(group.id, color)}
+                            >
+                              {group.color === color && (
+                                <Check className="absolute inset-0 m-auto size-3.5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" />
+                              )}
+                            </button>
+                          ))}
+                          <ColorPickerButton
+                            currentColor={group.color}
+                            onChange={(c) => onSetGroupColor(group.id, c)}
+                          />
+                        </div>
+                      </DropdownMenuGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  {spaces.length > 1 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <FolderInput className="mr-2 size-3.5" />
+                          移动到
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent className="w-44">
+                          <DropdownMenuGroup>
+                            {spaces.map((s) => (
+                              <DropdownMenuItem
+                                key={s.id}
+                                disabled={s.id === activeSpaceId}
+                                onClick={() =>
+                                  onMoveGroupToSpace(group.id, s.id)
+                                }
+                              >
+                                {s.title}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuGroup>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+                    </>
+                  )}
+                  <DropdownMenuItem onClick={() => onDeleteGroup(group.id)}>
+                    <Trash2 className="mr-2 size-3.5" />
+                    删除分组
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onSelect={() => {
-                      addSubgroupAfterMenuCloseRef.current = true;
+                    disabled={allUrls.length === 0}
+                    onClick={() => {
+                      for (const url of allUrls) browser.tabs.create({ url });
                     }}
                   >
-                    <FolderPlus className="mr-2 size-3.5" />
-                    添加小组
+                    <ExternalLink className="mr-2 size-3.5" />
+                    打开全部书签
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Palette className="mr-2 size-3.5" />
-                    标题颜色
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="p-2">
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {GROUP_COLOR_PRESETS.map((color) => (
-                        <button
-                          key={color}
-                          className="relative size-6 rounded-full transition-transform hover:scale-110"
-                          style={{ background: color }}
-                          onClick={() => onSetGroupColor(group.id, color)}
+                  <DropdownMenuItem
+                    disabled={allUrls.length === 0}
+                    onClick={() => browser.windows.create({ url: allUrls })}
+                  >
+                    <AppWindow className="mr-2 size-3.5" />
+                    在新窗口打开全部
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={allUrls.length === 0}
+                    onClick={() =>
+                      browser.windows.create({ url: allUrls, incognito: true })
+                    }
+                  >
+                    <EyeOff className="mr-2 size-3.5" />
+                    在隐私窗口打开全部
+                  </DropdownMenuItem>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger disabled={allUrls.length === 0}>
+                      <PanelsTopLeft className="mr-2 size-3.5" />
+                      多窗口网格打开
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-44">
+                      <DropdownMenuGroup>
+                        <DropdownMenuCheckboxItem
+                          checked={compactGridWindows}
+                          closeOnClick={false}
+                          onCheckedChange={(next) =>
+                            setCompactGridWindows(!!next)
+                          }
                         >
-                          {group.color === color && (
-                            <Check className="absolute inset-0 m-auto size-3.5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" />
-                          )}
-                        </button>
-                      ))}
-                      <ColorPickerButton
-                        currentColor={group.color}
-                        onChange={(c) => onSetGroupColor(group.id, c)}
-                      />
-                    </div>
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-                {spaces.length > 1 && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>
-                        <FolderInput className="mr-2 size-3.5" />
-                        移动到
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="w-44">
-                        {spaces.map((s) => (
+                          简化窗口
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuSeparator />
+                        {getGridOpenCounts(allUrls.length).map((count) => (
                           <DropdownMenuItem
-                            key={s.id}
-                            disabled={s.id === activeSpaceId}
-                            onSelect={() => onMoveGroupToSpace(group.id, s.id)}
+                            key={count}
+                            onClick={() =>
+                              void openUrlsInGrid(
+                                allUrls.slice(0, count),
+                                compactGridWindows,
+                              )
+                            }
                           >
-                            {s.title}
+                            打开前 {count} 个
                           </DropdownMenuItem>
                         ))}
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                  </>
-                )}
-                <DropdownMenuItem onSelect={() => onDeleteGroup(group.id)}>
-                  <Trash2 className="mr-2 size-3.5" />
-                  删除分组
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  disabled={allUrls.length === 0}
-                  onSelect={() => {
-                    for (const url of allUrls) browser.tabs.create({ url });
-                  }}
-                >
-                  <ExternalLink className="mr-2 size-3.5" />
-                  打开全部书签
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={allUrls.length === 0}
-                  onSelect={() => browser.windows.create({ url: allUrls })}
-                >
-                  <AppWindow className="mr-2 size-3.5" />
-                  在新窗口打开全部
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={allUrls.length === 0}
-                  onSelect={() => browser.windows.create({ url: allUrls, incognito: true })}
-                >
-                  <EyeOff className="mr-2 size-3.5" />
-                  在隐私窗口打开全部
-                </DropdownMenuItem>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger disabled={allUrls.length === 0}>
-                    <PanelsTopLeft className="mr-2 size-3.5" />
-                    多窗口网格打开
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="w-44">
-                    <DropdownMenuCheckboxItem
-                      checked={compactGridWindows}
-                      onSelect={(e) => e.preventDefault()}
-                      onCheckedChange={(next) => setCompactGridWindows(!!next)}
-                    >
-                      简化窗口
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuSeparator />
-                    {getGridOpenCounts(allUrls.length).map((count) => (
-                      <DropdownMenuItem
-                        key={count}
-                        onSelect={() => void openUrlsInGrid(allUrls.slice(0, count), compactGridWindows)}
-                      >
-                        打开前 {count} 个
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
+                      </DropdownMenuGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -908,14 +1147,23 @@ export function GroupCard({
           <div
             className={cn(
               'flex flex-1 flex-col overflow-hidden',
-              group.viewMode !== 'browser-tree' && group.viewMode !== 'iframe' ? 'p-2' : 'py-1',
-              isIframeBodyHidden && 'h-0 min-h-0 flex-none py-0 opacity-0 pointer-events-none',
+              group.viewMode !== 'browser-tree' && group.viewMode !== 'iframe'
+                ? 'p-2'
+                : 'py-1',
+              isIframeBodyHidden &&
+                'h-0 min-h-0 flex-none py-0 opacity-0 pointer-events-none',
             )}
             aria-hidden={isIframeBodyHidden || undefined}
           >
             {group.viewMode === 'iframe' ? (
               group.iframeUrl ? (
-                <div className="rounded-md" style={{ height: group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT, overflow: 'clip' }}>
+                <div
+                  className="rounded-md"
+                  style={{
+                    height: group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT,
+                    overflow: 'clip',
+                  }}
+                >
                   {iframeActivated ? (
                     <iframe
                       ref={iframeRef}
@@ -929,7 +1177,10 @@ export function GroupCard({
                   ) : (
                     <div className="flex h-full w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/70 bg-muted/20 px-4">
                       <Globe className="size-8 text-muted-foreground/40" />
-                      <p className="max-w-[80%] truncate text-xs text-muted-foreground" title={group.iframeUrl}>
+                      <p
+                        className="max-w-[80%] truncate text-xs text-muted-foreground"
+                        title={group.iframeUrl}
+                      >
                         {group.iframeUrl}
                       </p>
                       <Button
@@ -947,7 +1198,9 @@ export function GroupCard({
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/70 bg-muted/15 px-4 py-5">
-                  <p className="text-xs text-muted-foreground">请输入要嵌入的网页 URL</p>
+                  <p className="text-xs text-muted-foreground">
+                    请输入要嵌入的网页 URL
+                  </p>
                   <Input
                     type="url"
                     placeholder="https://example.com"
@@ -992,7 +1245,9 @@ export function GroupCard({
                 />
               ) : (
                 <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/70 bg-muted/15 px-4 py-5">
-                  <p className="text-xs text-muted-foreground">尚未选择书签文件夹</p>
+                  <p className="text-xs text-muted-foreground">
+                    尚未选择书签文件夹
+                  </p>
                   <Button
                     type="button"
                     variant="outline"
@@ -1039,7 +1294,12 @@ export function GroupCard({
                   />
                 )}
 
-                <div className={cn('flex flex-col gap-2 empty:hidden', group.bookmarks.length > 0 && 'mt-2')}>
+                <div
+                  className={cn(
+                    'flex flex-col gap-2 empty:hidden',
+                    group.bookmarks.length > 0 && 'mt-2',
+                  )}
+                >
                   {group.subgroups.map((subgroup) => (
                     <div key={subgroup.id} className="relative">
                       <SubgroupPanel
@@ -1058,15 +1318,21 @@ export function GroupCard({
                         onDeleteBookmark={onDeleteBookmark}
                         onMoveBookmark={onMoveBookmark}
                         onDropExternalBookmark={onDropExternalBookmark}
-                        onSetViewMode={(mode) => onSetSubgroupViewMode(subgroup.id, mode)}
-                        onSetIconSize={(size) => onSetSubgroupIconSize(subgroup.id, size)}
+                        onSetViewMode={(mode) =>
+                          onSetSubgroupViewMode(subgroup.id, mode)
+                        }
+                        onSetIconSize={(size) =>
+                          onSetSubgroupIconSize(subgroup.id, size)
+                        }
                         autoFocusEdit={autoFocusSubgroupId === subgroup.id}
                         onClearAutoFocus={onClearAutoFocus}
                       />
                     </div>
                   ))}
                 </div>
-                {group.subgroups.length > 0 && <SubgroupEndNode groupId={group.id} />}
+                {group.subgroups.length > 0 && (
+                  <SubgroupEndNode groupId={group.id} />
+                )}
               </>
             )}
           </div>

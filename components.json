@@ -1,12 +1,12 @@
 {
   "$schema": "https://ui.shadcn.com/schema.json",
-  "style": "new-york",
+  "style": "base-nova",
   "rsc": false,
   "tsx": true,
   "tailwind": {
     "config": "",
     "css": "entrypoints/newtab/style.css",
-    "baseColor": "slate",
+    "baseColor": "neutral",
     "cssVariables": true
   },
   "aliases": {
@@ -15,5 +15,6 @@
     "ui": "@/components/ui",
     "lib": "@/lib",
     "hooks": "@/hooks"
-  }
+  },
+  "iconLibrary": "lucide"
 }

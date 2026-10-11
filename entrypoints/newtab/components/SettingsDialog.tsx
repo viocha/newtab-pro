@@ -1,4 +1,7 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Kbd } from '@/components/ui/kbd';
+import { Field, FieldLabel, FieldGroup } from '@/components/ui/field';
+import { useId, useState, useCallback, useEffect, useRef } from 'react';
 import {
   GripVertical,
   Check,
@@ -68,11 +71,13 @@ function SettingsSection({
   contentClassName?: string;
 }) {
   return (
-    <Card className={cn('gap-0 overflow-hidden border-border/60 bg-background shadow-sm', className)}>
+    <Card className={cn('gap-0 py-0', className)}>
       <CardHeader className="gap-0 border-b border-border/50 bg-muted/15 px-4 py-2.5">
         <CardTitle className="text-sm">{title}</CardTitle>
       </CardHeader>
-      <CardContent className={cn('px-0', contentClassName)}>{children}</CardContent>
+      <CardContent className={cn('px-0', contentClassName)}>
+        {children}
+      </CardContent>
     </Card>
   );
 }
@@ -86,12 +91,18 @@ function SettingsSwitchRow({
   onCheckedChange: (v: boolean) => void;
   label: string;
 }) {
+  const switchId = useId();
   return (
     <div className="flex items-start justify-between gap-4 px-4 py-2.5">
       <div className="min-w-0">
-        <div className="text-sm font-medium text-foreground">{label}</div>
+        <FieldLabel htmlFor={switchId}>{label}</FieldLabel>
       </div>
-      <Switch checked={checked} onCheckedChange={onCheckedChange} className="mt-0.5" />
+      <Switch
+        id={switchId}
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        className="mt-0.5"
+      />
     </div>
   );
 }
@@ -209,7 +220,9 @@ function ShortcutInput({
         <span
           className={cn(
             'text-xs font-mono',
-            liveCombo ? 'text-foreground/80' : 'animate-pulse text-muted-foreground',
+            liveCombo
+              ? 'text-foreground/80'
+              : 'animate-pulse text-muted-foreground',
           )}
         >
           {liveCombo ? formatShortcut(liveCombo) : '按下快捷键…'}
@@ -225,9 +238,7 @@ function ShortcutInput({
       className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/20"
     >
       <span className="text-sm font-medium text-foreground">{label}</span>
-      <kbd className="rounded-md border border-border/70 bg-muted px-2 py-0.5 font-mono text-[11px] text-foreground/80 shadow-xs">
-        {formatShortcut(value)}
-      </kbd>
+      <Kbd>{formatShortcut(value)}</Kbd>
     </button>
   );
 }
@@ -274,52 +285,59 @@ function EngineFormDialog({ state, onClose, onSubmit }: EngineFormDialogProps) {
 
   return (
     <Dialog open={!!state} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[min(94vw,440px)] border-border/60 bg-background shadow-xl sm:max-w-[440px]" aria-describedby={undefined}>
+      <DialogContent
+        className="w-[min(94vw,440px)] border-border/60 bg-background shadow-xl sm:max-w-[440px]"
+        aria-describedby={undefined}
+      >
         <DialogHeader>
           <DialogTitle>{isAdd ? '添加搜索引擎' : '编辑搜索引擎'}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-3 pt-3">
-          <div className="grid gap-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="search-engine-name">名称</label>
-            <Input
-              id="search-engine-name"
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Google"
-            />
-          </div>
-          <div className="grid gap-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="search-engine-search-url">搜索 URL</label>
-            <Input
-              id="search-engine-search-url"
-              value={searchUrl}
-              onChange={(e) => setSearchUrl(e.target.value)}
-              placeholder="https://www.google.com/search?q={query}"
-            />
-          </div>
-          <div className="grid gap-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="search-engine-suggest-url">
-              搜索建议 URL（可选）
-            </label>
-            <Input
-              id="search-engine-suggest-url"
-              value={suggestUrl}
-              onChange={(e) => setSuggestUrl(e.target.value)}
-              placeholder="https://suggestqueries.google.com/complete/search?output=toolbar&q={query}"
-            />
-          </div>
-          <div className="grid gap-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="search-engine-icon-url">
-              图标链接（可选）
-            </label>
-            <Input
-              id="search-engine-icon-url"
-              value={iconUrl}
-              onChange={(e) => setIconUrl(e.target.value)}
-              placeholder="https://example.com/favicon.ico"
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="grid gap-3">
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="search-engine-name">名称</FieldLabel>
+              <Input
+                id="search-engine-name"
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Google"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="search-engine-search-url">
+                搜索 URL
+              </FieldLabel>
+              <Input
+                id="search-engine-search-url"
+                value={searchUrl}
+                onChange={(e) => setSearchUrl(e.target.value)}
+                placeholder="https://www.google.com/search?q={query}"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="search-engine-suggest-url">
+                搜索建议 URL（可选）
+              </FieldLabel>
+              <Input
+                id="search-engine-suggest-url"
+                value={suggestUrl}
+                onChange={(e) => setSuggestUrl(e.target.value)}
+                placeholder="https://suggestqueries.google.com/complete/search?output=toolbar&q={query}"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="search-engine-icon-url">
+                图标链接（可选）
+              </FieldLabel>
+              <Input
+                id="search-engine-icon-url"
+                value={iconUrl}
+                onChange={(e) => setIconUrl(e.target.value)}
+                placeholder="https://example.com/favicon.ico"
+              />
+            </Field>
+          </FieldGroup>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" size="sm" onClick={onClose}>
               取消
@@ -353,8 +371,14 @@ function SortableEngineItem({
   onEdit,
   onDelete,
 }: SortableEngineItemProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: engine.id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: engine.id });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -393,9 +417,20 @@ function SortableEngineItem({
         <GripVertical className="size-3.5" />
       </button>
 
-      {engine.iconUrl
-        ? <img src={engine.iconUrl} className="size-4 shrink-0 rounded-sm" alt="" />
-        : engineIconSrc && <FaviconImage url={engineIconSrc} className="size-4 shrink-0 rounded-sm" />}
+      {engine.iconUrl ? (
+        <img
+          src={engine.iconUrl}
+          className="size-4 shrink-0 rounded-sm"
+          alt=""
+        />
+      ) : (
+        engineIconSrc && (
+          <FaviconImage
+            url={engineIconSrc}
+            className="size-4 shrink-0 rounded-sm"
+          />
+        )
+      )}
 
       <span className="min-w-0 flex-1 truncate text-sm">{engine.name}</span>
 
@@ -452,7 +487,10 @@ export type SettingsDialogProps = {
   settings: AppSettings;
   onUpdateSettings: (partial: Partial<AppSettings>) => void;
   onAddSearchEngine: (engine: Omit<SearchEngine, 'id'>) => void;
-  onUpdateSearchEngine: (id: string, engine: Partial<Omit<SearchEngine, 'id'>>) => void;
+  onUpdateSearchEngine: (
+    id: string,
+    engine: Partial<Omit<SearchEngine, 'id'>>,
+  ) => void;
   onDeleteSearchEngine: (id: string) => void;
   onSetActiveSearchEngine: (id: string) => void;
   onResetSearchEngines: () => void;
@@ -472,7 +510,9 @@ export function SettingsDialog({
   onReorderSearchEngines,
 }: SettingsDialogProps) {
   const [view, setView] = useState<'main' | 'engines'>('main');
-  const [engineDialogState, setEngineDialogState] = useState<null | 'add' | SearchEngine>(null);
+  const [engineDialogState, setEngineDialogState] = useState<
+    null | 'add' | SearchEngine
+  >(null);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
   const handleOpenChange = useCallback(
@@ -527,17 +567,28 @@ export function SettingsDialog({
   );
 
   const currentSuggestUrl = settings.defaultSuggestUrl ?? '';
-  const isCustomSuggestUrl = !SUGGEST_URL_PRESETS.some((preset) => preset.value === currentSuggestUrl);
+  const isCustomSuggestUrl = !SUGGEST_URL_PRESETS.some(
+    (preset) => preset.value === currentSuggestUrl,
+  );
 
   return (
     <>
-      <Sheet open={open} onOpenChange={handleOpenChange}>
+      <Sheet
+        open={open}
+        onOpenChange={(nextOpen, details) => {
+          if (
+            details.reason === 'escape-key' &&
+            document.querySelector('[data-shortcut-recording]')
+          ) {
+            details.cancel();
+            return;
+          }
+          handleOpenChange(nextOpen);
+        }}
+      >
         <SheetContent
           side="right"
           className="w-[min(96vw,560px)] gap-0 p-0 sm:max-w-[560px]"
-          onEscapeKeyDown={(e) => {
-            if (document.querySelector('[data-shortcut-recording]')) e.preventDefault();
-          }}
         >
           <SheetHeader className="gap-0 border-b border-border/50 bg-background px-4 py-2.5">
             <div className="flex min-h-8 items-center gap-2.5">
@@ -562,19 +613,23 @@ export function SettingsDialog({
           </SheetHeader>
 
           <ScrollArea className="min-h-0 flex-1">
-            <div className="space-y-2 p-4">
+            <div className="flex flex-col gap-2 p-4">
               {view === 'main' ? (
                 <>
                   <SettingsSection title="搜索栏">
                     <SettingsSwitchRow
                       checked={settings.showSearchBar}
-                      onCheckedChange={(next) => onUpdateSettings({ showSearchBar: next })}
+                      onCheckedChange={(next) =>
+                        onUpdateSettings({ showSearchBar: next })
+                      }
                       label="显示搜索栏"
                     />
                     <Separator />
                     <SettingsSwitchRow
                       checked={settings.openSearchInNewTab}
-                      onCheckedChange={(next) => onUpdateSettings({ openSearchInNewTab: next })}
+                      onCheckedChange={(next) =>
+                        onUpdateSettings({ openSearchInNewTab: next })
+                      }
                       label="在新标签页中打开搜索结果"
                     />
                     <Separator />
@@ -586,43 +641,48 @@ export function SettingsDialog({
                   </SettingsSection>
 
                   <SettingsSection title="默认搜索建议">
-                    <div className="space-y-2.5 px-4 py-2.5">
-                      <div className="flex flex-wrap gap-2">
-                        {[...SUGGEST_URL_PRESETS, { label: '自定义', value: null as unknown as string }].map((preset) => {
-                          const isActive = preset.value === null
-                            ? isCustomSuggestUrl
-                            : currentSuggestUrl === preset.value;
-                          return (
-                            <Button
-                              key={preset.label}
-                              type="button"
-                              variant={isActive ? 'default' : 'outline'}
-                              size="xs"
-                              className="rounded-full px-3"
-                              onClick={() => {
-                                if (preset.value === null) {
-                                  if (!isCustomSuggestUrl) {
-                                    onUpdateSettings({ defaultSuggestUrl: '' });
-                                  }
-                                } else {
-                                  onUpdateSettings({ defaultSuggestUrl: preset.value });
-                                }
-                              }}
-                            >
-                              {preset.label}
-                            </Button>
-                          );
-                        })}
-                      </div>
+                    <div className="flex flex-col gap-2.5 px-4 py-2.5">
+                      <ToggleGroup
+                        value={[
+                          isCustomSuggestUrl ? 'custom' : currentSuggestUrl,
+                        ]}
+                        onValueChange={(values) => {
+                          if (values[0] === undefined) return;
+                          if (values[0] === 'custom') {
+                            if (!isCustomSuggestUrl)
+                              onUpdateSettings({ defaultSuggestUrl: '' });
+                          } else
+                            onUpdateSettings({ defaultSuggestUrl: values[0] });
+                        }}
+                        variant="outline"
+                        size="sm"
+                        spacing={0}
+                        aria-label="搜索建议来源"
+                      >
+                        {SUGGEST_URL_PRESETS.map((preset) => (
+                          <ToggleGroupItem
+                            key={preset.label}
+                            value={preset.value}
+                          >
+                            {preset.label}
+                          </ToggleGroupItem>
+                        ))}
+                        <ToggleGroupItem value="custom">自定义</ToggleGroupItem>
+                      </ToggleGroup>
                       <Input
                         autoFocus={isCustomSuggestUrl}
                         readOnly={!isCustomSuggestUrl}
                         value={currentSuggestUrl}
-                        onChange={(e) => onUpdateSettings({ defaultSuggestUrl: e.target.value })}
+                        onChange={(e) =>
+                          onUpdateSettings({
+                            defaultSuggestUrl: e.target.value,
+                          })
+                        }
                         placeholder="自定义 URL，用 {query} 代表搜索词"
                         className={cn(
                           'text-xs',
-                          !isCustomSuggestUrl && 'cursor-default select-all text-muted-foreground',
+                          !isCustomSuggestUrl &&
+                            'cursor-default select-all text-muted-foreground',
                         )}
                       />
                     </div>
@@ -632,27 +692,33 @@ export function SettingsDialog({
                     <ShortcutInput
                       label="切换到下一个 Space"
                       value={settings.spaceNextShortcut}
-                      onChange={(next) => onUpdateSettings({ spaceNextShortcut: next })}
+                      onChange={(next) =>
+                        onUpdateSettings({ spaceNextShortcut: next })
+                      }
                     />
                     <Separator />
                     <ShortcutInput
                       label="切换到上一个 Space"
                       value={settings.spacePrevShortcut}
-                      onChange={(next) => onUpdateSettings({ spacePrevShortcut: next })}
+                      onChange={(next) =>
+                        onUpdateSettings({ spacePrevShortcut: next })
+                      }
                     />
                   </SettingsSection>
 
                   <SettingsSection title="内嵌网页">
                     <SettingsSwitchRow
                       checked={settings.iframeAutoRun}
-                      onCheckedChange={(next) => onUpdateSettings({ iframeAutoRun: next })}
+                      onCheckedChange={(next) =>
+                        onUpdateSettings({ iframeAutoRun: next })
+                      }
                       label="切换 Space 时自动运行 iframe"
                     />
                   </SettingsSection>
                 </>
               ) : (
                 <>
-                  <Card className="gap-0 overflow-hidden border-border/60 bg-background shadow-sm">
+                  <Card className="gap-0 py-0">
                     <CardHeader className="items-center gap-0 border-b border-border/50 bg-muted/15 px-4 py-2.5">
                       <CardTitle className="text-sm">已配置引擎</CardTitle>
                       <CardAction>
@@ -685,19 +751,27 @@ export function SettingsDialog({
                         onDragEnd={handleDragEnd}
                       >
                         <SortableContext
-                          items={settings.searchEngines.map((engine) => engine.id)}
+                          items={settings.searchEngines.map(
+                            (engine) => engine.id,
+                          )}
                           strategy={verticalListSortingStrategy}
                         >
                           <ScrollArea className="max-h-[min(48vh,320px)]">
-                            <div className="space-y-1.5 p-1.5">
+                            <div className="flex flex-col gap-1.5 p-1.5">
                               {settings.searchEngines.map((engine) => (
                                 <SortableEngineItem
                                   key={engine.id}
                                   engine={engine}
-                                  isActive={engine.id === settings.activeSearchEngineId}
-                                  onSetActive={() => onSetActiveSearchEngine(engine.id)}
+                                  isActive={
+                                    engine.id === settings.activeSearchEngineId
+                                  }
+                                  onSetActive={() =>
+                                    onSetActiveSearchEngine(engine.id)
+                                  }
                                   onEdit={() => setEngineDialogState(engine)}
-                                  onDelete={() => onDeleteSearchEngine(engine.id)}
+                                  onDelete={() =>
+                                    onDeleteSearchEngine(engine.id)
+                                  }
                                 />
                               ))}
                             </div>
@@ -706,7 +780,6 @@ export function SettingsDialog({
                       </DndContext>
                     </CardContent>
                   </Card>
-
                 </>
               )}
             </div>

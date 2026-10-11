@@ -1,17 +1,14 @@
 import { useEffect, useRef } from 'react';
-import { TriangleAlert } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogMedia,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -35,6 +32,7 @@ export function ConfirmDialog({
   onConfirm,
 }: ConfirmDialogProps) {
   const contentRef = useRef({ title, description });
+  const confirmAfterClose = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -43,39 +41,44 @@ export function ConfirmDialog({
   }, [description, open, title]);
 
   const displayTitle = open ? title : contentRef.current.title;
-  const displayDescription = open ? description : contentRef.current.description;
+  const displayDescription = open
+    ? description
+    : contentRef.current.description;
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent
-        size="sm"
-        className="border-border/60 bg-background shadow-xl"
-      >
-        <AlertDialogHeader>
-          <AlertDialogMedia
-            className={
-              destructive
-                ? 'bg-destructive/10 text-destructive'
-                : 'bg-primary/10 text-primary'
-            }
-          >
-            <TriangleAlert className="size-7" />
-          </AlertDialogMedia>
-          <AlertDialogTitle>{displayTitle}</AlertDialogTitle>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      onOpenChangeComplete={(isOpen) => {
+        if (!isOpen && confirmAfterClose.current) {
+          const confirm = confirmAfterClose.current;
+          confirmAfterClose.current = null;
+          confirm();
+        }
+      }}
+    >
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{displayTitle}</DialogTitle>
           {displayDescription ? (
-            <AlertDialogDescription>{displayDescription}</AlertDialogDescription>
+            <DialogDescription>{displayDescription}</DialogDescription>
           ) : null}
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>{cancelText}</AlertDialogCancel>
-          <AlertDialogAction
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            {cancelText}
+          </Button>
+          <Button
             variant={destructive ? 'destructive' : 'default'}
-            onClick={onConfirm}
+            onClick={() => {
+              confirmAfterClose.current = onConfirm;
+              onOpenChange(false);
+            }}
           >
             {confirmText}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

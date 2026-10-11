@@ -1,5 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  InputGroup,
+  InputGroupInput,
+  InputGroupAddon,
+  InputGroupButton,
+} from '@/components/ui/input-group';
+import { Field, FieldLabel, FieldGroup } from '@/components/ui/field';
+import { useCallback, useEffect, useMemo, useId, useState } from 'react';
+import {
+  Eye,
+  EyeOff,
   ChevronDown,
   ChevronUp,
   CloudDownload,
@@ -9,7 +18,7 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -51,12 +60,14 @@ function SectionCard({
   contentClassName?: string;
 }) {
   return (
-    <Card className={cn('gap-0 overflow-hidden border-border/60 bg-background shadow-sm', className)}>
+    <Card className={cn('gap-0 py-0', className)}>
       <CardHeader className="items-center gap-0 border-b border-border/50 bg-muted/15 px-4 py-2.5">
         <CardTitle className="text-sm">{title}</CardTitle>
         {action ? <CardAction>{action}</CardAction> : null}
       </CardHeader>
-      <CardContent className={cn('px-0', contentClassName)}>{children}</CardContent>
+      <CardContent className={cn('px-0', contentClassName)}>
+        {children}
+      </CardContent>
     </Card>
   );
 }
@@ -72,12 +83,19 @@ function SwitchRow({
   label: string;
   disabled?: boolean;
 }) {
+  const switchId = useId();
   return (
-    <div className={cn('flex items-start justify-between gap-4 px-4 py-2.5', disabled && 'opacity-55')}>
+    <div
+      className={cn(
+        'flex items-start justify-between gap-4 px-4 py-2.5',
+        disabled && 'opacity-55',
+      )}
+    >
       <div className="min-w-0">
-        <div className="text-sm font-medium text-foreground">{label}</div>
+        <FieldLabel htmlFor={switchId}>{label}</FieldLabel>
       </div>
       <Switch
+        id={switchId}
         checked={checked}
         onCheckedChange={onCheckedChange}
         disabled={disabled}
@@ -143,6 +161,7 @@ export function WebDavBackupDialog({
   onManualRestore,
   onOpenRemoteDiff,
 }: WebDavBackupDialogProps) {
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const hasSavedAccount = !!(
     backupSettings.webdavUrl.trim() &&
     backupSettings.username.trim() &&
@@ -152,10 +171,16 @@ export function WebDavBackupDialog({
 
   const [editing, setEditing] = useState(!hasSavedAccount);
   const [draft, setDraft] = useState(() => getEditableAccount(backupSettings));
-  const [lastTestedSignature, setLastTestedSignature] = useState<string | null>(null);
+  const [lastTestedSignature, setLastTestedSignature] = useState<string | null>(
+    null,
+  );
   const [testing, setTesting] = useState(false);
-  const [workingAction, setWorkingAction] = useState<null | 'backup' | 'restore' | 'diff'>(null);
-  const [intervalDraft, setIntervalDraft] = useState(() => String(backupSettings.autoBackupIntervalHours));
+  const [workingAction, setWorkingAction] = useState<
+    null | 'backup' | 'restore' | 'diff'
+  >(null);
+  const [intervalDraft, setIntervalDraft] = useState(() =>
+    String(backupSettings.autoBackupIntervalHours),
+  );
   const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
   const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
   const [diffDialogOpen, setDiffDialogOpen] = useState(false);
@@ -198,10 +223,14 @@ export function WebDavBackupDialog({
         ...draft,
       });
       setLastTestedSignature(currentSignature);
-      toast('连接测试成功', { description: '已通过读写校验，可以保存账户。' });
+      toast.add({
+        title: '连接测试成功',
+        description: '已通过读写校验，可以保存账户。',
+      });
     } catch (error) {
       setLastTestedSignature(null);
-      toast('连接测试失败', {
+      toast.add({
+        title: '连接测试失败',
         description: error instanceof Error ? error.message : '测试连接失败',
       });
     } finally {
@@ -222,14 +251,20 @@ export function WebDavBackupDialog({
     });
     setEditing(false);
     setLastTestedSignature(null);
-    toast(hasSavedAccount ? '账户已更新' : '账户已添加');
-  }, [backupSettings, connectionVerified, draft, hasSavedAccount, onSaveAccount]);
+    toast.add({ title: hasSavedAccount ? '账户已更新' : '账户已添加' });
+  }, [
+    backupSettings,
+    connectionVerified,
+    draft,
+    hasSavedAccount,
+    onSaveAccount,
+  ]);
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="w-[min(96vw,760px)] overflow-hidden border-border/60 bg-background p-0 shadow-xl sm:max-w-[760px]"
+          className="w-[min(96vw,760px)] gap-0 overflow-hidden border-border/60 bg-background p-0 shadow-xl sm:max-w-[760px]"
           aria-describedby={undefined}
         >
           <DialogHeader className="border-b border-border/50 bg-background px-5 py-3.5">
@@ -237,17 +272,27 @@ export function WebDavBackupDialog({
           </DialogHeader>
 
           <ScrollArea className="max-h-[min(78vh,660px)]">
-            <div className="space-y-2 p-4">
+            <div className="flex flex-col gap-2 p-4">
               <SectionCard
                 title="WebDAV 账户"
                 action={
                   !editing && hasSavedAccount ? (
                     <div className="flex items-center gap-2">
-                      <Button type="button" variant="ghost" size="sm" onClick={() => setRemoveConfirmOpen(true)}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setRemoveConfirmOpen(true)}
+                      >
                         <Trash2 className="size-3.5" />
                         移除
                       </Button>
-                      <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditing(true)}
+                      >
                         <Pencil className="size-3.5" />
                         编辑
                       </Button>
@@ -255,7 +300,6 @@ export function WebDavBackupDialog({
                   ) : null
                 }
               >
-
                 {!editing && hasSavedAccount ? (
                   <div className="grid gap-3 px-4 py-2.5 sm:grid-cols-3">
                     {[
@@ -267,50 +311,89 @@ export function WebDavBackupDialog({
                         key={label}
                         className="rounded-xl border border-border/60 bg-muted/15 p-3"
                       >
-                        <div className="text-xs font-medium text-muted-foreground">{label}</div>
-                        <div className="mt-1 break-all text-sm text-foreground">{value}</div>
+                        <div className="text-xs font-medium text-muted-foreground">
+                          {label}
+                        </div>
+                        <div className="mt-1 break-all text-sm text-foreground">
+                          {value}
+                        </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="space-y-2.5 px-4 py-2.5">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-muted-foreground">WebDAV 地址</label>
+                  <FieldGroup className="flex flex-col gap-2.5 px-4 py-2.5">
+                    <Field>
+                      <FieldLabel htmlFor="webdavbackupdialog-field-1">
+                        WebDAV 地址
+                      </FieldLabel>
                       <Input
+                        id="webdavbackupdialog-field-1"
                         value={draft.webdavUrl}
-                        onChange={(e) => updateDraft({ webdavUrl: e.target.value })}
+                        onChange={(e) =>
+                          updateDraft({ webdavUrl: e.target.value })
+                        }
                         placeholder="https://dav.example.com/remote.php/dav/files/name/"
                       />
-                    </div>
+                    </Field>
 
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-muted-foreground">用户名</label>
+                    <FieldGroup className="grid gap-3 sm:grid-cols-2">
+                      <Field>
+                        <FieldLabel htmlFor="webdavbackupdialog-field-2">
+                          用户名
+                        </FieldLabel>
                         <Input
+                          id="webdavbackupdialog-field-2"
                           value={draft.username}
-                          onChange={(e) => updateDraft({ username: e.target.value })}
+                          onChange={(e) =>
+                            updateDraft({ username: e.target.value })
+                          }
                           placeholder="user"
                         />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-muted-foreground">密码</label>
-                        <Input
-                          type="password"
-                          value={draft.password}
-                          onChange={(e) => updateDraft({ password: e.target.value })}
-                          placeholder="app password"
-                        />
-                      </div>
-                    </div>
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor="webdavbackupdialog-field-3">
+                          密码
+                        </FieldLabel>
+                        <InputGroup>
+                          <InputGroupInput
+                            id="webdavbackupdialog-field-3"
+                            type={passwordVisible ? 'text' : 'password'}
+                            value={draft.password}
+                            onChange={(e) =>
+                              updateDraft({ password: e.target.value })
+                            }
+                            placeholder="app password"
+                          />
+                          <InputGroupAddon align="inline-end">
+                            <InputGroupButton
+                              size="icon-xs"
+                              aria-label={
+                                passwordVisible ? '隐藏密码' : '显示密码'
+                              }
+                              onClick={() =>
+                                setPasswordVisible((value) => !value)
+                              }
+                            >
+                              {passwordVisible ? <EyeOff /> : <Eye />}
+                            </InputGroupButton>
+                          </InputGroupAddon>
+                        </InputGroup>
+                      </Field>
+                    </FieldGroup>
 
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-muted-foreground">远程备份路径</label>
+                    <Field>
+                      <FieldLabel htmlFor="webdavbackupdialog-field-4">
+                        远程备份路径
+                      </FieldLabel>
                       <Input
+                        id="webdavbackupdialog-field-4"
                         value={draft.remotePath}
-                        onChange={(e) => updateDraft({ remotePath: e.target.value })}
+                        onChange={(e) =>
+                          updateDraft({ remotePath: e.target.value })
+                        }
                         placeholder="newtab-pro/backup.json"
                       />
-                    </div>
+                    </Field>
 
                     <div className="flex justify-end gap-2 pt-0.5">
                       {hasSavedAccount ? (
@@ -343,18 +426,28 @@ export function WebDavBackupDialog({
                         <Link2 className="size-3.5" />
                         {testing ? '测试中…' : '测试连接'}
                       </Button>
-                      <Button type="button" size="sm" disabled={!connectionVerified} onClick={handleSave}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={!connectionVerified}
+                        onClick={handleSave}
+                      >
                         保存账户
                       </Button>
                     </div>
-                  </div>
+                  </FieldGroup>
                 )}
               </SectionCard>
 
-              <SectionCard title="备份与恢复" className={!accountUsable ? 'opacity-60' : undefined}>
+              <SectionCard
+                title="备份与恢复"
+                className={!accountUsable ? 'opacity-60' : undefined}
+              >
                 <SwitchRow
                   checked={backupSettings.autoBackupEnabled}
-                  onCheckedChange={(next) => onUpdateBackupSettings({ autoBackupEnabled: next })}
+                  onCheckedChange={(next) =>
+                    onUpdateBackupSettings({ autoBackupEnabled: next })
+                  }
                   label="启用定期自动备份"
                   disabled={!accountUsable}
                 />
@@ -362,8 +455,15 @@ export function WebDavBackupDialog({
                 {backupSettings.autoBackupEnabled ? (
                   <>
                     <Separator />
-                    <div className={cn('flex items-center justify-between gap-4 px-4 py-2.5', !accountUsable && 'opacity-55')}>
-                      <div className="text-sm font-medium text-foreground">备份间隔</div>
+                    <div
+                      className={cn(
+                        'flex items-center justify-between gap-4 px-4 py-2.5',
+                        !accountUsable && 'opacity-55',
+                      )}
+                    >
+                      <div className="text-sm font-medium text-foreground">
+                        备份间隔
+                      </div>
                       <div className="flex h-9 w-24 overflow-hidden rounded-lg border border-input bg-background shadow-xs transition-colors focus-within:ring-1 focus-within:ring-ring">
                         <Input
                           type="number"
@@ -392,10 +492,14 @@ export function WebDavBackupDialog({
                             aria-label="增加备份间隔"
                             disabled={!accountUsable}
                             onClick={() => {
-                              const base = intervalDraft ? Number(intervalDraft) : backupSettings.autoBackupIntervalHours;
+                              const base = intervalDraft
+                                ? Number(intervalDraft)
+                                : backupSettings.autoBackupIntervalHours;
                               const next = clampBackupIntervalHours(base + 1);
                               setIntervalDraft(String(next));
-                              onUpdateBackupSettings({ autoBackupIntervalHours: next });
+                              onUpdateBackupSettings({
+                                autoBackupIntervalHours: next,
+                              });
                             }}
                             className="flex flex-1 items-center justify-center text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                           >
@@ -406,10 +510,14 @@ export function WebDavBackupDialog({
                             aria-label="减少备份间隔"
                             disabled={!accountUsable}
                             onClick={() => {
-                              const base = intervalDraft ? Number(intervalDraft) : backupSettings.autoBackupIntervalHours;
+                              const base = intervalDraft
+                                ? Number(intervalDraft)
+                                : backupSettings.autoBackupIntervalHours;
                               const next = clampBackupIntervalHours(base - 1);
                               setIntervalDraft(String(next));
-                              onUpdateBackupSettings({ autoBackupIntervalHours: next });
+                              onUpdateBackupSettings({
+                                autoBackupIntervalHours: next,
+                              });
                             }}
                             className="flex flex-1 items-center justify-center border-t border-border/70 text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                           >
@@ -430,54 +538,55 @@ export function WebDavBackupDialog({
                       ? ` ${new Date(backupSettings.lastBackupAt).toLocaleString('zh-CN')}`
                       : ' 暂无'}
                     {backupSettings.lastBackupError ? (
-                      <span className="ml-3 text-destructive">最近一次失败：{backupSettings.lastBackupError}</span>
+                      <span className="ml-3 text-destructive">
+                        最近一次失败：{backupSettings.lastBackupError}
+                      </span>
                     ) : null}
                   </div>
                   <div className="flex flex-wrap justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!accountUsable || workingAction !== null}
-                    onClick={async () => {
-                      setWorkingAction('diff');
-                      try {
-                        const result = await onOpenRemoteDiff();
-                        setDiffResult(result);
-                        setDiffDialogOpen(true);
-                      } finally {
-                        setWorkingAction(null);
-                      }
-                    }}
-                  >
-                    {workingAction === 'diff' ? '对比中…' : '查看与云端差异'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!accountUsable || workingAction !== null}
-                    onClick={async () => {
-                      setWorkingAction('backup');
-                      try {
-                        await onManualBackup();
-                      } finally {
-                        setWorkingAction(null);
-                      }
-                    }}
-                  >
-                    <CloudUpload className="size-3.5" />
-                    {workingAction === 'backup' ? '备份中…' : '立即备份'}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={!accountUsable || workingAction !== null}
-                    onClick={() => setRestoreConfirmOpen(true)}
-                  >
-                    <CloudDownload className="size-3.5" />
-                    从 WebDAV 恢复
-                  </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={!accountUsable || workingAction !== null}
+                      onClick={async () => {
+                        setWorkingAction('diff');
+                        try {
+                          const result = await onOpenRemoteDiff();
+                          setDiffResult(result);
+                          setDiffDialogOpen(true);
+                        } finally {
+                          setWorkingAction(null);
+                        }
+                      }}
+                    >
+                      {workingAction === 'diff' ? '对比中…' : '查看与云端差异'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={!accountUsable || workingAction !== null}
+                      onClick={async () => {
+                        setWorkingAction('backup');
+                        try {
+                          await onManualBackup();
+                        } finally {
+                          setWorkingAction(null);
+                        }
+                      }}
+                    >
+                      <CloudUpload className="size-3.5" />
+                      {workingAction === 'backup' ? '备份中…' : '立即备份'}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={!accountUsable || workingAction !== null}
+                      onClick={() => setRestoreConfirmOpen(true)}
+                    >
+                      <CloudDownload className="size-3.5" />从 WebDAV 恢复
+                    </Button>
                   </div>
                 </div>
               </SectionCard>
@@ -498,7 +607,7 @@ export function WebDavBackupDialog({
           setEditing(true);
           setDraft(getEditableAccount(DEFAULT_SETTINGS.backup));
           setLastTestedSignature(null);
-          toast('已移除 WebDAV 账户');
+          toast.add({ title: '已移除 WebDAV 账户' });
         }}
       />
 

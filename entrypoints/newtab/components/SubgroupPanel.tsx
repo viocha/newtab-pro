@@ -1,10 +1,34 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight, FolderTree, GripVertical, LayoutGrid, LayoutList, MoreHorizontal, Plus, Trash2, ExternalLink, AppWindow, EyeOff, FolderInput, PanelsTopLeft } from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import {
+  ChevronDown,
+  ChevronRight,
+  FolderTree,
+  GripVertical,
+  LayoutGrid,
+  LayoutList,
+  MoreHorizontal,
+  Plus,
+  Trash2,
+  ExternalLink,
+  AppWindow,
+  EyeOff,
+  FolderInput,
+  PanelsTopLeft,
+} from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { browser } from 'wxt/browser';
 
 import { Button } from '@/components/ui/button';
 import {
+  DropdownMenuGroup,
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -31,14 +55,22 @@ import type {
 import { useDndUIStore } from '../drag';
 import { BookmarkRows } from './BookmarkRows';
 import { BookmarkIconGrid } from './BookmarkIconGrid';
-import { getGridOpenCounts, openUrlsInGrid, useWindowOpenPrefs } from '../window-open';
+import {
+  getGridOpenCounts,
+  openUrlsInGrid,
+  useWindowOpenPrefs,
+} from '../window-open';
 
 type SubgroupPanelProps = {
   groupId: string;
   subgroup: BookmarkSubgroup;
   spaces: Space[];
   activeSpaceId: string;
-  onMoveSubgroupToSpace: (source: InsertTarget, targetSpaceId: string, targetGroupId: string) => void;
+  onMoveSubgroupToSpace: (
+    source: InsertTarget,
+    targetSpaceId: string,
+    targetGroupId: string,
+  ) => void;
   onMoveBookmarkToSpace: (
     source: BookmarkNodeTarget,
     targetSpaceId: string,
@@ -50,8 +82,14 @@ type SubgroupPanelProps = {
   onDeleteSubgroup: (target: InsertTarget) => void;
   onOpenManualAdd: (target: BookmarkContainerTarget) => void;
   onOpenImportAdd: (target: BookmarkContainerTarget) => void;
-  onOpenEditBookmark: (target: BookmarkContainerTarget, bookmark: BookmarkItem) => void;
-  onDeleteBookmark: (target: BookmarkContainerTarget, bookmarkId: string) => void;
+  onOpenEditBookmark: (
+    target: BookmarkContainerTarget,
+    bookmark: BookmarkItem,
+  ) => void;
+  onDeleteBookmark: (
+    target: BookmarkContainerTarget,
+    bookmarkId: string,
+  ) => void;
   onMoveBookmark: (
     source: BookmarkNodeTarget,
     target: BookmarkContainerTarget,
@@ -105,12 +143,15 @@ export function SubgroupPanel({
     return true;
   }, []);
 
-  const setTitleInputNode = useCallback((node: HTMLInputElement | null) => {
-    titleInputRef.current = node;
-    if (node && pendingTitleFocusRef.current && focusTitleInput(node)) {
-      pendingTitleFocusRef.current = false;
-    }
-  }, [focusTitleInput]);
+  const setTitleInputNode = useCallback(
+    (node: HTMLInputElement | null) => {
+      titleInputRef.current = node;
+      if (node && pendingTitleFocusRef.current && focusTitleInput(node)) {
+        pendingTitleFocusRef.current = false;
+      }
+    },
+    [focusTitleInput],
+  );
 
   const startEditingTitle = useCallback(() => {
     setTitleDraft(subgroup.title);
@@ -163,17 +204,22 @@ export function SubgroupPanel({
   const dndId = `subgroup|${groupId}|${subgroup.id}`;
   const { activeId, dropIndicator } = useDndUIStore();
 
-  const { setNodeRef: setDragRef, listeners, attributes } = useDraggable({
+  const {
+    setNodeRef: setDragRef,
+    listeners,
+    attributes,
+  } = useDraggable({
     id: dndId,
-    data: { type: 'subgroup', groupId, subgroup, target }
+    data: { type: 'subgroup', groupId, subgroup, target },
   });
   const { setNodeRef: setDropRef } = useDroppable({
     id: dndId,
-    data: { type: 'subgroup', target, subgroup }
+    data: { type: 'subgroup', target, subgroup },
   });
 
   const isDragging = activeId === dndId;
-  const isTarget = dropIndicator?.id === dndId && dropIndicator.type === 'subgroup';
+  const isTarget =
+    dropIndicator?.id === dndId && dropIndicator.type === 'subgroup';
 
   return (
     <div className="relative">
@@ -184,7 +230,10 @@ export function SubgroupPanel({
       <section
         ref={setDropRef}
         id={`dnd-${dndId}`}
-        className={cn('rounded-lg border border-border/70 bg-card/70 px-1.5 py-1 shadow-sm transition-opacity', isDragging && 'opacity-50')}
+        className={cn(
+          'rounded-lg border border-border/70 bg-card/70 px-1.5 py-1 shadow-sm transition-opacity',
+          isDragging && 'opacity-50',
+        )}
       >
         <header className="group flex items-center gap-0.5 px-0.5">
           <span
@@ -201,7 +250,11 @@ export function SubgroupPanel({
             onClick={() => onToggleSubgroup(target)}
             title="折叠小组"
           >
-            {subgroup.collapsed ? <ChevronRight className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+            {subgroup.collapsed ? (
+              <ChevronRight className="size-3.5" />
+            ) : (
+              <ChevronDown className="size-3.5" />
+            )}
           </button>
           <div className="min-w-0 flex-1">
             {editingTitle ? (
@@ -234,10 +287,12 @@ export function SubgroupPanel({
             )}
           </div>
 
-          <div className={cn(
-            'flex items-center gap-0.5 transition-opacity',
-            menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
-          )}>
+          <div
+            className={cn(
+              'flex items-center gap-0.5 transition-opacity',
+              menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+            )}
+          >
             <Button
               size="icon"
               variant="ghost"
@@ -256,158 +311,242 @@ export function SubgroupPanel({
             >
               <FolderTree className="size-3.5" />
             </Button>
-            <DropdownMenu onOpenChange={setMenuOpen}>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className={cn(
-                    'size-6 rounded-md text-muted-foreground hover:bg-muted/45 hover:text-foreground',
-                    menuOpen && 'bg-muted/45 text-foreground',
-                  )}
-                >
-                  <MoreHorizontal className="size-3.5" />
-                </Button>
+            <DropdownMenu
+              onOpenChange={(open) => {
+                if (open) setMenuOpen(true);
+              }}
+              onOpenChangeComplete={(open) => {
+                if (!open) setMenuOpen(false);
+              }}
+            >
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className={cn(
+                      'size-6 rounded-md text-muted-foreground hover:bg-muted/45 hover:text-foreground aria-expanded:bg-muted/45 aria-expanded:text-foreground',
+                      menuOpen && 'bg-muted/45 text-foreground',
+                    )}
+                  />
+                }
+              >
+                <MoreHorizontal className="size-3.5" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                {/* View mode segmented */}
-                <DropdownMenuLabel className="pb-1 text-xs font-medium text-muted-foreground">视图模式</DropdownMenuLabel>
-                <div className="px-2 pb-2">
-                  <div className="flex items-center rounded-md bg-muted p-0.5">
-                    {([['list', <LayoutList className="size-3.5" />, '列表'], ['icon', <LayoutGrid className="size-3.5" />, '图标']] as const).map(([val, icon, label]) => (
-                      <button
-                        key={val}
-                        className={cn(
-                          'flex flex-1 items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-medium transition-all',
-                          subgroup.viewMode === val
-                            ? 'bg-background text-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground',
-                        )}
-                        onClick={() => onSetViewMode(val as BookmarkViewMode)}
-                      >
-                        {icon}{label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {/* Icon size segmented – only in icon mode */}
-                {subgroup.viewMode === 'icon' && (
-                  <>
-                    <DropdownMenuLabel className="pb-1 text-xs font-medium text-muted-foreground">图标尺寸</DropdownMenuLabel>
-                    <div className="px-2 pb-2">
-                      <div className="flex items-center rounded-md bg-muted p-0.5">
-                        {([['sm', '小'], ['md', '中'], ['lg', '大']] as const).map(([val, label]) => (
-                          <button
-                            key={val}
-                            className={cn(
-                              'flex flex-1 items-center justify-center rounded py-1 text-xs font-medium transition-all',
-                              subgroup.iconSize === val
-                                ? 'bg-background text-foreground shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground',
-                            )}
-                            onClick={() => onSetIconSize(val as IconSize)}
-                          >
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
-                {spaces.some((s) =>
-                  s.id !== activeSpaceId
-                    ? s.board.groups.length > 0
-                    : s.board.groups.some((g) => g.id !== groupId)
-                ) && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>
-                        <FolderInput className="mr-2 size-3.5" />
-                        移动到
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="w-44">
-                        {spaces.map((space) => {
-                          if (space.board.groups.length === 0) return null;
-                          return (
-                            <DropdownMenuSub key={space.id}>
-                              <DropdownMenuSubTrigger>
-                                {space.title}
-                                {space.id === activeSpaceId && (
-                                  <span className="ml-1 text-[10px] text-muted-foreground">(当前)</span>
-                                )}
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent className="w-44">
-                                {space.board.groups.map((g) => {
-                                  const isCurrentGroup =
-                                    space.id === activeSpaceId && g.id === groupId;
-                                  return (
-                                    <DropdownMenuItem
-                                      key={g.id}
-                                      disabled={isCurrentGroup}
-                                      onSelect={() => onMoveSubgroupToSpace(target, space.id, g.id)}
-                                    >
-                                      {g.title}
-                                    </DropdownMenuItem>
-                                  );
-                                })}
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
-                          );
-                        })}
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                  </>
-                )}
-                <DropdownMenuItem onSelect={() => onDeleteSubgroup(target)}>
-                  <Trash2 className="mr-2 size-3.5" />
-                  删除小组
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem disabled={subgroup.bookmarks.length === 0} onSelect={() => {
-                    for (const b of subgroup.bookmarks) browser.tabs.create({ url: b.url });
-                  }}>
-                  <ExternalLink className="mr-2 size-3.5" />
-                  打开全部书签
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={subgroup.bookmarks.length === 0}
-                  onSelect={() => browser.windows.create({ url: subgroup.bookmarks.map(b => b.url) })}
-                >
-                  <AppWindow className="mr-2 size-3.5" />
-                  在新窗口打开全部
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={subgroup.bookmarks.length === 0}
-                  onSelect={() => browser.windows.create({ url: subgroup.bookmarks.map(b => b.url), incognito: true })}
-                >
-                  <EyeOff className="mr-2 size-3.5" />
-                  在隐私窗口打开全部
-                </DropdownMenuItem>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger disabled={subgroup.bookmarks.length === 0}>
-                    <PanelsTopLeft className="mr-2 size-3.5" />
-                    多窗口网格打开
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="w-44">
-                    <DropdownMenuCheckboxItem
-                      checked={compactGridWindows}
-                      onSelect={(e) => e.preventDefault()}
-                      onCheckedChange={(next) => setCompactGridWindows(!!next)}
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>视图模式</DropdownMenuLabel>
+                  <div className="px-1.5 pb-1">
+                    <ToggleGroup
+                      value={[subgroup.viewMode ?? 'list']}
+                      onValueChange={(value) => {
+                        if (value[0])
+                          onSetViewMode(value[0] as BookmarkViewMode);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      spacing={0}
+                      className="w-full"
+                      aria-label="视图模式"
                     >
-                      简化窗口
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuSeparator />
-                    {getGridOpenCounts(subgroup.bookmarks.length).map((count) => (
-                      <DropdownMenuItem
-                        key={count}
-                        onSelect={() => void openUrlsInGrid(subgroup.bookmarks.slice(0, count).map((bookmark) => bookmark.url), compactGridWindows)}
-                      >
-                        打开前 {count} 个
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
+                      {(
+                        [
+                          ['list', <LayoutList />, '列表'],
+                          ['icon', <LayoutGrid />, '图标'],
+                        ] as const
+                      ).map(([val, icon, label]) => {
+                        const isDisabled = false;
+                        return (
+                          <ToggleGroupItem
+                            key={val}
+                            value={val}
+                            disabled={isDisabled}
+                            aria-label={label}
+                            title={
+                              isDisabled
+                                ? `${label}（分组内容不为空时无法切换）`
+                                : label
+                            }
+                            className="flex-1"
+                          >
+                            {icon}
+                          </ToggleGroupItem>
+                        );
+                      })}
+                    </ToggleGroup>
+                  </div>
+                  {/* Icon size segmented – only in icon mode */}
+                  {subgroup.viewMode === 'icon' && (
+                    <>
+                      <DropdownMenuLabel>图标尺寸</DropdownMenuLabel>
+                      <div className="px-1.5 pb-1">
+                        <ToggleGroup
+                          value={[subgroup.iconSize ?? 'md']}
+                          onValueChange={(value) => {
+                            if (value[0]) onSetIconSize(value[0] as IconSize);
+                          }}
+                          variant="outline"
+                          size="sm"
+                          spacing={0}
+                          className="w-full"
+                          aria-label="图标尺寸"
+                        >
+                          {(
+                            [
+                              ['sm', '小'],
+                              ['md', '中'],
+                              ['lg', '大'],
+                            ] as const
+                          ).map(([val, label]) => (
+                            <ToggleGroupItem
+                              key={val}
+                              value={val}
+                              className="flex-1"
+                            >
+                              {label}
+                            </ToggleGroupItem>
+                          ))}
+                        </ToggleGroup>
+                      </div>
+                    </>
+                  )}
+
+                  {spaces.some((s) =>
+                    s.id !== activeSpaceId
+                      ? s.board.groups.length > 0
+                      : s.board.groups.some((g) => g.id !== groupId),
+                  ) && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <FolderInput className="mr-2 size-3.5" />
+                          移动到
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent className="w-44">
+                          <DropdownMenuGroup>
+                            {spaces.map((space) => {
+                              if (space.board.groups.length === 0) return null;
+                              return (
+                                <DropdownMenuSub key={space.id}>
+                                  <DropdownMenuSubTrigger>
+                                    {space.title}
+                                    {space.id === activeSpaceId && (
+                                      <span className="ml-1 text-[10px] text-muted-foreground">
+                                        (当前)
+                                      </span>
+                                    )}
+                                  </DropdownMenuSubTrigger>
+                                  <DropdownMenuSubContent className="w-44">
+                                    <DropdownMenuGroup>
+                                      {space.board.groups.map((g) => {
+                                        const isCurrentGroup =
+                                          space.id === activeSpaceId &&
+                                          g.id === groupId;
+                                        return (
+                                          <DropdownMenuItem
+                                            key={g.id}
+                                            disabled={isCurrentGroup}
+                                            onClick={() =>
+                                              onMoveSubgroupToSpace(
+                                                target,
+                                                space.id,
+                                                g.id,
+                                              )
+                                            }
+                                          >
+                                            {g.title}
+                                          </DropdownMenuItem>
+                                        );
+                                      })}
+                                    </DropdownMenuGroup>
+                                  </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+                              );
+                            })}
+                          </DropdownMenuGroup>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+                    </>
+                  )}
+                  <DropdownMenuItem onClick={() => onDeleteSubgroup(target)}>
+                    <Trash2 className="mr-2 size-3.5" />
+                    删除小组
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    disabled={subgroup.bookmarks.length === 0}
+                    onClick={() => {
+                      for (const b of subgroup.bookmarks)
+                        browser.tabs.create({ url: b.url });
+                    }}
+                  >
+                    <ExternalLink className="mr-2 size-3.5" />
+                    打开全部书签
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={subgroup.bookmarks.length === 0}
+                    onClick={() =>
+                      browser.windows.create({
+                        url: subgroup.bookmarks.map((b) => b.url),
+                      })
+                    }
+                  >
+                    <AppWindow className="mr-2 size-3.5" />
+                    在新窗口打开全部
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={subgroup.bookmarks.length === 0}
+                    onClick={() =>
+                      browser.windows.create({
+                        url: subgroup.bookmarks.map((b) => b.url),
+                        incognito: true,
+                      })
+                    }
+                  >
+                    <EyeOff className="mr-2 size-3.5" />
+                    在隐私窗口打开全部
+                  </DropdownMenuItem>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger
+                      disabled={subgroup.bookmarks.length === 0}
+                    >
+                      <PanelsTopLeft className="mr-2 size-3.5" />
+                      多窗口网格打开
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-44">
+                      <DropdownMenuGroup>
+                        <DropdownMenuCheckboxItem
+                          checked={compactGridWindows}
+                          closeOnClick={false}
+                          onCheckedChange={(next) =>
+                            setCompactGridWindows(!!next)
+                          }
+                        >
+                          简化窗口
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuSeparator />
+                        {getGridOpenCounts(subgroup.bookmarks.length).map(
+                          (count) => (
+                            <DropdownMenuItem
+                              key={count}
+                              onClick={() =>
+                                void openUrlsInGrid(
+                                  subgroup.bookmarks
+                                    .slice(0, count)
+                                    .map((bookmark) => bookmark.url),
+                                  compactGridWindows,
+                                )
+                              }
+                            >
+                              打开前 {count} 个
+                            </DropdownMenuItem>
+                          ),
+                        )}
+                      </DropdownMenuGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

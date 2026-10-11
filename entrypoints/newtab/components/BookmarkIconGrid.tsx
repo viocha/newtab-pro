@@ -1,10 +1,19 @@
 import type { DragEvent } from 'react';
 import { useState } from 'react';
-import { Edit3, ExternalLink, AppWindow, EyeOff, Trash2, Link as LinkIcon, FolderInput } from 'lucide-react';
+import {
+  Edit3,
+  ExternalLink,
+  AppWindow,
+  EyeOff,
+  Trash2,
+  Link as LinkIcon,
+  FolderInput,
+} from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { browser } from 'wxt/browser';
 
 import {
+  ContextMenuGroup,
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
@@ -16,17 +25,26 @@ import {
 } from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
 
-import type { BookmarkContainerTarget, BookmarkItem, BookmarkNodeTarget, IconSize, Space } from '../types';
+import type {
+  BookmarkContainerTarget,
+  BookmarkItem,
+  BookmarkNodeTarget,
+  IconSize,
+  Space,
+} from '../types';
 import { tryNormalizeUrl } from '../utils';
 import { useDndUIStore, readTabDragPayload } from '../drag';
 import { FaviconImage } from './FaviconImage';
 
 // ── size config ───────────────────────────────────────────────────────
 
-const SIZE_CONFIG: Record<IconSize, { minW: number; iconCls: string; showLabel: boolean; textCls: string }> = {
-  sm: { minW: 32,  iconCls: 'size-4',  showLabel: false, textCls: '' },
-  md: { minW: 56,  iconCls: 'size-6',  showLabel: true,  textCls: 'text-[8px]' },
-  lg: { minW: 64,  iconCls: 'size-8',  showLabel: true,  textCls: 'text-[10px]' },
+const SIZE_CONFIG: Record<
+  IconSize,
+  { minW: number; iconCls: string; showLabel: boolean; textCls: string }
+> = {
+  sm: { minW: 32, iconCls: 'size-4', showLabel: false, textCls: '' },
+  md: { minW: 56, iconCls: 'size-6', showLabel: true, textCls: 'text-[8px]' },
+  lg: { minW: 64, iconCls: 'size-8', showLabel: true, textCls: 'text-[10px]' },
 };
 
 // ── helpers ───────────────────────────────────────────────────────────
@@ -78,15 +96,33 @@ function IconBookmarkItemNode({
   const dndId = `bookmark|${target.groupId}|${target.subgroupId}|${bookmark.id}`;
   const { activeId, dropIndicator } = useDndUIStore();
 
-  const { setNodeRef: setDragRef, attributes, listeners } = useDraggable({
+  const {
+    setNodeRef: setDragRef,
+    attributes,
+    listeners,
+  } = useDraggable({
     id: dndId,
-    data: { type: 'bookmark', target, bookmark, index, isIconGrid: true, iconSize },
+    data: {
+      type: 'bookmark',
+      target,
+      bookmark,
+      index,
+      isIconGrid: true,
+      iconSize,
+    },
   });
 
   // isIconGrid flag lets App.tsx use X-axis for drop zone determination
   const { setNodeRef: setDropRef } = useDroppable({
     id: dndId,
-    data: { type: 'bookmark', target, bookmark, index, isIconGrid: true, iconSize },
+    data: {
+      type: 'bookmark',
+      target,
+      bookmark,
+      index,
+      isIconGrid: true,
+      iconSize,
+    },
   });
 
   const setNodeRef = (node: HTMLElement | null) => {
@@ -95,7 +131,8 @@ function IconBookmarkItemNode({
   };
 
   const isDragging = activeId === dndId;
-  const isTarget = dropIndicator?.id === dndId && dropIndicator.type === 'bookmark';
+  const isTarget =
+    dropIndicator?.id === dndId && dropIndicator.type === 'bookmark';
   const cfg = SIZE_CONFIG[iconSize];
 
   return (
@@ -110,184 +147,227 @@ function IconBookmarkItemNode({
         <div className="pointer-events-none absolute -left-[2px] top-1 bottom-1 z-20 w-[2px] rounded-full bg-primary" />
       ) : null}
 
-      <ContextMenu onOpenChange={(open) => setContextOpenBookmarkId(open ? bookmark.id : null)}>
-        <ContextMenuTrigger asChild>
-          <a
-            href={bookmark.url}
-            target="_self"
-            className={cn(
-              'flex flex-col items-center gap-1 rounded-md p-1.5 hover:bg-accent/75 transition-colors',
-              contextOpenBookmarkId === bookmark.id && 'bg-accent/75',
-            )}
-            title={`${bookmark.title}\n${bookmark.url}`}
-            onClick={(e) => {
-              const url = bookmark.url;
-              if (
-                url.startsWith('edge://') ||
-                url.startsWith('chrome://') ||
-                url.startsWith('about:')
-              ) {
-                e.preventDefault();
-                if (e.altKey) { /* silent */ }
-                else if (e.ctrlKey && e.shiftKey) browser.tabs.create({ url, active: true });
-                else if (e.ctrlKey || e.metaKey) browser.tabs.create({ url, active: false });
-                else if (e.shiftKey) browser.windows.create({ url });
-                else browser.tabs.update({ url });
-              }
-            }}
-            onAuxClick={(e) => {
-              const url = bookmark.url;
-              if (
-                e.button === 1 &&
-                (url.startsWith('edge://') ||
+      <ContextMenu
+        onOpenChange={(open) => {
+          if (open) setContextOpenBookmarkId(bookmark.id);
+        }}
+        onOpenChangeComplete={(open) => {
+          if (!open) setContextOpenBookmarkId(null);
+        }}
+      >
+        <ContextMenuTrigger
+          render={
+            <a
+              href={bookmark.url}
+              target="_self"
+              className={cn(
+                'flex flex-col items-center gap-1 rounded-md p-1.5 hover:bg-accent/75 transition-colors',
+                contextOpenBookmarkId === bookmark.id && 'bg-accent/75',
+              )}
+              title={`${bookmark.title}\n${bookmark.url}`}
+              onClick={(e) => {
+                const url = bookmark.url;
+                if (
+                  url.startsWith('edge://') ||
                   url.startsWith('chrome://') ||
-                  url.startsWith('about:'))
-              ) {
-                e.preventDefault();
-                if (e.shiftKey) browser.tabs.create({ url, active: true });
-                else browser.tabs.create({ url, active: false });
-              }
-            }}
-            {...listeners}
-            {...attributes}
-          >
-            <FaviconImage
-              url={bookmark.url}
-              className={cn(cfg.iconCls, 'shrink-0 rounded-[4px]')}
-              loading="lazy"
+                  url.startsWith('about:')
+                ) {
+                  e.preventDefault();
+                  if (e.altKey) {
+                    /* silent */
+                  } else if (e.ctrlKey && e.shiftKey)
+                    browser.tabs.create({ url, active: true });
+                  else if (e.ctrlKey || e.metaKey)
+                    browser.tabs.create({ url, active: false });
+                  else if (e.shiftKey) browser.windows.create({ url });
+                  else browser.tabs.update({ url });
+                }
+              }}
+              onAuxClick={(e) => {
+                const url = bookmark.url;
+                if (
+                  e.button === 1 &&
+                  (url.startsWith('edge://') ||
+                    url.startsWith('chrome://') ||
+                    url.startsWith('about:'))
+                ) {
+                  e.preventDefault();
+                  if (e.shiftKey) browser.tabs.create({ url, active: true });
+                  else browser.tabs.create({ url, active: false });
+                }
+              }}
+              {...listeners}
+              {...attributes}
             />
-            {cfg.showLabel && (
-              <span
-                className={cn(
-                  'w-full truncate text-center text-foreground leading-tight',
-                  cfg.textCls,
-                )}
-              >
-                {bookmark.title}
-              </span>
-            )}
-          </a>
+          }
+        >
+          <FaviconImage
+            url={bookmark.url}
+            className={cn(cfg.iconCls, 'shrink-0 rounded-[4px]')}
+            loading="lazy"
+          />
+          {cfg.showLabel && (
+            <span
+              className={cn(
+                'w-full truncate text-center text-foreground leading-tight',
+                cfg.textCls,
+              )}
+            >
+              {bookmark.title}
+            </span>
+          )}
         </ContextMenuTrigger>
 
         <ContextMenuContent className="w-44">
-          <ContextMenuItem onSelect={() => onEditBookmark(target, bookmark)}>
-            <Edit3 className="mr-2 size-3.5" />
-            编辑
-          </ContextMenuItem>
-					<ContextMenuSub>
-            <ContextMenuSubTrigger>
-              <FolderInput className="mr-2 size-3.5" />
-              移动到
-            </ContextMenuSubTrigger>
-            <ContextMenuSubContent className="w-44">
-              {spaces.map((space) => {
-                if (space.board.groups.length === 0) return null;
-                return (
-                  <ContextMenuSub key={space.id}>
-                    <ContextMenuSubTrigger>
-                      {space.title}
-                      {space.id === activeSpaceId && (
-                        <span className="ml-1 text-[10px] text-muted-foreground">(当前)</span>
-                      )}
-                    </ContextMenuSubTrigger>
-                    <ContextMenuSubContent className="w-44">
-                      {space.board.groups.map((g) => {
-                        const isCurrentGroup =
-                          space.id === activeSpaceId && g.id === target.groupId;
-                        const isCurrentRoot = isCurrentGroup && !target.subgroupId;
-                        if (g.subgroups.length === 0) {
-                          return (
-                            <ContextMenuItem
-                              key={g.id}
-                              disabled={isCurrentRoot}
-                              onSelect={() =>
-                                onMoveBookmarkToSpace(
-                                  { ...target, bookmarkId: bookmark.id },
-                                  space.id,
-                                  g.id,
-                                )
-                              }
-                            >
-                              {g.title}
-                            </ContextMenuItem>
-                          );
-                        }
-                        return (
-                          <ContextMenuSub key={g.id}>
-                            <ContextMenuSubTrigger>
-                              {g.title}
-                              {isCurrentGroup && (
-                                <span className="ml-1 text-[10px] text-muted-foreground">(当前)</span>
-                              )}
-                            </ContextMenuSubTrigger>
-                            <ContextMenuSubContent className="w-44">
-                              <ContextMenuItem
-                                disabled={isCurrentRoot}
-                                onSelect={() =>
-                                  onMoveBookmarkToSpace(
-                                    { ...target, bookmarkId: bookmark.id },
-                                    space.id,
-                                    g.id,
-                                  )
-                                }
-                              >
-                                根目录
-                              </ContextMenuItem>
-                              <ContextMenuSeparator />
-                              {g.subgroups.map((sg) => {
-                                const isCurrentSG =
-                                  isCurrentGroup && target.subgroupId === sg.id;
+          <ContextMenuGroup>
+            <ContextMenuItem onClick={() => onEditBookmark(target, bookmark)}>
+              <Edit3 className="mr-2 size-3.5" />
+              编辑
+            </ContextMenuItem>
+            <ContextMenuSub>
+              <ContextMenuSubTrigger>
+                <FolderInput className="mr-2 size-3.5" />
+                移动到
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent className="w-44">
+                <ContextMenuGroup>
+                  {spaces.map((space) => {
+                    if (space.board.groups.length === 0) return null;
+                    return (
+                      <ContextMenuSub key={space.id}>
+                        <ContextMenuSubTrigger>
+                          {space.title}
+                          {space.id === activeSpaceId && (
+                            <span className="ml-1 text-[10px] text-muted-foreground">
+                              (当前)
+                            </span>
+                          )}
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent className="w-44">
+                          <ContextMenuGroup>
+                            {space.board.groups.map((g) => {
+                              const isCurrentGroup =
+                                space.id === activeSpaceId &&
+                                g.id === target.groupId;
+                              const isCurrentRoot =
+                                isCurrentGroup && !target.subgroupId;
+                              if (g.subgroups.length === 0) {
                                 return (
                                   <ContextMenuItem
-                                    key={sg.id}
-                                    disabled={isCurrentSG}
-                                    onSelect={() =>
+                                    key={g.id}
+                                    disabled={isCurrentRoot}
+                                    onClick={() =>
                                       onMoveBookmarkToSpace(
                                         { ...target, bookmarkId: bookmark.id },
                                         space.id,
                                         g.id,
-                                        sg.id,
                                       )
                                     }
                                   >
-                                    {sg.title}
+                                    {g.title}
                                   </ContextMenuItem>
                                 );
-                              })}
-                            </ContextMenuSubContent>
-                          </ContextMenuSub>
-                        );
-                      })}
-                    </ContextMenuSubContent>
-                  </ContextMenuSub>
-                );
-              })}
-            </ContextMenuSubContent>
-          </ContextMenuSub>
-          <ContextMenuItem onSelect={() => onDeleteBookmark(target, bookmark.id)}>
-            <Trash2 className="mr-2 size-3.5" />
-            删除
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem onSelect={() => navigator.clipboard.writeText(bookmark.url)}>
-            <LinkIcon className="mr-2 size-3.5" />
-            复制链接
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem onSelect={() => browser.tabs.create({ url: bookmark.url })}>
-            <ExternalLink className="mr-2 size-3.5" />
-            在新标签页打开
-          </ContextMenuItem>
-          <ContextMenuItem onSelect={() => browser.windows.create({ url: bookmark.url })}>
-            <AppWindow className="mr-2 size-3.5" />
-            在新窗口打开
-          </ContextMenuItem>
-          <ContextMenuItem
-            onSelect={() => browser.windows.create({ url: bookmark.url, incognito: true })}
-          >
-            <EyeOff className="mr-2 size-3.5" />
-            在隐私窗口打开
-          </ContextMenuItem>
+                              }
+                              return (
+                                <ContextMenuSub key={g.id}>
+                                  <ContextMenuSubTrigger>
+                                    {g.title}
+                                    {isCurrentGroup && (
+                                      <span className="ml-1 text-[10px] text-muted-foreground">
+                                        (当前)
+                                      </span>
+                                    )}
+                                  </ContextMenuSubTrigger>
+                                  <ContextMenuSubContent className="w-44">
+                                    <ContextMenuGroup>
+                                      <ContextMenuItem
+                                        disabled={isCurrentRoot}
+                                        onClick={() =>
+                                          onMoveBookmarkToSpace(
+                                            {
+                                              ...target,
+                                              bookmarkId: bookmark.id,
+                                            },
+                                            space.id,
+                                            g.id,
+                                          )
+                                        }
+                                      >
+                                        根目录
+                                      </ContextMenuItem>
+                                      <ContextMenuSeparator />
+                                      {g.subgroups.map((sg) => {
+                                        const isCurrentSG =
+                                          isCurrentGroup &&
+                                          target.subgroupId === sg.id;
+                                        return (
+                                          <ContextMenuItem
+                                            key={sg.id}
+                                            disabled={isCurrentSG}
+                                            onClick={() =>
+                                              onMoveBookmarkToSpace(
+                                                {
+                                                  ...target,
+                                                  bookmarkId: bookmark.id,
+                                                },
+                                                space.id,
+                                                g.id,
+                                                sg.id,
+                                              )
+                                            }
+                                          >
+                                            {sg.title}
+                                          </ContextMenuItem>
+                                        );
+                                      })}
+                                    </ContextMenuGroup>
+                                  </ContextMenuSubContent>
+                                </ContextMenuSub>
+                              );
+                            })}
+                          </ContextMenuGroup>
+                        </ContextMenuSubContent>
+                      </ContextMenuSub>
+                    );
+                  })}
+                </ContextMenuGroup>
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+            <ContextMenuItem
+              onClick={() => onDeleteBookmark(target, bookmark.id)}
+            >
+              <Trash2 className="mr-2 size-3.5" />
+              删除
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onClick={() => navigator.clipboard.writeText(bookmark.url)}
+            >
+              <LinkIcon className="mr-2 size-3.5" />
+              复制链接
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onClick={() => browser.tabs.create({ url: bookmark.url })}
+            >
+              <ExternalLink className="mr-2 size-3.5" />
+              在新标签页打开
+            </ContextMenuItem>
+            <ContextMenuItem
+              onClick={() => browser.windows.create({ url: bookmark.url })}
+            >
+              <AppWindow className="mr-2 size-3.5" />
+              在新窗口打开
+            </ContextMenuItem>
+            <ContextMenuItem
+              onClick={() =>
+                browser.windows.create({ url: bookmark.url, incognito: true })
+              }
+            >
+              <EyeOff className="mr-2 size-3.5" />
+              在隐私窗口打开
+            </ContextMenuItem>
+          </ContextMenuGroup>
         </ContextMenuContent>
       </ContextMenu>
 
@@ -315,7 +395,8 @@ function IconBookmarkEndNode({
     data: { type: 'bookmark-end', target, index, isIconGrid: true, iconSize },
   });
   const { dropIndicator } = useDndUIStore();
-  const isTarget = dropIndicator?.id === dndId && dropIndicator.type === 'bookmark';
+  const isTarget =
+    dropIndicator?.id === dndId && dropIndicator.type === 'bookmark';
 
   return (
     <div
@@ -344,8 +425,14 @@ type BookmarkIconGridProps = {
     targetGroupId: string,
     targetSubgroupId?: string,
   ) => void;
-  onEditBookmark: (target: BookmarkContainerTarget, bookmark: BookmarkItem) => void;
-  onDeleteBookmark: (target: BookmarkContainerTarget, bookmarkId: string) => void;
+  onEditBookmark: (
+    target: BookmarkContainerTarget,
+    bookmark: BookmarkItem,
+  ) => void;
+  onDeleteBookmark: (
+    target: BookmarkContainerTarget,
+    bookmarkId: string,
+  ) => void;
   onMoveBookmark: (
     source: BookmarkNodeTarget,
     target: BookmarkContainerTarget,
@@ -370,7 +457,9 @@ export function BookmarkIconGrid({
   onDeleteBookmark,
   onDropExternalBookmark,
 }: BookmarkIconGridProps) {
-  const [contextOpenBookmarkId, setContextOpenBookmarkId] = useState<string | null>(null);
+  const [contextOpenBookmarkId, setContextOpenBookmarkId] = useState<
+    string | null
+  >(null);
   const cfg = SIZE_CONFIG[iconSize];
 
   const resolveDropKind = (event: DragEvent) => {
@@ -387,7 +476,13 @@ export function BookmarkIconGrid({
   const EmptyZoneId = `bookmark-end|${target.groupId}|${target.subgroupId}`;
   const { setNodeRef: setEmptyDropRef } = useDroppable({
     id: EmptyZoneId,
-    data: { type: 'bookmark-end', target, index: 0, isIconGrid: true, iconSize },
+    data: {
+      type: 'bookmark-end',
+      target,
+      index: 0,
+      isIconGrid: true,
+      iconSize,
+    },
   });
   const { dropIndicator } = useDndUIStore();
   const isEmptyTarget = dropIndicator?.id === EmptyZoneId;
@@ -426,7 +521,9 @@ export function BookmarkIconGrid({
       ref={setContainerDropRef}
       id={containerId}
       className="grid gap-0.5"
-      style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${cfg.minW}px, 1fr))` }}
+      style={{
+        gridTemplateColumns: `repeat(auto-fill, minmax(${cfg.minW}px, 1fr))`,
+      }}
       onDragOver={(event) => {
         if (!resolveDropKind(event)) return;
         event.preventDefault();
@@ -456,7 +553,11 @@ export function BookmarkIconGrid({
           onDeleteBookmark={onDeleteBookmark}
         />
       ))}
-      <IconBookmarkEndNode target={target} index={bookmarks.length} iconSize={iconSize} />
+      <IconBookmarkEndNode
+        target={target}
+        index={bookmarks.length}
+        iconSize={iconSize}
+      />
     </div>
   );
 }

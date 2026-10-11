@@ -5,6 +5,7 @@ import { browser, type Browser } from 'wxt/browser';
 
 import { Button } from '@/components/ui/button';
 import {
+  ContextMenuGroup,
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
@@ -54,62 +55,85 @@ function TabDraggableItem({
   const isDragging = activeId === dndId;
 
   return (
-    <ContextMenu onOpenChange={handleMenuOpenChange}>
-      <ContextMenuTrigger asChild>
-        <button
-          ref={setNodeRef}
-          id={`dnd-${dndId}`}
-          {...listeners}
-          {...attributes}
-          type="button"
-          title={`${title}\n${tab.url}`}
+    <ContextMenu
+      onOpenChange={(open) => {
+        if (open) handleMenuOpenChange(true);
+      }}
+      onOpenChangeComplete={(open) => {
+        if (!open) handleMenuOpenChange(false);
+      }}
+    >
+      <ContextMenuTrigger
+        render={
+          <button
+            ref={setNodeRef}
+            id={`dnd-${dndId}`}
+            {...listeners}
+            {...attributes}
+            type="button"
+            title={`${title}\n${tab.url}`}
+            className={cn(
+              'group flex w-full min-w-0 shrink-0 items-center rounded-xl border border-transparent py-1.5',
+              expanded
+                ? 'gap-2.5 overflow-hidden'
+                : 'justify-center gap-0 overflow-visible',
+              'text-left transition-[background-color,border-color,opacity] duration-150',
+              'hover:border-border/60 hover:bg-muted/45 active:bg-muted/55',
+              'cursor-grab active:cursor-grabbing',
+              isDragging && 'opacity-40',
+              menuOpen && 'border-border/60 bg-muted/55',
+            )}
+            style={{
+              paddingLeft: expanded ? 6 : 1,
+              paddingRight: expanded ? 6 : 1,
+            }}
+          />
+        }
+      >
+        <span
           className={cn(
-            'group flex w-full min-w-0 shrink-0 items-center rounded-xl border border-transparent py-1.5',
-            expanded ? 'gap-2.5 overflow-hidden' : 'justify-center gap-0 overflow-visible',
-            'text-left transition-[background-color,border-color,opacity] duration-150',
-            'hover:border-border/60 hover:bg-muted/45 active:bg-muted/55',
-            'cursor-grab active:cursor-grabbing',
-            isDragging && 'opacity-40',
-            menuOpen && 'border-border/60 bg-muted/55',
+            'flex shrink-0 items-center justify-center rounded-lg bg-background/75 shadow-xs ring-1 ring-border/40',
+            expanded ? 'size-7' : 'size-[1.625rem]',
           )}
-          style={{ paddingLeft: expanded ? 6 : 1, paddingRight: expanded ? 6 : 1 }}
         >
-          <span
+          <FaviconImage
+            url={tab.url || ''}
+            tabIconUrl={tab.favIconUrl}
             className={cn(
-              'flex shrink-0 items-center justify-center rounded-lg bg-background/75 shadow-xs ring-1 ring-border/40',
-              expanded ? 'size-7' : 'size-[1.625rem]',
+              'rounded-[3px] object-contain',
+              expanded ? 'size-4' : 'size-3.5',
             )}
-          >
-            <FaviconImage
-              url={tab.url || ''}
-              tabIconUrl={tab.favIconUrl}
-              className={cn('rounded-[3px] object-contain', expanded ? 'size-4' : 'size-3.5')}
-              onError={(e: any) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-          </span>
-          <div
-            className={cn(
-              'block min-w-0 flex-1 truncate whitespace-nowrap text-[12px] text-foreground/85 transition-[opacity,transform] duration-200',
-              expanded ? 'opacity-100' : 'max-w-0 opacity-0',
-            )}
-          >
-            {title}
-          </div>
-        </button>
+            onError={(e: any) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        </span>
+        <div
+          className={cn(
+            'block min-w-0 flex-1 truncate whitespace-nowrap text-[12px] text-foreground/85 transition-[opacity,transform] duration-200',
+            expanded ? 'opacity-100' : 'max-w-0 opacity-0',
+          )}
+        >
+          {title}
+        </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem onSelect={() => navigator.clipboard.writeText(title).catch(() => {})}>
-          复制标题
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem
-          disabled={!tab.url}
-          onSelect={() => tab.url && navigator.clipboard.writeText(tab.url).catch(() => {})}
-        >
-          复制 URL
-        </ContextMenuItem>
+        <ContextMenuGroup>
+          <ContextMenuItem
+            onClick={() => navigator.clipboard.writeText(title).catch(() => {})}
+          >
+            复制标题
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            disabled={!tab.url}
+            onClick={() =>
+              tab.url && navigator.clipboard.writeText(tab.url).catch(() => {})
+            }
+          >
+            复制 URL
+          </ContextMenuItem>
+        </ContextMenuGroup>
       </ContextMenuContent>
     </ContextMenu>
   );
@@ -150,7 +174,7 @@ export function TabsEdgeDrawer() {
           return (a.index ?? 0) - (b.index ?? 0);
         });
       setTabs(filtered);
-    } catch { }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -188,7 +212,10 @@ export function TabsEdgeDrawer() {
     mouseInsideRef.current = false;
     if (contextMenuOpen) return;
     clearTimer();
-    closeTimer.current = window.setTimeout(() => setManualExpanded(false), CLOSE_DELAY_MS);
+    closeTimer.current = window.setTimeout(
+      () => setManualExpanded(false),
+      CLOSE_DELAY_MS,
+    );
   };
 
   // 右键菜单关闭后，若鼠标已离开侧栏，则触发收缩
@@ -199,7 +226,10 @@ export function TabsEdgeDrawer() {
       window.clearTimeout(closeTimer.current);
       closeTimer.current = null;
     }
-    closeTimer.current = window.setTimeout(() => setManualExpanded(false), CLOSE_DELAY_MS);
+    closeTimer.current = window.setTimeout(
+      () => setManualExpanded(false),
+      CLOSE_DELAY_MS,
+    );
   }, [contextMenuOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const displayTabs = reversed ? [...tabs].reverse() : tabs;
@@ -213,7 +243,10 @@ export function TabsEdgeDrawer() {
         'transition-[width,box-shadow,transform] duration-250 ease-out',
         expanded ? 'translate-x-0' : 'translate-x-0',
       )}
-      style={{ width: expanded ? EXPANDED_W : COLLAPSED_W, height: 'calc(100vh - 12px)' }}
+      style={{
+        width: expanded ? EXPANDED_W : COLLAPSED_W,
+        height: 'calc(100vh - 12px)',
+      }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -225,7 +258,12 @@ export function TabsEdgeDrawer() {
         )}
         style={{ width: expanded ? EXPANDED_W : COLLAPSED_W }}
       >
-        <div className={cn('flex items-center', expanded ? 'gap-2' : 'justify-center')}>
+        <div
+          className={cn(
+            'flex items-center',
+            expanded ? 'gap-2' : 'justify-center',
+          )}
+        >
           <span
             className={cn(
               'inline-flex shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary',
@@ -255,11 +293,15 @@ export function TabsEdgeDrawer() {
                 ? 'bg-primary/15 text-primary hover:bg-primary/25'
                 : 'text-muted-foreground hover:text-foreground',
             )}
-            onClick={() => setReversed((prev) => {
-              const next = !prev;
-              try { localStorage.setItem(TABS_REVERSED_KEY, String(next)); } catch { }
-              return next;
-            })}
+            onClick={() =>
+              setReversed((prev) => {
+                const next = !prev;
+                try {
+                  localStorage.setItem(TABS_REVERSED_KEY, String(next));
+                } catch {}
+                return next;
+              })
+            }
             title={reversed ? '已颠倒顺序（点击恢复）' : '颠倒顺序'}
           >
             <ArrowDownUp className="size-3.5" />
@@ -271,7 +313,10 @@ export function TabsEdgeDrawer() {
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div
           className="flex min-w-0 max-w-full flex-col gap-1 py-3"
-          style={{ paddingLeft: expanded ? 8 : 4, paddingRight: expanded ? 8 : 4 }}
+          style={{
+            paddingLeft: expanded ? 8 : 4,
+            paddingRight: expanded ? 8 : 4,
+          }}
         >
           {displayTabs.map((tab) => (
             <TabDraggableItem

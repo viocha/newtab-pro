@@ -1,9 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { AppWindow, ChevronDown, ChevronRight, Copy, ExternalLink, EyeOff, Folder, FolderOpen, MapPin, PanelsTopLeft } from 'lucide-react';
+import {
+  AppWindow,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  ExternalLink,
+  EyeOff,
+  Folder,
+  FolderOpen,
+  MapPin,
+  PanelsTopLeft,
+} from 'lucide-react';
 import { browser, type Browser } from 'wxt/browser';
 
-
 import {
+  ContextMenuGroup,
   ContextMenu,
   ContextMenuCheckboxItem,
   ContextMenuContent,
@@ -19,7 +30,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { BROWSER_TREE_DEFAULT_MAX_ITEMS } from '../constants';
 import { FaviconImage } from './FaviconImage';
-import { getGridOpenCounts, openUrlsInGrid, useWindowOpenPrefs } from '../window-open';
+import {
+  getGridOpenCounts,
+  openUrlsInGrid,
+  useWindowOpenPrefs,
+} from '../window-open';
 
 /** 每行的近似高度（px），用于将 maxItems 换算成 maxHeight */
 const ITEM_HEIGHT_PX = 28;
@@ -97,7 +112,9 @@ export function BrowserTreeView({
     void load();
 
     // 监听书签变化，静默重新加载（保留展开状态）
-    const reload = () => { void load(); };
+    const reload = () => {
+      void load();
+    };
     browser.bookmarks.onCreated.addListener(reload);
     browser.bookmarks.onRemoved.addListener(reload);
     browser.bookmarks.onChanged.addListener(reload);
@@ -124,217 +141,306 @@ export function BrowserTreeView({
   /** 递归收集节点下所有书签 URL */
   const collectNodeUrls = (node: TreeNode): string[] => {
     const urls: string[] = [];
-    const walk = (n: TreeNode) => { if (n.url) urls.push(n.url); n.children?.forEach(walk); };
+    const walk = (n: TreeNode) => {
+      if (n.url) urls.push(n.url);
+      n.children?.forEach(walk);
+    };
     walk(node);
     return urls;
   };
 
   const renderNodes = (items: TreeNode[], depth: number): React.ReactNode =>
-    [...items].sort((a, b) => {
-      const aFolder = !a.url;
-      const bFolder = !b.url;
-      if (aFolder === bFolder) return 0;
-      return aFolder ? -1 : 1;
-    }).map((node) => {
-      const key = node.id || `${node.title}-${node.url}-${depth}`;
-      const isFolder = !node.url;
-      const hasChildren = !!(node.children?.length);
-      const isExpanded = expandedIds.has(node.id);
-      // 书签内容比文件夹多缩进一点，与展开箭头区域对齐
-      const indent = isFolder ? depth * 14 + 4 : depth * 14 + 4;
+    [...items]
+      .sort((a, b) => {
+        const aFolder = !a.url;
+        const bFolder = !b.url;
+        if (aFolder === bFolder) return 0;
+        return aFolder ? -1 : 1;
+      })
+      .map((node) => {
+        const key = node.id || `${node.title}-${node.url}-${depth}`;
+        const isFolder = !node.url;
+        const hasChildren = !!node.children?.length;
+        const isExpanded = expandedIds.has(node.id);
+        // 书签内容比文件夹多缩进一点，与展开箭头区域对齐
+        const indent = isFolder ? depth * 14 + 4 : depth * 14 + 4;
 
-      if (isFolder) {
-        const folderUrls = collectNodeUrls(node);
-        const folderRow = (
-          <div
-            className={cn(
-              'flex cursor-pointer select-none items-center gap-1 overflow-hidden rounded px-1 py-1 text-xs hover:bg-accent/60',
-              contextOpenId === node.id && !disableCustomContextMenu && 'bg-accent/60',
-            )}
-            style={{ paddingLeft: `${indent}px` }}
-            onClick={() => hasChildren && toggleExpand(node.id)}
-          >
-            <span className="inline-flex size-4 shrink-0 items-center justify-center text-muted-foreground"
-              onClick={(e) => { e.stopPropagation(); if (hasChildren) toggleExpand(node.id); }}
-            >
-              {hasChildren ? (
-                isExpanded
-                  ? <ChevronDown className="size-3" />
-                  : <ChevronRight className="size-3" />
-              ) : (
-                <span className="size-3" />
+        if (isFolder) {
+          const folderUrls = collectNodeUrls(node);
+          const folderRow = (
+            <div
+              className={cn(
+                'flex cursor-pointer select-none items-center gap-1 overflow-hidden rounded px-1 py-1 text-xs hover:bg-accent/60',
+                contextOpenId === node.id &&
+                  !disableCustomContextMenu &&
+                  'bg-accent/60',
               )}
-            </span>
+              style={{ paddingLeft: `${indent}px` }}
+              onClick={() => hasChildren && toggleExpand(node.id)}
+            >
+              <span
+                className="inline-flex size-4 shrink-0 items-center justify-center text-muted-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (hasChildren) toggleExpand(node.id);
+                }}
+              >
+                {hasChildren ? (
+                  isExpanded ? (
+                    <ChevronDown className="size-3" />
+                  ) : (
+                    <ChevronRight className="size-3" />
+                  )
+                ) : (
+                  <span className="size-3" />
+                )}
+              </span>
 
-            <span className="inline-flex size-4 shrink-0 items-center justify-center">
-              {isExpanded
-                ? <FolderOpen className="size-3.5 text-amber-500" />
-                : <Folder className="size-3.5 text-amber-500" />}
-            </span>
+              <span className="inline-flex size-4 shrink-0 items-center justify-center">
+                {isExpanded ? (
+                  <FolderOpen className="size-3.5 text-amber-500" />
+                ) : (
+                  <Folder className="size-3.5 text-amber-500" />
+                )}
+              </span>
 
-            <span className="min-w-0 flex-1 truncate text-foreground/90">
-              {node.title || '未命名文件夹'}
-            </span>
-          </div>
-        );
+              <span className="min-w-0 flex-1 truncate text-foreground/90">
+                {node.title || '未命名文件夹'}
+              </span>
+            </div>
+          );
 
-        if (disableCustomContextMenu) {
+          if (disableCustomContextMenu) {
+            return (
+              <React.Fragment key={key}>
+                {folderRow}
+                {hasChildren &&
+                  isExpanded &&
+                  renderNodes(node.children!, depth + 1)}
+              </React.Fragment>
+            );
+          }
+
           return (
             <React.Fragment key={key}>
-              {folderRow}
-              {hasChildren && isExpanded && renderNodes(node.children!, depth + 1)}
+              <ContextMenu
+                onOpenChange={(open) => setContextOpenId(open ? node.id : null)}
+              >
+                <ContextMenuTrigger render={folderRow} />
+                <ContextMenuContent>
+                  <ContextMenuGroup>
+                    {folderUrls.length > 0 && (
+                      <>
+                        <ContextMenuItem
+                          onClick={() => {
+                            for (const u of folderUrls)
+                              void browser.tabs.create({ url: u });
+                          }}
+                        >
+                          <ExternalLink className="mr-2 size-3.5" />
+                          打开全部书签
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          onClick={() =>
+                            void browser.windows.create({ url: folderUrls })
+                          }
+                        >
+                          <AppWindow className="mr-2 size-3.5" />
+                          在新窗口打开全部
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          onClick={() =>
+                            void browser.windows.create({
+                              url: folderUrls,
+                              incognito: true,
+                            })
+                          }
+                        >
+                          <EyeOff className="mr-2 size-3.5" />
+                          在隐私窗口打开全部
+                        </ContextMenuItem>
+                        <ContextMenuSub>
+                          <ContextMenuSubTrigger>
+                            <PanelsTopLeft className="mr-2 size-3.5" />
+                            多窗口网格打开
+                          </ContextMenuSubTrigger>
+                          <ContextMenuSubContent className="w-44">
+                            <ContextMenuGroup>
+                              <ContextMenuCheckboxItem
+                                checked={compactGridWindows}
+                                closeOnClick={false}
+                                onCheckedChange={(next) =>
+                                  setCompactGridWindows(!!next)
+                                }
+                              >
+                                简化窗口
+                              </ContextMenuCheckboxItem>
+                              <ContextMenuSeparator />
+                              {getGridOpenCounts(folderUrls.length).map(
+                                (count) => (
+                                  <ContextMenuItem
+                                    key={count}
+                                    onClick={() =>
+                                      void openUrlsInGrid(
+                                        folderUrls.slice(0, count),
+                                        compactGridWindows,
+                                      )
+                                    }
+                                  >
+                                    打开前 {count} 个
+                                  </ContextMenuItem>
+                                ),
+                              )}
+                            </ContextMenuGroup>
+                          </ContextMenuSubContent>
+                        </ContextMenuSub>
+                        <ContextMenuSeparator />
+                      </>
+                    )}
+                    <ContextMenuItem
+                      onClick={() => void locateInBookmarkPro(node.id)}
+                    >
+                      <MapPin className="mr-2 size-3.5" />
+                      在侧栏书签中定位
+                    </ContextMenuItem>
+                  </ContextMenuGroup>
+                </ContextMenuContent>
+              </ContextMenu>
+              {hasChildren &&
+                isExpanded &&
+                renderNodes(node.children!, depth + 1)}
             </React.Fragment>
           );
         }
 
+        // 书签节点：普通点击在当前标签页打开，修饰键和中键沿用浏览器行为
+        const bookmarkRow = (
+          <a
+            href={node.url}
+            target="_self"
+            title={node.url ? `${node.title}\n${node.url}` : node.title}
+            className={cn(
+              'flex select-none items-center gap-1 overflow-hidden rounded px-1 py-1 text-xs hover:bg-accent/60',
+              contextOpenId === node.id &&
+                !disableCustomContextMenu &&
+                'bg-accent/60',
+            )}
+            style={{
+              paddingLeft: `${indent + 4}px`,
+              textDecoration: 'none',
+              color: 'inherit',
+            }}
+            onClick={(e) => {
+              const url = node.url;
+              if (!url || !/^(?:edge|chrome|about):/.test(url)) return;
+              e.preventDefault();
+              if (e.altKey) return;
+              if (e.ctrlKey && e.shiftKey)
+                void browser.tabs.create({ url, active: true });
+              else if (e.ctrlKey || e.metaKey)
+                void browser.tabs.create({ url, active: false });
+              else if (e.shiftKey) void browser.windows.create({ url });
+              else void browser.tabs.update({ url });
+            }}
+            onAuxClick={(e) => {
+              const url = node.url;
+              if (
+                e.button !== 1 ||
+                !url ||
+                !/^(?:edge|chrome|about):/.test(url)
+              )
+                return;
+              e.preventDefault();
+              void browser.tabs.create({ url, active: e.shiftKey });
+            }}
+          >
+            <span className="inline-flex size-4 shrink-0 items-center justify-center" />
+
+            <span className="inline-flex size-4 shrink-0 items-center justify-center">
+              <FaviconImage
+                url={node.url || ''}
+                className="size-3.5 rounded-[3px]"
+                loading="lazy"
+              />
+            </span>
+
+            <span className="min-w-0 flex-1 truncate text-foreground/80">
+              {node.title || node.url || '未命名'}
+            </span>
+          </a>
+        );
+
+        if (disableCustomContextMenu) {
+          return <React.Fragment key={key}>{bookmarkRow}</React.Fragment>;
+        }
+
         return (
-          <React.Fragment key={key}>
-          <ContextMenu onOpenChange={(open) => setContextOpenId(open ? node.id : null)}>
-            <ContextMenuTrigger asChild>
-              {folderRow}
-            </ContextMenuTrigger>
+          <ContextMenu
+            key={key}
+            onOpenChange={(open) => setContextOpenId(open ? node.id : null)}
+          >
+            <ContextMenuTrigger render={bookmarkRow} />
             <ContextMenuContent>
-              {folderUrls.length > 0 && (
-                <>
-                  <ContextMenuItem onSelect={() => { for (const u of folderUrls) void browser.tabs.create({ url: u }); }}>
-                    <ExternalLink className="mr-2 size-3.5" />
-                    打开全部书签
-                  </ContextMenuItem>
-                  <ContextMenuItem onSelect={() => void browser.windows.create({ url: folderUrls })}>
-                    <AppWindow className="mr-2 size-3.5" />
-                    在新窗口打开全部
-                  </ContextMenuItem>
-                  <ContextMenuItem onSelect={() => void browser.windows.create({ url: folderUrls, incognito: true })}>
-                    <EyeOff className="mr-2 size-3.5" />
-                    在隐私窗口打开全部
-                  </ContextMenuItem>
-                  <ContextMenuSub>
-                    <ContextMenuSubTrigger>
-                      <PanelsTopLeft className="mr-2 size-3.5" />
-                      多窗口网格打开
-                    </ContextMenuSubTrigger>
-                    <ContextMenuSubContent className="w-44">
-                      <ContextMenuCheckboxItem
-                        checked={compactGridWindows}
-                        onSelect={(e) => e.preventDefault()}
-                        onCheckedChange={(next) => setCompactGridWindows(!!next)}
-                      >
-                        简化窗口
-                      </ContextMenuCheckboxItem>
-                      <ContextMenuSeparator />
-                      {getGridOpenCounts(folderUrls.length).map((count) => (
-                        <ContextMenuItem
-                          key={count}
-                          onSelect={() => void openUrlsInGrid(folderUrls.slice(0, count), compactGridWindows)}
-                        >
-                          打开前 {count} 个
-                        </ContextMenuItem>
-                      ))}
-                    </ContextMenuSubContent>
-                  </ContextMenuSub>
-                  <ContextMenuSeparator />
-                </>
-              )}
-              <ContextMenuItem onSelect={() => void locateInBookmarkPro(node.id)}>
-                <MapPin className="mr-2 size-3.5" />
-                在侧栏书签中定位
-              </ContextMenuItem>
+              <ContextMenuGroup>
+                <ContextMenuItem
+                  onClick={() => navigator.clipboard.writeText(node.url ?? '')}
+                >
+                  <Copy className="mr-2 size-3.5" />
+                  复制链接
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                  onClick={() => {
+                    if (node.url) void browser.tabs.create({ url: node.url });
+                  }}
+                >
+                  <ExternalLink className="mr-2 size-3.5" />
+                  在新标签页打开
+                </ContextMenuItem>
+                <ContextMenuItem
+                  onClick={() => {
+                    if (node.url)
+                      void browser.windows.create({ url: node.url });
+                  }}
+                >
+                  <AppWindow className="mr-2 size-3.5" />
+                  在新窗口打开
+                </ContextMenuItem>
+                <ContextMenuItem
+                  onClick={() => {
+                    if (node.url)
+                      void browser.windows.create({
+                        url: node.url,
+                        incognito: true,
+                      });
+                  }}
+                >
+                  <EyeOff className="mr-2 size-3.5" />
+                  在隐私窗口打开
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                  onClick={() => void locateInBookmarkPro(node.id)}
+                >
+                  <MapPin className="mr-2 size-3.5" />
+                  在侧栏书签中定位
+                </ContextMenuItem>
+              </ContextMenuGroup>
             </ContextMenuContent>
           </ContextMenu>
-          {hasChildren && isExpanded && renderNodes(node.children!, depth + 1)}
-          </React.Fragment>
-      );
-      }
-
-      // 书签节点：普通点击在当前标签页打开，修饰键和中键沿用浏览器行为
-      const bookmarkRow = (
-        <a
-          href={node.url}
-          target="_self"
-          title={node.url ? `${node.title}\n${node.url}` : node.title}
-          className={cn(
-            'flex select-none items-center gap-1 overflow-hidden rounded px-1 py-1 text-xs hover:bg-accent/60',
-            contextOpenId === node.id && !disableCustomContextMenu && 'bg-accent/60',
-          )}
-          style={{ paddingLeft: `${indent + 4}px`, textDecoration: 'none', color: 'inherit' }}
-          onClick={(e) => {
-            const url = node.url;
-            if (!url || !/^(?:edge|chrome|about):/.test(url)) return;
-            e.preventDefault();
-            if (e.altKey) return;
-            if (e.ctrlKey && e.shiftKey) void browser.tabs.create({ url, active: true });
-            else if (e.ctrlKey || e.metaKey) void browser.tabs.create({ url, active: false });
-            else if (e.shiftKey) void browser.windows.create({ url });
-            else void browser.tabs.update({ url });
-          }}
-          onAuxClick={(e) => {
-            const url = node.url;
-            if (e.button !== 1 || !url || !/^(?:edge|chrome|about):/.test(url)) return;
-            e.preventDefault();
-            void browser.tabs.create({ url, active: e.shiftKey });
-          }}
-        >
-          <span className="inline-flex size-4 shrink-0 items-center justify-center" />
-
-          <span className="inline-flex size-4 shrink-0 items-center justify-center">
-            <FaviconImage
-              url={node.url || ''}
-              className="size-3.5 rounded-[3px]"
-              loading="lazy"
-            />
-          </span>
-
-          <span className="min-w-0 flex-1 truncate text-foreground/80">
-            {node.title || node.url || '未命名'}
-          </span>
-        </a>
-      );
-
-      if (disableCustomContextMenu) {
-        return <React.Fragment key={key}>{bookmarkRow}</React.Fragment>;
-      }
-
-      return (
-        <ContextMenu key={key} onOpenChange={(open) => setContextOpenId(open ? node.id : null)}>
-          <ContextMenuTrigger asChild>
-            {bookmarkRow}
-          </ContextMenuTrigger>
-          <ContextMenuContent>
-            <ContextMenuItem onSelect={() => navigator.clipboard.writeText(node.url ?? '')}>
-              <Copy className="mr-2 size-3.5" />
-              复制链接
-            </ContextMenuItem>
-            <ContextMenuSeparator />
-            <ContextMenuItem onSelect={() => { if (node.url) void browser.tabs.create({ url: node.url }); }}>
-              <ExternalLink className="mr-2 size-3.5" />
-              在新标签页打开
-            </ContextMenuItem>
-            <ContextMenuItem onSelect={() => { if (node.url) void browser.windows.create({ url: node.url }); }}>
-              <AppWindow className="mr-2 size-3.5" />
-              在新窗口打开
-            </ContextMenuItem>
-            <ContextMenuItem onSelect={() => { if (node.url) void browser.windows.create({ url: node.url, incognito: true }); }}>
-              <EyeOff className="mr-2 size-3.5" />
-              在隐私窗口打开
-            </ContextMenuItem>
-            <ContextMenuSeparator />
-            <ContextMenuItem onSelect={() => void locateInBookmarkPro(node.id)}>
-              <MapPin className="mr-2 size-3.5" />
-              在侧栏书签中定位
-            </ContextMenuItem>
-          </ContextMenuContent>
-        </ContextMenu>
-      );
-    });
+        );
+      });
 
   // 可见区域最大高度
   const maxHeight = maxItems * ITEM_HEIGHT_PX;
 
   // 初次加载时用固定高度占位，避免高度闪烁
   if (loading && nodes.length === 0) {
-    return fitParentHeight
-      ? <div className="h-full min-h-0 rounded" />
-      : <div style={{ height: maxHeight }} className="rounded" />;
+    return fitParentHeight ? (
+      <div className="h-full min-h-0 rounded" />
+    ) : (
+      <div style={{ height: maxHeight }} className="rounded" />
+    );
   }
 
   if (error) {

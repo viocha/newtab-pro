@@ -1,31 +1,31 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 :root {
-  --radius: 0.65rem;
-  --background: oklch(0.97 0.01 95);
-  --foreground: oklch(0.21 0.02 258);
-  --card: oklch(0.99 0.005 95);
-  --card-foreground: oklch(0.21 0.02 258);
-  --popover: oklch(0.99 0.005 95);
-  --popover-foreground: oklch(0.21 0.02 258);
-  --primary: oklch(0.45 0.09 233);
-  --primary-foreground: oklch(0.98 0.005 95);
-  --secondary: oklch(0.93 0.01 95);
-  --secondary-foreground: oklch(0.24 0.02 258);
-  --muted: oklch(0.93 0.01 95);
-  --muted-foreground: oklch(0.49 0.03 258);
-  --accent: oklch(0.92 0.02 220);
-  --accent-foreground: oklch(0.22 0.02 258);
-  --destructive: oklch(0.62 0.23 28);
-  --destructive-foreground: oklch(0.98 0.01 20);
-  --border: oklch(0.87 0.02 230);
-  --input: oklch(0.87 0.02 230);
-  --ring: oklch(0.56 0.09 236);
+  --radius: 10px;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
 }
 
 @theme inline {
-  --font-sans: "Segoe UI Variable", "PingFang SC", "Microsoft YaHei UI", "Noto Sans SC", sans-serif;
+  --font-sans: sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -45,10 +45,10 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) * 1.4);
 }
 
 @layer base {
@@ -67,7 +67,6 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: var(--font-sans);
     font-size: 13px;
     line-height: 1.35;
   }
@@ -76,16 +75,26 @@
     overscroll-behavior: none;
   }
 
-  button {
+  button,
+  [role='button'],
+  [role='menuitem'],
+  [role='menuitemcheckbox'],
+  [role='menuitemradio'],
+  [role='switch'],
+  label[for] {
     cursor: pointer;
   }
 }
 
+/* 放在层外，避免注入的 body 字体规则覆盖界面默认字体。 */
+:root,
+:root body,
+:root :where(button, input, select, optgroup, textarea) {
+  font-family: sans-serif;
+}
+
 .bg-page {
-  background:
-    radial-gradient(1400px 460px at 50% -20%, oklch(0.98 0.03 210 / 0.75), transparent 70%),
-    radial-gradient(1200px 450px at 100% 0%, oklch(0.95 0.03 110 / 0.5), transparent 65%),
-    linear-gradient(180deg, oklch(0.97 0.008 95) 0%, oklch(0.95 0.015 230) 100%);
+  background: var(--background);
 }
 
 /* 约束 ScrollArea 内容宽度，避免长标题撑开分组网格。 */
