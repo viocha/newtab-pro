@@ -1,3 +1,4 @@
+import { BookmarkText } from './BookmarkText';
 import type { DragEvent } from 'react';
 import { useState } from 'react';
 import {
@@ -227,7 +228,7 @@ function BookmarkItemNode({
             className="size-3.5 rounded-[3px]"
             loading="lazy"
           />
-          <span className="truncate text-foreground">{bookmark.title}</span>
+          <BookmarkText title={bookmark.title} url={bookmark.url} className="text-foreground" />
         </ContextMenuTrigger>
         <ContextMenuContent className="w-44">
           <ContextMenuGroup>

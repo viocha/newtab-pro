@@ -85,6 +85,11 @@ function sanitizeSettings(raw: unknown): AppSettings {
       : searchEngines[0].id;
 
   return {
+    listTitleLines: r.listTitleLines === 2 || r.listTitleLines === 3 ? r.listTitleLines : 1,
+    listShowUrl: typeof r.listShowUrl === 'boolean' ? r.listShowUrl : false,
+    treeTitleLines: r.treeTitleLines === 2 || r.treeTitleLines === 3 ? r.treeTitleLines : 1,
+    treeShowUrl: typeof r.treeShowUrl === 'boolean' ? r.treeShowUrl : false,
+    iconTitleLines: r.iconTitleLines === 2 || r.iconTitleLines === 3 ? r.iconTitleLines : 1,
     showSearchBar:
       typeof r.showSearchBar === 'boolean' ? r.showSearchBar : DEFAULT_SETTINGS.showSearchBar,
     searchEngines,

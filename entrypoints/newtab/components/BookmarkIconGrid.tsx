@@ -1,3 +1,4 @@
+import { BookmarkText } from './BookmarkText';
 import type { DragEvent } from 'react';
 import { useState } from 'react';
 import {
@@ -207,14 +208,14 @@ function IconBookmarkItemNode({
             loading="lazy"
           />
           {cfg.showLabel && (
-            <span
+            <BookmarkText
+              title={bookmark.title}
+              mode="icon"
               className={cn(
-                'w-full truncate text-center text-foreground leading-tight',
+                'text-center text-foreground leading-tight',
                 cfg.textCls,
               )}
-            >
-              {bookmark.title}
-            </span>
+            />
           )}
         </ContextMenuTrigger>
 

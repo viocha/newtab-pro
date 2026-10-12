@@ -69,6 +69,11 @@ export const SUGGEST_URL_PRESETS = [
 ] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  listTitleLines: 1,
+  listShowUrl: false,
+  treeTitleLines: 1,
+  treeShowUrl: false,
+  iconTitleLines: 1,
   showSearchBar: false,
   searchEngines: DEFAULT_SEARCH_ENGINES,
   activeSearchEngineId: 'google',

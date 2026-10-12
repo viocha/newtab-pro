@@ -93,6 +93,7 @@ import type {
 } from './types';
 import { useBoardStore } from './use-board-store';
 import { useSettingsStore } from './use-settings-store';
+import { BookmarkDisplayContext } from './components/BookmarkText';
 import { createBackupPayload, parseBackupPayload } from './backup';
 import {
   compareBackupSnapshots,
@@ -1897,6 +1898,7 @@ export default function App() {
   }
 
   return (
+    <BookmarkDisplayContext value={settings}>
     <DndContext
       sensors={sensors}
       collisionDetection={pointerWithin}
@@ -2805,5 +2807,6 @@ export default function App() {
 
       <SmartDragOverlay />
     </DndContext>
+    </BookmarkDisplayContext>
   );
 }

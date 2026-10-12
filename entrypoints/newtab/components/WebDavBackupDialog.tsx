@@ -38,6 +38,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
 import type { BackupDiffResult } from '../backup-diff';
@@ -85,15 +86,14 @@ function SwitchRow({
 }) {
   const switchId = useId();
   return (
-    <div
+    <Label
+      htmlFor={switchId}
       className={cn(
-        'flex items-start justify-between gap-4 px-4 py-2.5',
+        'w-full items-start justify-between gap-4 px-4 py-2.5',
         disabled && 'opacity-55',
       )}
     >
-      <div className="min-w-0">
-        <FieldLabel htmlFor={switchId}>{label}</FieldLabel>
-      </div>
+      <span className="min-w-0">{label}</span>
       <Switch
         id={switchId}
         checked={checked}
@@ -101,7 +101,7 @@ function SwitchRow({
         disabled={disabled}
         className="mt-0.5"
       />
-    </div>
+    </Label>
   );
 }
 

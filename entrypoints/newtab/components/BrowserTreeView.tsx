@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { BookmarkText } from './BookmarkText';
 import {
   AppWindow,
   ChevronDown,
@@ -364,9 +365,7 @@ export function BrowserTreeView({
               />
             </span>
 
-            <span className="min-w-0 flex-1 truncate text-foreground/80">
-              {node.title || node.url || '未命名'}
-            </span>
+            <BookmarkText title={node.title} url={node.url} mode="tree" className="text-foreground/80" />
           </a>
         );
 

@@ -1,5 +1,5 @@
 import { Field, FieldLabel, FieldGroup } from '@/components/ui/field';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { ScrollableTextarea } from '@/components/ScrollableTextarea';
 
 import { tryNormalizeUrl } from '../utils';
 
@@ -36,6 +36,7 @@ export function BookmarkFormDialog({
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) {
@@ -64,7 +65,7 @@ export function BookmarkFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent ref={dialogRef} initialFocus={mode === 'edit' ? dialogRef : undefined}>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -83,18 +84,23 @@ export function BookmarkFormDialog({
           <FieldGroup className="grid gap-3 py-2">
             <Field>
               <FieldLabel htmlFor="bookmark-title">名称</FieldLabel>
-              <Input
+              <ScrollableTextarea
                 id="bookmark-title"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder="例如：Google"
-                autoFocus
+                rows={2}
               />
             </Field>
             <Field>
               <FieldLabel htmlFor="bookmark-url">URL</FieldLabel>
-              <Input
+              <ScrollableTextarea
                 id="bookmark-url"
+                rows={3}
+                className="break-all"
+                inputMode="url"
+                autoCapitalize="none"
+                spellCheck={false}
                 value={url}
                 onChange={(event) => {
                   setUrl(event.target.value);
@@ -111,7 +117,7 @@ export function BookmarkFormDialog({
           <DialogFooter>
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               onClick={() => onOpenChange(false)}
             >
               取消

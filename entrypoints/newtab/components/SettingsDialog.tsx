@@ -49,6 +49,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -93,17 +94,15 @@ function SettingsSwitchRow({
 }) {
   const switchId = useId();
   return (
-    <div className="flex items-start justify-between gap-4 px-4 py-2.5">
-      <div className="min-w-0">
-        <FieldLabel htmlFor={switchId}>{label}</FieldLabel>
-      </div>
+    <Label htmlFor={switchId} className="w-full items-start justify-between gap-4 px-4 py-2.5">
+      <span className="min-w-0">{label}</span>
       <Switch
         id={switchId}
         checked={checked}
         onCheckedChange={onCheckedChange}
         className="mt-0.5"
       />
-    </div>
+    </Label>
   );
 }
 
@@ -130,6 +129,28 @@ function SettingsActionRow({
         <ChevronLeft className="size-3.5 rotate-180" />
       </span>
     </button>
+  );
+}
+
+function BookmarkTitleLinesRow({ value, onChange }: {
+  value: 1 | 2 | 3;
+  onChange: (value: 1 | 2 | 3) => void;
+}) {
+  const labelId = useId();
+  return (
+    <Field orientation="horizontal" className="justify-between px-4 py-2.5">
+      <FieldLabel id={labelId}>名称显示行数</FieldLabel>
+      <ToggleGroup value={[String(value)]} variant="outline" size="sm" spacing={0}
+        aria-labelledby={labelId}
+        onValueChange={(values) => {
+          const next = Number(values[0]);
+          if (next === 1 || next === 2 || next === 3) onChange(next);
+        }}>
+        <ToggleGroupItem value="1">1 行</ToggleGroupItem>
+        <ToggleGroupItem value="2">2 行</ToggleGroupItem>
+        <ToggleGroupItem value="3">3 行</ToggleGroupItem>
+      </ToggleGroup>
+    </Field>
   );
 }
 
@@ -339,7 +360,7 @@ function EngineFormDialog({ state, onClose, onSubmit }: EngineFormDialogProps) {
             </Field>
           </FieldGroup>
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>
               取消
             </Button>
             <Button
@@ -616,6 +637,24 @@ export function SettingsDialog({
             <div className="flex flex-col gap-2 p-4">
               {view === 'main' ? (
                 <>
+                  <SettingsSection title="书签列表">
+                    <BookmarkTitleLinesRow value={settings.listTitleLines}
+                      onChange={(listTitleLines) => onUpdateSettings({ listTitleLines })} />
+                    <Separator />
+                    <SettingsSwitchRow label="在名称下方显示 URL" checked={settings.listShowUrl}
+                      onCheckedChange={(listShowUrl) => onUpdateSettings({ listShowUrl })} />
+                  </SettingsSection>
+                  <SettingsSection title="书签树">
+                    <BookmarkTitleLinesRow value={settings.treeTitleLines}
+                      onChange={(treeTitleLines) => onUpdateSettings({ treeTitleLines })} />
+                    <Separator />
+                    <SettingsSwitchRow label="在名称下方显示 URL" checked={settings.treeShowUrl}
+                      onCheckedChange={(treeShowUrl) => onUpdateSettings({ treeShowUrl })} />
+                  </SettingsSection>
+                  <SettingsSection title="书签图标">
+                    <BookmarkTitleLinesRow value={settings.iconTitleLines}
+                      onChange={(iconTitleLines) => onUpdateSettings({ iconTitleLines })} />
+                  </SettingsSection>
                   <SettingsSection title="搜索栏">
                     <SettingsSwitchRow
                       checked={settings.showSearchBar}

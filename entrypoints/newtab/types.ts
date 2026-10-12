@@ -141,6 +141,11 @@ export type BackupSettings = {
 };
 
 export type AppSettings = {
+  listTitleLines: 1 | 2 | 3;
+  listShowUrl: boolean;
+  treeTitleLines: 1 | 2 | 3;
+  treeShowUrl: boolean;
+  iconTitleLines: 1 | 2 | 3;
   showSearchBar: boolean;
   searchEngines: SearchEngine[];
   activeSearchEngineId: string;
