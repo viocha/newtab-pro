@@ -1,15 +1,17 @@
 import { Button } from '@/components/ui/button';
 import type { MouseEvent } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { browser } from 'wxt/browser';
 
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { BrowserTreeView } from '@/entrypoints/newtab/components/BrowserTreeView';
+import { BookmarkDisplayContext, BookmarkText } from '@/entrypoints/newtab/components/BookmarkText';
+import { useSettingsStore } from '@/entrypoints/newtab/use-settings-store';
 import {
   SPACES_STORAGE_FALLBACK_KEY,
   SPACES_STORAGE_KEY,
 } from '@/entrypoints/newtab/constants';
-import { IFRAME_DEFAULT_HEIGHT } from '@/entrypoints/newtab/constants';
 import type {
   BookmarkGroup,
   BookmarkItem,
@@ -22,6 +24,17 @@ import { cn } from '@/lib/utils';
 
 const POPUP_SELECTED_SPACE_KEY = 'newtab-pro:popup:selected-space-id';
 const POPUP_SELECTED_GROUP_KEY = 'newtab-pro:popup:selected-group-id';
+const POPUP_SCROLL_KEY = 'newtab-pro:popup:scroll-position';
+
+function readScrollPosition(spaceId: string, groupId: string) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(POPUP_SCROLL_KEY) || 'null');
+    return saved?.spaceId === spaceId && saved?.groupId === groupId &&
+      Number.isFinite(saved.top) && saved.top >= 0 ? saved.top : 0;
+  } catch {
+    return 0;
+  }
+}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -177,7 +190,26 @@ async function loadSpaceStore() {
   }
 }
 
-function GroupContent({ group }: { group: BookmarkGroup }) {
+function GroupContent({ group, spaceId, initialScrollTop }: {
+  group: BookmarkGroup;
+  spaceId: string;
+  initialScrollTop: number;
+}) {
+  const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
+  const initialTop = useRef(initialScrollTop);
+  useLayoutEffect(() => {
+    if (!viewport) return;
+    viewport.scrollTop = initialTop.current;
+    const save = () => localStorage.setItem(POPUP_SCROLL_KEY, JSON.stringify({
+      spaceId, groupId: group.id, top: viewport.scrollTop,
+    }));
+    save();
+    viewport.addEventListener('scroll', save, { passive: true });
+    return () => viewport.removeEventListener('scroll', save);
+  }, [viewport, spaceId, group.id]);
+  // 书签树和 iframe 各自处理内部滚动；列表与图标使用分组 ScrollArea。
+  const fillContentHeight = group.viewMode === 'browser-tree' || group.viewMode === 'iframe';
+  const ContentArea = fillContentHeight ? 'div' : ScrollArea;
   const renderRootBookmarks = () => {
     if (group.bookmarks.length === 0) {
       return null;
@@ -209,31 +241,26 @@ function GroupContent({ group }: { group: BookmarkGroup }) {
         </p>
       </header>
 
-      {group.collapsed ? null : (
-        <div
+        <ContentArea
+          {...(!fillContentHeight ? { viewportProps: { ref: setViewport } } : {})}
           className={cn(
-            'min-h-0 flex-1',
+            'bookmark-scroll-area min-h-0 min-w-0 flex-1 overflow-hidden',
             group.viewMode === 'browser-tree'
-              ? 'overflow-hidden py-1'
-              : 'overflow-y-auto overflow-x-hidden',
-            group.viewMode !== 'browser-tree' && group.viewMode !== 'iframe'
-              ? 'p-2'
-              : '',
+              && 'py-1',
           )}
         >
+          <div className={cn(
+            'min-w-0 max-w-full',
+            fillContentHeight ? 'h-full' : 'min-h-full',
+            group.viewMode !== 'browser-tree' && group.viewMode !== 'iframe' && 'p-2',
+          )}>
           {group.viewMode === 'iframe' ? (
             group.iframeUrl ? (
-              <div
-                className="rounded-md"
-                style={{
-                  minHeight: group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT,
-                  overflow: 'clip',
-                }}
-              >
+              <div className="h-full overflow-hidden rounded-md">
                 <iframe
                   src={group.iframeUrl}
                   title={group.title}
-                  className="h-full w-full border-0"
+                  className="block h-full w-full border-0"
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-orientation-lock allow-pointer-lock allow-presentation allow-downloads"
                   allow="fullscreen *; autoplay *; camera *; microphone *; geolocation *; clipboard-read *; clipboard-write *; payment *; encrypted-media *; picture-in-picture *; display-capture *; web-share *; accelerometer *; gyroscope *; magnetometer *; midi *; usb *; bluetooth *; hid *; serial *; gamepad *; screen-wake-lock *; idle-detection *; storage-access *; xr-spatial-tracking *; publickey-credentials-get *"
                 />
@@ -251,6 +278,7 @@ function GroupContent({ group }: { group: BookmarkGroup }) {
                   maxItems={group.browserTreeMaxItems}
                   fitParentHeight
                   disableCustomContextMenu
+                  scrollViewportProps={{ ref: setViewport }}
                 />
               </div>
             ) : (
@@ -278,8 +306,8 @@ function GroupContent({ group }: { group: BookmarkGroup }) {
               </div>
             </>
           )}
-        </div>
-      )}
+          </div>
+        </ContentArea>
     </section>
   );
 }
@@ -351,9 +379,9 @@ function BookmarkLink({
         className={iconClassName}
         loading="lazy"
       />
-      <span className={cn('truncate text-foreground', labelClassName)}>
-        {bookmark.title}
-      </span>
+      <BookmarkText title={bookmark.title} url={bookmark.url}
+        mode={compact ? 'list' : 'icon'}
+        className={cn('text-foreground', labelClassName)} />
     </a>
   );
 }
@@ -440,20 +468,20 @@ function SubgroupReadOnly({ subgroup }: { subgroup: BookmarkSubgroup }) {
           {subgroup.title}
         </p>
       </header>
-      {!subgroup.collapsed ? (
-        <div className="mt-1">{renderBookmarks()}</div>
-      ) : null}
+      <div className="mt-1">{renderBookmarks()}</div>
     </section>
   );
 }
 
 export default function App() {
+  const { settings } = useSettingsStore();
   const [store, setStore] = useState<SpaceStore>({
     spaces: [],
     activeSpaceId: '',
   });
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState('');
+  const [initialScrollTop, setInitialScrollTop] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -480,6 +508,7 @@ export default function App() {
           ? savedGroupId
           : (defaultSpace?.board.groups[0]?.id ?? '');
       setSelectedGroupId(defaultGroupId);
+      setInitialScrollTop(readScrollPosition(defaultSpaceId, defaultGroupId));
     })();
 
     return () => {
@@ -529,6 +558,7 @@ export default function App() {
   }, [selectedGroupId]);
 
   return (
+    <BookmarkDisplayContext value={settings}>
     <div className="bg-page h-full overflow-hidden">
       {store.spaces.length === 0 ? (
         <div className="flex h-full items-center justify-center px-3 text-xs text-muted-foreground">
@@ -546,7 +576,11 @@ export default function App() {
                   size="xs"
                   key={space.id}
                   type="button"
-                  onClick={() => setSelectedSpaceId(space.id)}
+                  onClick={() => {
+                    if (space.id === selectedSpace?.id) return;
+                    setInitialScrollTop(0);
+                    setSelectedSpaceId(space.id);
+                  }}
                 >
                   {space.title}
                 </Button>
@@ -564,7 +598,11 @@ export default function App() {
                   size="xs"
                   key={group.id}
                   type="button"
-                  onClick={() => setSelectedGroupId(group.id)}
+                  onClick={() => {
+                    if (group.id === selectedGroup?.id) return;
+                    setInitialScrollTop(0);
+                    setSelectedGroupId(group.id);
+                  }}
                 >
                   {group.title}
                 </Button>
@@ -576,7 +614,9 @@ export default function App() {
 
           <div className="min-h-0 flex-1 overflow-hidden p-2">
             {selectedGroup ? (
-              <GroupContent group={selectedGroup} />
+              <GroupContent key={`${selectedSpace?.id}:${selectedGroup.id}`}
+                spaceId={selectedSpace?.id ?? ''} group={selectedGroup}
+                initialScrollTop={initialScrollTop} />
             ) : (
               <div className="px-2 py-3 text-xs text-muted-foreground">
                 当前 Space 没有分组
@@ -586,5 +626,6 @@ export default function App() {
         </div>
       )}
     </div>
+    </BookmarkDisplayContext>
   );
 }

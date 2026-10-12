@@ -75,6 +75,7 @@ type Props = {
   fitParentHeight?: boolean;
   /** 关闭自定义上下文菜单，改用浏览器原生右键菜单 */
   disableCustomContextMenu?: boolean;
+  scrollViewportProps?: React.ComponentProps<typeof ScrollArea>['viewportProps'];
 };
 
 export function BrowserTreeView({
@@ -82,6 +83,7 @@ export function BrowserTreeView({
   maxItems = BROWSER_TREE_DEFAULT_MAX_ITEMS,
   fitParentHeight = false,
   disableCustomContextMenu = false,
+  scrollViewportProps,
 }: Props) {
   const { compactGridWindows, setCompactGridWindows } = useWindowOpenPrefs();
   const [nodes, setNodes] = useState<TreeNode[]>([]);
@@ -460,6 +462,7 @@ export function BrowserTreeView({
 
   return (
     <ScrollArea
+      viewportProps={scrollViewportProps}
       style={fitParentHeight ? { height: '100%' } : { maxHeight }}
       className={cn(
         'bookmark-scroll-area min-h-0 min-w-0 max-w-full rounded',
