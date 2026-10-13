@@ -1,5 +1,5 @@
 import { Field, FieldLabel, FieldGroup } from '@/components/ui/field';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -36,9 +36,9 @@ export function BookmarkFormDialog({
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) {
       return;
     }
@@ -65,7 +65,14 @@ export function BookmarkFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent ref={dialogRef} initialFocus={mode === 'edit' ? dialogRef : undefined}>
+      <DialogContent initialFocus={mode === 'edit' ? () => {
+        const input = titleRef.current;
+        input?.focus({ preventScroll: true });
+        input?.setSelectionRange(0, 0);
+        const viewport = input?.closest('[data-slot="scroll-area-viewport"]');
+        if (viewport) viewport.scrollTop = 0;
+        return false;
+      } : undefined}>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -86,6 +93,7 @@ export function BookmarkFormDialog({
               <FieldLabel htmlFor="bookmark-title">名称</FieldLabel>
               <ScrollableTextarea
                 id="bookmark-title"
+                ref={titleRef}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder="例如：Google"
