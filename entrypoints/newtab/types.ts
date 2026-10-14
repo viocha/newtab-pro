@@ -17,6 +17,8 @@ export type BookmarkSubgroup = {
 };
 
 export type BookmarkGroup = {
+  /** 大分组跨越的列数，默认 1；显示时不超过网格实际列数 */
+  columnSpan?: number;
   id: string;
   title: string;
   color: string;
@@ -141,6 +143,8 @@ export type BackupSettings = {
 };
 
 export type AppSettings = {
+  columns: 'auto' | 1 | 2 | 3 | 4 | 5 | 6;
+  selectedBatchEngineIds: string[];
   listTitleLines: 1 | 2 | 3;
   listShowUrl: boolean;
   treeTitleLines: 1 | 2 | 3;

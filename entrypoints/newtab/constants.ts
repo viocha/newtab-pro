@@ -69,6 +69,8 @@ export const SUGGEST_URL_PRESETS = [
 ] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  columns: 'auto',
+  selectedBatchEngineIds: [],
   listTitleLines: 1,
   listShowUrl: false,
   treeTitleLines: 1,

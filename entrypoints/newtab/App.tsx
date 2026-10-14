@@ -80,6 +80,8 @@ import { BrowserFolderPickerDialog } from './components/BrowserFolderPickerDialo
 import { IframeUrlPickerDialog } from './components/IframeUrlPickerDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { GroupCard } from './components/GroupCard';
+import type { AppSettings } from './types';
+import { BoardGrid, BoardGridItem } from './components/BoardGrid';
 import { TabsEdgeDrawer } from './components/TabsEdgeDrawer';
 import { SearchBar } from './components/SearchBar';
 import { HelpDialog } from './components/HelpDialog';
@@ -923,6 +925,7 @@ export default function App() {
     toggleGroup,
     setGroupViewMode,
     setGroupIconSize,
+    setGroupColumnSpan,
     setGroupBrowserTreeConfig,
     setGroupIframeConfig,
     addSubgroup,
@@ -975,20 +978,8 @@ export default function App() {
     open: false,
   });
 
-  const [columns, setColumnsState] = useState<'auto' | 1 | 2 | 3 | 4 | 5 | 6>(
-    () => {
-      const saved = localStorage.getItem('newtab-pro:columns');
-      if (saved === 'auto') return 'auto';
-      const n = Number(saved);
-      return ([1, 2, 3, 4, 5, 6] as const).includes(n as any)
-        ? (n as 1 | 2 | 3 | 4 | 5 | 6)
-        : 'auto';
-    },
-  );
-  const setColumns = (v: 'auto' | 1 | 2 | 3 | 4 | 5 | 6) => {
-    setColumnsState(v);
-    localStorage.setItem('newtab-pro:columns', String(v));
-  };
+  const columns = settings.columns;
+  const setColumns = (columns: AppSettings['columns']) => updateSettings({ columns });
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [autoEditGroupId, setAutoEditGroupId] = useState<string | null>(null);
   const [autoEditSubgroupId, setAutoEditSubgroupId] = useState<string | null>(
@@ -2143,6 +2134,7 @@ export default function App() {
                       ref={searchBarInputRef}
                       settings={settings}
                       onSetActiveEngine={setActiveSearchEngine}
+                      onSetBatchEngineIds={(selectedBatchEngineIds) => updateSettings({ selectedBatchEngineIds })}
                       onAddToHistory={addToSearchHistory}
                       onRemoveFromHistory={removeFromSearchHistory}
                       onClearHistory={clearSearchHistory}
@@ -2160,10 +2152,6 @@ export default function App() {
                     a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
                   );
                   const spaceEff = space.columns ?? columns;
-                  const spaceGridCols =
-                    spaceEff === 'auto'
-                      ? 'repeat(auto-fill, minmax(320px, 1fr))'
-                      : `repeat(${spaceEff}, minmax(0, 1fr))`;
                   return (
                     <main
                       key={space.id}
@@ -2174,13 +2162,11 @@ export default function App() {
                           : undefined
                       }
                     >
-                      <div
-                        className="grid items-start gap-3"
-                        style={{ gridTemplateColumns: spaceGridCols }}
-                      >
+                      <BoardGrid columns={spaceEff}>
                         {mountedGroups.map((group) => (
-                          <div
+                          <BoardGridItem
                             key={group.id}
+                            span={group.columnSpan}
                             className="relative"
                             style={{ order: groupOrder.get(group.id) }}
                             data-group-card="true"
@@ -2188,6 +2174,7 @@ export default function App() {
                           >
                             <GroupCard
                               group={group}
+                              onSetColumnSpan={(span) => setGroupColumnSpan(group.id, span)}
                               spaces={spaces}
                               activeSpaceId={activeSpaceId}
                               isActiveSpace={space.id === activeSpaceId}
@@ -2424,9 +2411,9 @@ export default function App() {
                                 }
                               }}
                             />
-                          </div>
+                          </BoardGridItem>
                         ))}
-                      </div>
+                      </BoardGrid>
                     </main>
                   );
                 })}

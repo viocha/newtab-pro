@@ -2,6 +2,8 @@ import * as jsondiffpatch from 'jsondiffpatch';
 import { format as formatHtml } from 'jsondiffpatch/formatters/html';
 
 import { createBackupPayload, parseBackupPayload } from './backup';
+import { sanitizeSettings } from './use-settings-store';
+import { sanitizeSpaceStore } from './use-board-store';
 import type { AppSettings, Space, SpaceStore } from './types';
 
 export type BackupDiffDocument = {
@@ -22,7 +24,6 @@ export type BackupContentStats = {
   subgroups: number;
   bookmarks: number;
   searchEngines: number;
-  searchHistory: number;
 };
 
 export type BackupDiffSnapshot = {
@@ -150,7 +151,6 @@ function collectBackupContentStats(document: BackupDiffDocument): BackupContentS
     subgroups: 0,
     bookmarks: 0,
     searchEngines: 0,
-    searchHistory: 0,
   };
 
   if (isRecord(document.spaces) && Array.isArray(document.spaces.spaces)) {
@@ -164,9 +164,6 @@ function collectBackupContentStats(document: BackupDiffDocument): BackupContentS
   if (isRecord(document.settings)) {
     stats.searchEngines = Array.isArray(document.settings.searchEngines)
       ? document.settings.searchEngines.length
-      : 0;
-    stats.searchHistory = Array.isArray(document.settings.searchHistory)
-      ? document.settings.searchHistory.length
       : 0;
   }
 
@@ -193,10 +190,12 @@ export function parseBackupDiffSnapshot(raw: unknown): BackupDiffSnapshot {
     throw new Error('版本不匹配或文件格式错误');
   }
 
+  const normalized = createBackupPayload(sanitizeSpaceStore(parsed.spaceStore), sanitizeSettings(parsed.settings));
+
   return {
     document: {
-      spaces: parsed.spaceStore,
-      ...(parsed.settings !== undefined ? { settings: parsed.settings } : {}),
+      spaces: normalized.spaces,
+      ...(parsed.settings !== undefined ? { settings: normalized.settings } : {}),
     },
     exportedAt: parsed.exportedAt,
   };

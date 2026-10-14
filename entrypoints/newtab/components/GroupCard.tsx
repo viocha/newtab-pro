@@ -119,6 +119,7 @@ type GroupCardProps = {
   ) => void;
   onSetViewMode: (mode: BookmarkViewMode) => void;
   onSetIconSize: (size: IconSize) => void;
+  onSetColumnSpan: (span: number) => void;
   onSetSubgroupViewMode: (subgroupId: string, mode: BookmarkViewMode) => void;
   onSetSubgroupIconSize: (subgroupId: string, size: IconSize) => void;
   /** 设置书签树模式最多显示条目数 */
@@ -309,6 +310,7 @@ export function GroupCard({
   onDropExternalBookmark,
   onSetViewMode,
   onSetIconSize,
+  onSetColumnSpan,
   onSetSubgroupViewMode,
   onSetSubgroupIconSize,
   onSetBrowserTreeMaxItems,
@@ -745,6 +747,21 @@ export function GroupCard({
                     </>
                   )}
 
+                  <DropdownMenuLabel>跨越列数</DropdownMenuLabel>
+                  <div className="px-1.5 pb-2">
+                    <ToggleGroup variant="outline" size="sm" spacing={0}
+                      className="w-full" aria-label="跨越列数"
+                      value={[String(group.columnSpan ?? 1)]}
+                      onValueChange={(value) => {
+                        if (value[0]) onSetColumnSpan(Number(value[0]));
+                      }}>
+                      {[1, 2, 3, 4, 5, 6].map((span) => (
+                        <ToggleGroupItem key={span} value={String(span)} className="flex-1">{span}</ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  </div>
+                  <DropdownMenuSeparator />
+
                   {/* Iframe config – only in iframe mode */}
                   {group.viewMode === 'iframe' && (
                     <>
@@ -770,6 +787,7 @@ export function GroupCard({
                                 );
                               }}
                               onKeyDown={(e) => {
+                                if (e.key !== 'Escape' && e.key !== 'Tab') e.stopPropagation();
                                 if (e.key === 'Enter') {
                                   onSetIframeConfig(
                                     group.id,
@@ -834,6 +852,7 @@ export function GroupCard({
                                 }
                               }}
                               onKeyDown={(e) => {
+                                if (e.key !== 'Escape' && e.key !== 'Tab') e.stopPropagation();
                                 if (e.key === 'Enter') {
                                   const v = parseInt(iframeHeightDraft, 10);
                                   if (!isNaN(v) && v >= 100) {
@@ -957,6 +976,7 @@ export function GroupCard({
                               }
                             }}
                             onKeyDown={(e) => {
+                              if (e.key !== 'Escape' && e.key !== 'Tab') e.stopPropagation();
                               if (e.key === 'Enter') {
                                 const v = parseInt(btMaxDraft, 10);
                                 if (!isNaN(v) && v >= 5) {
@@ -1240,6 +1260,8 @@ export function GroupCard({
             ) : group.viewMode === 'browser-tree' ? (
               group.browserTreeFolderId ? (
                 <BrowserTreeView
+                  key={`${group.id}:${group.browserTreeFolderId}`}
+                  stateKey={`newtab-pro:tree:${group.id}:${group.browserTreeFolderId}`}
                   folderId={group.browserTreeFolderId}
                   maxItems={group.browserTreeMaxItems}
                 />

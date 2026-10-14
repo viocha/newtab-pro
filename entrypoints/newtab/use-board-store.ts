@@ -146,6 +146,8 @@ function sanitizeBoard(raw: unknown): BookmarkBoard {
       return {
         id: toText(group.id, createId()),
         title: toText(group.title, `分组 ${index + 1}`),
+        columnSpan: typeof group.columnSpan === 'number' && Number.isFinite(group.columnSpan)
+          ? Math.max(1, Math.min(6, Math.round(group.columnSpan))) : 1,
         color: toText(group.color, pickGroupGradient(index)),
         collapsed: toBoolean(group.collapsed),
         bookmarks: sanitizeBookmarkList(group.bookmarks),
@@ -160,7 +162,7 @@ function sanitizeBoard(raw: unknown): BookmarkBoard {
   return { groups };
 }
 
-function sanitizeSpaceStore(raw: unknown): SpaceStore {
+export function sanitizeSpaceStore(raw: unknown): SpaceStore {
   if (!isObject(raw) || !Array.isArray(raw.spaces)) {
     return createDefaultSpaceStore();
   }
@@ -195,6 +197,22 @@ function sanitizeSpaceStore(raw: unknown): SpaceStore {
       : spaces[0].id;
 
   return { spaces, activeSpaceId };
+}
+
+
+export function restoreSpaceStore(raw: unknown, current: SpaceStore): SpaceStore {
+  const next = sanitizeSpaceStore(raw);
+  next.activeSpaceId = next.spaces.some((space) => space.id === current.activeSpaceId)
+    ? current.activeSpaceId : next.spaces[0].id;
+  const localGroups = new Map(current.spaces.flatMap((space) => space.board.groups.map((group) => [group.id, group] as const)));
+  for (const space of next.spaces) for (const group of space.board.groups) {
+    const local = localGroups.get(group.id);
+    group.collapsed = local?.collapsed ?? false;
+    group.browserTreeFolderId = local?.browserTreeFolderId;
+    const localSubgroups = new Map(local?.subgroups.map((subgroup) => [subgroup.id, subgroup]) ?? []);
+    for (const subgroup of group.subgroups) subgroup.collapsed = localSubgroups.get(subgroup.id)?.collapsed ?? false;
+  }
+  return next;
 }
 
 // ── clone ────────────────────────────────────────────────────────────
@@ -674,6 +692,13 @@ export function useBoardStore() {
     [commit],
   );
 
+  const setGroupColumnSpan = useCallback((groupId: string, span: number) => {
+    commit((draft) => {
+      const group = getActiveBoard(draft).groups.find((item) => item.id === groupId);
+      if (group) group.columnSpan = Math.max(1, Math.min(6, Math.round(span)));
+    });
+  }, [commit]);
+
   const setGroupBrowserTreeConfig = useCallback(
     (groupId: string, folderId: string | null, maxItems: number) => {
       commit((draft) => {
@@ -1048,7 +1073,7 @@ export function useBoardStore() {
 
   const importSpaceStore = useCallback(
     (raw: unknown) => {
-      const next = sanitizeSpaceStore(raw);
+      const next = restoreSpaceStore(raw, storeRef.current);
       storeRef.current = next;
       setStore(next);
       enqueuePersist(next);
@@ -1116,6 +1141,7 @@ export function useBoardStore() {
     toggleGroup,
     setGroupViewMode,
     setGroupIconSize,
+    setGroupColumnSpan,
     setGroupBrowserTreeConfig,
     setGroupIframeConfig,
     // subgroup ops

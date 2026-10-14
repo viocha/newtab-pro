@@ -1,14 +1,29 @@
-import type { AppSettings, BackupSettings, SpaceStore } from './types';
+import type { AppSettings, BackupSettings, SpaceStore, Space, BookmarkGroup, BookmarkSubgroup } from './types';
 
-export const BACKUP_PAYLOAD_VERSION = 2;
+export const BACKUP_PAYLOAD_VERSION = 3;
 export const AUTO_BACKUP_ALARM_NAME = 'newtab-pro:auto-backup';
 export const AUTO_BACKUP_CHECK_PERIOD_MINUTES = 15;
+
+type SyncedSubgroup = Pick<BookmarkSubgroup, 'id' | 'title' | 'viewMode' | 'iconSize' | 'bookmarks'>;
+type SyncedGroup = Pick<BookmarkGroup,
+  'id' | 'title' | 'color' | 'columnSpan' | 'viewMode' | 'iconSize' |
+  'browserTreeMaxItems' | 'iframeUrl' | 'iframeHeight' | 'bookmarks'> & {
+  subgroups: SyncedSubgroup[];
+};
+type SyncedSpace = Pick<Space, 'id' | 'title' | 'columns' | 'showSearch' | 'iframeAutoRun'> & {
+  board: { groups: SyncedGroup[] };
+};
+type SyncedSettings = Pick<AppSettings,
+  'columns' | 'selectedBatchEngineIds' | 'listTitleLines' | 'listShowUrl' |
+  'treeTitleLines' | 'treeShowUrl' | 'iconTitleLines' | 'showSearchBar' |
+  'searchEngines' | 'activeSearchEngineId' | 'openSearchInNewTab' |
+  'spaceNextShortcut' | 'spacePrevShortcut' | 'defaultSuggestUrl' | 'iframeAutoRun'>;
 
 export type BackupPayload = {
   version: typeof BACKUP_PAYLOAD_VERSION;
   exportedAt: string;
-  spaces: SpaceStore;
-  settings: Omit<AppSettings, 'backup'>;
+  spaces: { spaces: SyncedSpace[] };
+  settings: SyncedSettings;
 };
 
 export type BackupParseResult = {
@@ -22,12 +37,42 @@ function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 export function createBackupPayload(spaceStore: SpaceStore, settings: AppSettings): BackupPayload {
-  const { backup: _backup, ...restSettings } = settings;
+  const syncSettings = {
+    columns: settings.columns ?? 'auto',
+    selectedBatchEngineIds: settings.selectedBatchEngineIds ?? [],
+    listTitleLines: settings.listTitleLines,
+    listShowUrl: settings.listShowUrl,
+    treeTitleLines: settings.treeTitleLines,
+    treeShowUrl: settings.treeShowUrl,
+    iconTitleLines: settings.iconTitleLines,
+    showSearchBar: settings.showSearchBar,
+    searchEngines: settings.searchEngines.map(({ id, name, searchUrl, suggestUrl, iconUrl }) => ({ id, name, searchUrl, suggestUrl, iconUrl })),
+    activeSearchEngineId: settings.activeSearchEngineId,
+    openSearchInNewTab: settings.openSearchInNewTab,
+    spaceNextShortcut: settings.spaceNextShortcut,
+    spacePrevShortcut: settings.spacePrevShortcut,
+    defaultSuggestUrl: settings.defaultSuggestUrl,
+    iframeAutoRun: settings.iframeAutoRun,
+  };
   return {
     version: BACKUP_PAYLOAD_VERSION,
     exportedAt: new Date().toISOString(),
-    spaces: spaceStore,
-    settings: restSettings,
+    spaces: { spaces: spaceStore.spaces.map((space) => ({
+      id: space.id, title: space.title, columns: space.columns,
+      showSearch: space.showSearch, iframeAutoRun: space.iframeAutoRun,
+      board: { groups: space.board.groups.map((group) => ({
+        id: group.id, title: group.title, color: group.color,
+        columnSpan: group.columnSpan, viewMode: group.viewMode, iconSize: group.iconSize,
+        browserTreeMaxItems: group.browserTreeMaxItems,
+        iframeUrl: group.iframeUrl, iframeHeight: group.iframeHeight,
+        bookmarks: group.bookmarks.map(({ id, title, url }) => ({ id, title, url })),
+        subgroups: group.subgroups.map((subgroup) => ({
+          id: subgroup.id, title: subgroup.title, viewMode: subgroup.viewMode, iconSize: subgroup.iconSize,
+          bookmarks: subgroup.bookmarks.map(({ id, title, url }) => ({ id, title, url })),
+        })),
+      })) },
+    })) },
+    settings: syncSettings,
   };
 }
 
@@ -36,7 +81,7 @@ export function parseBackupPayload(raw: unknown): BackupParseResult | null {
     return null;
   }
 
-  if (raw.version === BACKUP_PAYLOAD_VERSION && 'spaces' in raw) {
+  if ((raw.version === BACKUP_PAYLOAD_VERSION || raw.version === 2) && 'spaces' in raw) {
     return {
       spaceStore: raw.spaces,
       settings: raw.settings,

@@ -50,7 +50,7 @@ function sanitizeBackupSettings(raw: unknown): BackupSettings {
   };
 }
 
-function sanitizeSettings(raw: unknown): AppSettings {
+export function sanitizeSettings(raw: unknown): AppSettings {
   if (!isObject(raw)) {
     return {
       ...DEFAULT_SETTINGS,
@@ -85,6 +85,11 @@ function sanitizeSettings(raw: unknown): AppSettings {
       : searchEngines[0].id;
 
   return {
+    columns: r.columns === 'auto' ? 'auto'
+      : typeof r.columns === 'number' && [1, 2, 3, 4, 5, 6].includes(r.columns)
+        ? r.columns as AppSettings['columns'] : 'auto',
+    selectedBatchEngineIds: Array.isArray(r.selectedBatchEngineIds)
+      ? [...new Set(r.selectedBatchEngineIds.filter((id): id is string => typeof id === 'string' && hasEngine(id)))].slice(0, 6) : [],
     listTitleLines: r.listTitleLines === 2 || r.listTitleLines === 3 ? r.listTitleLines : 1,
     listShowUrl: typeof r.listShowUrl === 'boolean' ? r.listShowUrl : false,
     treeTitleLines: r.treeTitleLines === 2 || r.treeTitleLines === 3 ? r.treeTitleLines : 1,
@@ -117,10 +122,42 @@ function sanitizeSettings(raw: unknown): AppSettings {
   };
 }
 
+export function restoreSettings(raw: unknown, current: AppSettings) {
+  return sanitizeSettings(isObject(raw) ? {
+    ...current, ...raw, backup: current.backup, searchHistory: current.searchHistory,
+  } : current);
+}
+
+/** 将本机已有列数和批量引擎偏好一次性迁入设置存储。 */
+function migrateLocalPreferences(raw: unknown) {
+  if (typeof localStorage === 'undefined') return raw;
+  const input = isObject(raw) ? raw : {};
+  if ('columns' in input && 'selectedBatchEngineIds' in input) return raw;
+  const next = { ...input };
+  if (!('columns' in input)) {
+    const saved = localStorage.getItem('newtab-pro:columns');
+    next.columns = saved === 'auto' ? 'auto' : Number(saved);
+  }
+  if (!('selectedBatchEngineIds' in input)) {
+    try {
+      next.selectedBatchEngineIds = JSON.parse(localStorage.getItem('newtab-pro:search-bar-batch-prefs') || '{}').selectedBatchEngineIds ?? [];
+    } catch { next.selectedBatchEngineIds = []; }
+  }
+  return next;
+}
+
 async function loadSettings(): Promise<AppSettings> {
   if (hasChromeStorage()) {
     const payload = await browser.storage.local.get(SETTINGS_STORAGE_KEY);
-    return sanitizeSettings(payload[SETTINGS_STORAGE_KEY]);
+    const raw = payload[SETTINGS_STORAGE_KEY];
+    const migrated = migrateLocalPreferences(raw);
+    const settings = sanitizeSettings(migrated);
+    if (migrated !== raw) {
+      await persistSettings(settings);
+      localStorage.removeItem('newtab-pro:columns');
+      localStorage.removeItem('newtab-pro:search-bar-batch-prefs');
+    }
+    return settings;
   }
   const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
   if (!raw) {
@@ -131,7 +168,15 @@ async function loadSettings(): Promise<AppSettings> {
     };
   }
   try {
-    return sanitizeSettings(JSON.parse(raw));
+    const parsed = JSON.parse(raw);
+    const migrated = migrateLocalPreferences(parsed);
+    const settings = sanitizeSettings(migrated);
+    if (migrated !== parsed) {
+      await persistSettings(settings);
+      localStorage.removeItem('newtab-pro:columns');
+      localStorage.removeItem('newtab-pro:search-bar-batch-prefs');
+    }
+    return settings;
   } catch {
     return {
       ...DEFAULT_SETTINGS,
@@ -325,11 +370,8 @@ export function useSettingsStore() {
 
   const importSettings = useCallback(
     (raw: unknown, options?: { preserveBackup?: boolean }) => {
-      const next = sanitizeSettings(
-        options?.preserveBackup && isObject(raw)
-          ? { ...raw, backup: settingsRef.current.backup }
-          : raw,
-      );
+      const next = options?.preserveBackup
+        ? restoreSettings(raw, settingsRef.current) : sanitizeSettings(raw);
       settingsRef.current = next;
       setSettings(next);
       skipNextExternalUpdate.current = true;

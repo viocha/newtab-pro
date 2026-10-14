@@ -41,13 +41,8 @@ import {
 
 // ── helpers ─────────────────────────────────────────────────────────
 
-const SEARCH_BAR_UI_PREFS_KEY = 'newtab-pro:search-bar-batch-prefs';
 const SUGGESTION_DEBOUNCE_MS = 250;
 const SUGGESTION_REQUEST_TIMEOUT_MS = 2000;
-
-type SearchBarUiPrefs = {
-  selectedBatchEngineIds?: string[];
-};
 
 function buildSearchUrl(engine: SearchEngine, query: string): string {
   return engine.searchUrl.replace('{query}', encodeURIComponent(query));
@@ -75,33 +70,6 @@ function buildSuggestUrl(
   const url = engine.suggestUrl || defaultSuggestUrl;
   if (!url) return '';
   return url.replace('{query}', encodeURIComponent(query));
-}
-
-function readSearchBarUiPrefs(): SearchBarUiPrefs {
-  if (typeof window === 'undefined') {
-    return {};
-  }
-
-  try {
-    const raw = window.localStorage.getItem(SEARCH_BAR_UI_PREFS_KEY);
-    if (!raw) {
-      return {};
-    }
-    const parsed = JSON.parse(raw) as SearchBarUiPrefs;
-    return typeof parsed === 'object' && parsed !== null ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeSearchBarUiPrefs(prefs: SearchBarUiPrefs) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  try {
-    window.localStorage.setItem(SEARCH_BAR_UI_PREFS_KEY, JSON.stringify(prefs));
-  } catch {}
 }
 
 async function fetchSuggestions(
@@ -171,6 +139,7 @@ function EngineIcon({
 type SearchBarProps = {
   settings: AppSettings;
   onSetActiveEngine: (id: string) => void;
+  onSetBatchEngineIds: (ids: string[]) => void;
   onAddToHistory: (query: string) => void;
   onRemoveFromHistory: (query: string) => void;
   onClearHistory: () => void;
@@ -181,6 +150,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
     {
       settings,
       onSetActiveEngine,
+      onSetBatchEngineIds,
       onAddToHistory,
       onRemoveFromHistory,
       onClearHistory,
@@ -194,9 +164,8 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
     const [engineMenuOpen, setEngineMenuOpen] = useState(false);
     const [batchMenuOpen, setBatchMenuOpen] = useState(false);
     const [batchWindowIds, setBatchWindowIds] = useState<number[]>([]);
-    const [selectedBatchEngineIds, setSelectedBatchEngineIds] = useState<
-      string[]
-    >(() => readSearchBarUiPrefs().selectedBatchEngineIds?.slice(0, 6) ?? []);
+    const selectedBatchEngineIds = settings.selectedBatchEngineIds.length
+      ? settings.selectedBatchEngineIds : settings.searchEngines.slice(0, 2).map((engine) => engine.id);
     const { compactGridWindows: useCompactGridWindows, setCompactGridWindows } =
       useWindowOpenPrefs();
     const inputRef = useRef<HTMLInputElement>(null);
@@ -310,26 +279,6 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
       document.addEventListener('mousedown', handler);
       return () => document.removeEventListener('mousedown', handler);
     }, []);
-
-    useEffect(() => {
-      setSelectedBatchEngineIds((prev) => {
-        const valid = prev
-          .filter((id) =>
-            settings.searchEngines.some((engine) => engine.id === id),
-          )
-          .slice(0, 6);
-        if (valid.length > 0) {
-          return valid;
-        }
-        return settings.searchEngines.slice(0, 2).map((engine) => engine.id);
-      });
-    }, [settings.searchEngines]);
-
-    useEffect(() => {
-      writeSearchBarUiPrefs({
-        selectedBatchEngineIds,
-      });
-    }, [selectedBatchEngineIds]);
 
     useEffect(() => {
       const handleWindowRemoved = (windowId: number) => {
@@ -563,7 +512,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
 
     const toggleBatchEngine = useCallback(
       (engineId: string, checked: boolean) => {
-        setSelectedBatchEngineIds((prev) => {
+        const next = ((prev: string[]) => {
           if (checked) {
             if (prev.includes(engineId)) return prev;
             if (prev.length >= 6) {
@@ -579,9 +528,10 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
           }
 
           return prev.filter((id) => id !== engineId);
-        });
+        })(selectedBatchEngineIds);
+        onSetBatchEngineIds(next);
       },
-      [],
+      [selectedBatchEngineIds, onSetBatchEngineIds],
     );
 
     const handleKeyDown = useCallback(

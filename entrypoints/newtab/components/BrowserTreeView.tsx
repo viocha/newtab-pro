@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BookmarkText } from './BookmarkText';
 import {
   AppWindow,
@@ -40,6 +40,19 @@ import {
 /** 每行的近似高度（px），用于将 maxItems 换算成 maxHeight */
 const ITEM_HEIGHT_PX = 28;
 
+function readTreeViewState(key?: string): { expandedIds: string[]; top: number } {
+  try {
+    const saved = key ? JSON.parse(localStorage.getItem(key) || 'null') : null;
+    return {
+      expandedIds: Array.isArray(saved?.expandedIds)
+        ? saved.expandedIds.filter((id: unknown): id is string => typeof id === 'string') : [],
+      top: Number.isFinite(saved?.top) && saved.top >= 0 ? saved.top : 0,
+    };
+  } catch {
+    return { expandedIds: [], top: 0 };
+  }
+}
+
 /** 通过 management API 找到 Bookmark Pro 扩展并发送定位消息 */
 async function locateInBookmarkPro(nodeId: string): Promise<void> {
   try {
@@ -76,6 +89,8 @@ type Props = {
   /** 关闭自定义上下文菜单，改用浏览器原生右键菜单 */
   disableCustomContextMenu?: boolean;
   scrollViewportProps?: React.ComponentProps<typeof ScrollArea>['viewportProps'];
+  /** 新标签页大分组独立保存树状态，包含绑定文件夹 ID */
+  stateKey?: string;
 };
 
 export function BrowserTreeView({
@@ -84,12 +99,35 @@ export function BrowserTreeView({
   fitParentHeight = false,
   disableCustomContextMenu = false,
   scrollViewportProps,
+  stateKey,
 }: Props) {
   const { compactGridWindows, setCompactGridWindows } = useWindowOpenPrefs();
   const [nodes, setNodes] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [savedState] = useState(() => readTreeViewState(stateKey));
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set(savedState.expandedIds));
+  const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
+  const topRef = useRef(savedState.top);
+  const expandedRef = useRef(expandedIds);
+  useLayoutEffect(() => {
+    expandedRef.current = expandedIds;
+    if (stateKey) localStorage.setItem(stateKey, JSON.stringify({
+      expandedIds: [...expandedIds], top: topRef.current,
+    }));
+  }, [expandedIds, stateKey]);
+  useLayoutEffect(() => {
+    if (!stateKey || !viewport) return;
+    viewport.scrollTop = topRef.current;
+    const save = () => {
+      topRef.current = viewport.scrollTop;
+      localStorage.setItem(stateKey, JSON.stringify({
+        expandedIds: [...expandedRef.current], top: topRef.current,
+      }));
+    };
+    viewport.addEventListener('scroll', save, { passive: true });
+    return () => viewport.removeEventListener('scroll', save);
+  }, [stateKey, viewport]);
   const [contextOpenId, setContextOpenId] = useState<string | null>(null);
 
   // 加载指定文件夹的书签树
@@ -462,7 +500,7 @@ export function BrowserTreeView({
 
   return (
     <ScrollArea
-      viewportProps={scrollViewportProps}
+      viewportProps={stateKey ? { ref: setViewport } : scrollViewportProps}
       style={fitParentHeight ? { height: '100%' } : { maxHeight }}
       className={cn(
         'bookmark-scroll-area min-h-0 min-w-0 max-w-full rounded',

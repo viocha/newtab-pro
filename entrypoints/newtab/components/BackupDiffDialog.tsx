@@ -37,7 +37,6 @@ const STAT_ITEMS: Array<{ key: keyof BackupContentStats; label: string }> = [
   { key: 'subgroups', label: '小组' },
   { key: 'bookmarks', label: '书签' },
   { key: 'searchEngines', label: '搜索引擎' },
-  { key: 'searchHistory', label: '搜索历史' },
 ];
 
 function SummaryCard({
