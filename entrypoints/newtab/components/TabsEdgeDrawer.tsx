@@ -266,7 +266,7 @@ export function TabsEdgeDrawer() {
         >
           <span
             className={cn(
-              'inline-flex shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary',
+              'inline-flex shrink-0 items-center justify-center text-primary',
               expanded ? 'size-7' : 'size-[1.625rem]',
             )}
           >
