@@ -1892,6 +1892,7 @@ export default function App() {
     <BookmarkDisplayContext value={settings}>
     <DndContext
       sensors={sensors}
+      autoScroll={{ threshold: { x: 0.03, y: 0.03 } }}
       collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragMove={handleDragMove}
