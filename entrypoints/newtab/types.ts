@@ -35,6 +35,8 @@ export type BookmarkGroup = {
   iframeUrl?: string;
   /** 内嵌网页视图：iframe 高度（px） */
   iframeHeight?: number;
+  /** 内嵌网页自动运行；undefined 表示跟随 Space */
+  iframeAutoRun?: boolean;
 };
 
 export type BookmarkBoard = {

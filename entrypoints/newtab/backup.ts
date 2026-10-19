@@ -7,7 +7,7 @@ export const AUTO_BACKUP_CHECK_PERIOD_MINUTES = 15;
 type SyncedSubgroup = Pick<BookmarkSubgroup, 'id' | 'title' | 'viewMode' | 'iconSize' | 'bookmarks'>;
 type SyncedGroup = Pick<BookmarkGroup,
   'id' | 'title' | 'color' | 'columnSpan' | 'viewMode' | 'iconSize' |
-  'browserTreeMaxItems' | 'iframeUrl' | 'iframeHeight' | 'bookmarks'> & {
+  'browserTreeMaxItems' | 'iframeUrl' | 'iframeHeight' | 'iframeAutoRun' | 'bookmarks'> & {
   subgroups: SyncedSubgroup[];
 };
 type SyncedSpace = Pick<Space, 'id' | 'title' | 'columns' | 'showSearch' | 'iframeAutoRun'> & {
@@ -65,6 +65,7 @@ export function createBackupPayload(spaceStore: SpaceStore, settings: AppSetting
         columnSpan: group.columnSpan, viewMode: group.viewMode, iconSize: group.iconSize,
         browserTreeMaxItems: group.browserTreeMaxItems,
         iframeUrl: group.iframeUrl, iframeHeight: group.iframeHeight,
+        iframeAutoRun: group.iframeAutoRun,
         bookmarks: group.bookmarks.map(({ id, title, url }) => ({ id, title, url })),
         subgroups: group.subgroups.map((subgroup) => ({
           id: subgroup.id, title: subgroup.title, viewMode: subgroup.viewMode, iconSize: subgroup.iconSize,

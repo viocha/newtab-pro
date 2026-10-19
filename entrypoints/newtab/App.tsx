@@ -928,6 +928,7 @@ export default function App() {
     setGroupColumnSpan,
     setGroupBrowserTreeConfig,
     setGroupIframeConfig,
+    setGroupIframeAutoRun,
     addSubgroup,
     renameSubgroup,
     deleteSubgroup,
@@ -2175,6 +2176,7 @@ export default function App() {
                           >
                             <GroupCard
                               group={group}
+                              onSetIframeAutoRun={(autoRun) => setGroupIframeAutoRun(space.id, group.id, autoRun)}
                               onSetColumnSpan={(span) => setGroupColumnSpan(group.id, span)}
                               spaces={spaces}
                               activeSpaceId={activeSpaceId}

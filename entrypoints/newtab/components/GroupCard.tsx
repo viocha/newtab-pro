@@ -31,6 +31,7 @@ import { browser } from 'wxt/browser';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   DropdownMenuGroup,
   DropdownMenu,
@@ -134,6 +135,7 @@ type GroupCardProps = {
   isActiveSpace: boolean;
   /** 该 Space 是否自动运行 iframe，由全局设置和 per-Space 设置合并计算 */
   iframeAutoRun: boolean;
+  onSetIframeAutoRun: (autoRun: boolean | undefined) => void;
   autoFocusEdit?: boolean;
   autoFocusSubgroupId?: string | null;
   onClearAutoFocus?: () => void;
@@ -322,6 +324,7 @@ export function GroupCard({
   onClearAutoFocus,
   isActiveSpace,
   iframeAutoRun,
+  onSetIframeAutoRun,
 }: GroupCardProps) {
   const { compactGridWindows, setCompactGridWindows } = useWindowOpenPrefs();
   const [editingTitle, setEditingTitle] = useState(!!autoFocusEdit);
@@ -338,9 +341,11 @@ export function GroupCard({
     String(group.iframeHeight ?? IFRAME_DEFAULT_HEIGHT),
   );
   // iframe 懒加载：只有 Space 被激活过才真正渲染 iframe，避免页面加载时所有 Space 的 iframe 同时请求
-  // 如果 iframeAutoRun=false，则初始不激活，需要手动点击 play 按钮
+  const effectiveIframeAutoRun = group.iframeAutoRun ?? iframeAutoRun;
+  const inheritIframeAutoRunLabel = `跟随 Space（${iframeAutoRun ? '自动' : '手动'}）`;
+  // 手动运行的分组需要点击播放按钮激活。
   const [iframeActivated, setIframeActivated] = useState(
-    isActiveSpace && iframeAutoRun,
+    isActiveSpace && effectiveIframeAutoRun,
   );
   const [iframeReloadKey, setIframeReloadKey] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -362,11 +367,11 @@ export function GroupCard({
   };
 
   useEffect(() => {
-    if (isActiveSpace && iframeAutoRun && !iframeActivated)
+    if (isActiveSpace && effectiveIframeAutoRun && !iframeActivated)
       setIframeActivated(true);
     // iframeActivated 故意不加入依赖——单向激活闸，防止无限循环
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActiveSpace, iframeAutoRun]);
+  }, [isActiveSpace, effectiveIframeAutoRun]);
 
   useEffect(() => {
     if (autoFocusEdit) {
@@ -895,6 +900,26 @@ export function GroupCard({
                             </Button>
                           </div>
                         </div>
+                      </div>
+                      <DropdownMenuLabel>自动运行</DropdownMenuLabel>
+                      <div className="px-1.5 pb-1">
+                        <Select
+                          items={{ inherit: inheritIframeAutoRunLabel, auto: '自动', manual: '手动' }}
+                          value={group.iframeAutoRun === undefined ? 'inherit' : group.iframeAutoRun ? 'auto' : 'manual'}
+                          onValueChange={(value) => {
+                            if (value) onSetIframeAutoRun(value === 'inherit' ? undefined : value === 'auto');
+                          }}>
+                          <SelectTrigger size="sm" className="w-full" aria-label="分组自动运行">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectItem value="inherit">{inheritIframeAutoRunLabel}</SelectItem>
+                              <SelectItem value="auto">自动</SelectItem>
+                              <SelectItem value="manual">手动</SelectItem>
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <DropdownMenuItem
                         onClick={(e) => {

@@ -156,6 +156,7 @@ function sanitizeBoard(raw: unknown): BookmarkBoard {
         iconSize: toIconSize(group.iconSize),        browserTreeFolderId: typeof group.browserTreeFolderId === 'string' && group.browserTreeFolderId ? group.browserTreeFolderId : undefined,
         browserTreeMaxItems: typeof group.browserTreeMaxItems === 'number' && group.browserTreeMaxItems > 0 ? Math.round(group.browserTreeMaxItems) : undefined,
         iframeUrl: typeof group.iframeUrl === 'string' && group.iframeUrl ? group.iframeUrl : undefined,
+        iframeAutoRun: typeof group.iframeAutoRun === 'boolean' ? group.iframeAutoRun : undefined,
         iframeHeight: typeof group.iframeHeight === 'number' && group.iframeHeight > 0 ? Math.round(group.iframeHeight) : undefined,      };
     });
 
@@ -713,6 +714,16 @@ export function useBoardStore() {
     [commit],
   );
 
+  const setGroupIframeAutoRun = useCallback((spaceId: string, groupId: string, autoRun: boolean | undefined) => {
+    commit((draft) => {
+      const group = draft.spaces.find((space) => space.id === spaceId)?.board.groups.find((item) => item.id === groupId);
+      if (group) {
+        if (autoRun === undefined) delete group.iframeAutoRun;
+        else group.iframeAutoRun = autoRun;
+      }
+    });
+  }, [commit]);
+
   const setGroupIframeConfig = useCallback(
     (spaceId: string, groupId: string, url: string, height: number) => {
       commit((draft) => {
@@ -1144,6 +1155,7 @@ export function useBoardStore() {
     setGroupColumnSpan,
     setGroupBrowserTreeConfig,
     setGroupIframeConfig,
+    setGroupIframeAutoRun,
     // subgroup ops
     addSubgroup,
     renameSubgroup,

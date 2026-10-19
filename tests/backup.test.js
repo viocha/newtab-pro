@@ -57,6 +57,17 @@ test('恢复设置保留本机搜索历史和 WebDAV 配置', () => {
   expect(restored.columns).toBe(2);
 });
 
+test('分组 iframe 自动运行配置在备份和恢复后保留三态', () => {
+  for (const autoRun of [undefined, true, false]) {
+    const configured = structuredClone(store);
+    configured.spaces[0].board.groups[0].iframeAutoRun = autoRun;
+    const payload = JSON.parse(JSON.stringify(createBackupPayload(configured, settings)));
+    expect(payload.spaces.spaces[0].board.groups[0].iframeAutoRun).toBe(autoRun);
+    const restored = restoreSpaceStore(payload.spaces, store);
+    expect(restored.spaces[0].board.groups[0].iframeAutoRun).toBe(autoRun);
+  }
+});
+
 test('旧备份中本机状态不制造差异，新备份可以读取', () => {
   const local = createLocalBackupDiffSnapshot(store, settings);
   const remote = parseBackupDiffSnapshot({ version: 2, spaces: { ...store, activeSpaceId: 's1' }, settings: { ...settings, searchHistory: ['其他设备'], backup: { password: 'ignored' } } });
