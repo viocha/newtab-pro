@@ -34,5 +34,5 @@ export function tryNormalizeUrl(input: string) {
 
 
 export function pickGroupGradient(index: number) {
-  return GROUP_GRADIENTS[index % GROUP_GRADIENTS.length];
+  return GROUP_GRADIENTS[index % GROUP_GRADIENTS.length]!;
 }

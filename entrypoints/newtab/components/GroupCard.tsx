@@ -1,6 +1,6 @@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { DragEvent } from 'react';
+import type { DragEvent } from 'react';
 import { flushSync } from 'react-dom';
 import {
   Check,

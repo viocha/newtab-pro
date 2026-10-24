@@ -82,7 +82,7 @@ export function sanitizeSettings(raw: unknown): AppSettings {
   const activeId =
     typeof r.activeSearchEngineId === 'string' && hasEngine(r.activeSearchEngineId)
       ? r.activeSearchEngineId
-      : searchEngines[0].id;
+      : searchEngines[0]!.id;
 
   return {
     columns: r.columns === 'auto' ? 'auto'
@@ -308,7 +308,7 @@ export function useSettingsStore() {
         const engines = next.length > 0 ? next : [...DEFAULT_SEARCH_ENGINES];
         const activeId = engines.some((e) => e.id === prev.activeSearchEngineId)
           ? prev.activeSearchEngineId
-          : engines[0].id;
+          : engines[0]!.id;
         return { ...prev, searchEngines: engines, activeSearchEngineId: activeId };
       });
     },
@@ -319,7 +319,7 @@ export function useSettingsStore() {
     commit((prev) => ({
       ...prev,
       searchEngines: [...DEFAULT_SEARCH_ENGINES],
-      activeSearchEngineId: DEFAULT_SEARCH_ENGINES[0].id,
+      activeSearchEngineId: DEFAULT_SEARCH_ENGINES[0]!.id,
     }));
   }, [commit]);
 

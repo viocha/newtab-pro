@@ -195,7 +195,7 @@ export function sanitizeSpaceStore(raw: unknown): SpaceStore {
     typeof raw.activeSpaceId === 'string' &&
       spaces.some((s) => s.id === (raw.activeSpaceId as string))
       ? (raw.activeSpaceId as string)
-      : spaces[0].id;
+      : spaces[0]!.id;
 
   return { spaces, activeSpaceId };
 }
@@ -204,7 +204,7 @@ export function sanitizeSpaceStore(raw: unknown): SpaceStore {
 export function restoreSpaceStore(raw: unknown, current: SpaceStore): SpaceStore {
   const next = sanitizeSpaceStore(raw);
   next.activeSpaceId = next.spaces.some((space) => space.id === current.activeSpaceId)
-    ? current.activeSpaceId : next.spaces[0].id;
+    ? current.activeSpaceId : next.spaces[0]!.id;
   const localGroups = new Map(current.spaces.flatMap((space) => space.board.groups.map((group) => [group.id, group] as const)));
   for (const space of next.spaces) for (const group of space.board.groups) {
     const local = localGroups.get(group.id);
@@ -528,9 +528,9 @@ export function useBoardStore() {
         const prevActiveSpaceId = draft.activeSpaceId;
         const [space] = draft.spaces.splice(index, 1);
         if (draft.activeSpaceId === spaceId) {
-          draft.activeSpaceId = draft.spaces[Math.min(index, draft.spaces.length - 1)].id;
+          draft.activeSpaceId = draft.spaces[Math.min(index, draft.spaces.length - 1)]!.id;
         }
-        return { space, index, prevActiveSpaceId };
+        return { space: space!, index, prevActiveSpaceId };
       });
     },
     [commitWithResult],
@@ -611,7 +611,7 @@ export function useBoardStore() {
         const index = findGroupIndex(board.groups, groupId);
         if (index < 0) return null;
         const [group] = board.groups.splice(index, 1);
-        return { group, index };
+        return { group: group!, index };
       });
     },
     [commitWithResult],
@@ -636,9 +636,9 @@ export function useBoardStore() {
         const fromIndex = findGroupIndex(board.groups, sourceGroupId);
         const toIndex = findGroupIndex(board.groups, targetGroupId);
         if (fromIndex < 0 || toIndex < 0) return;
-        const [moved] = board.groups.splice(fromIndex, 1);
+        const moved = board.groups.splice(fromIndex, 1);
         const insertIndex = fromIndex < toIndex ? toIndex - 1 : toIndex;
-        board.groups.splice(insertIndex, 0, moved);
+        board.groups.splice(insertIndex, 0, ...moved);
       });
     },
     [commit],
@@ -781,7 +781,7 @@ export function useBoardStore() {
         const index = findSubgroupIndex(group, target.subgroupId);
         if (index < 0) return null;
         const [subgroup] = group.subgroups.splice(index, 1);
-        return { groupId: target.groupId, subgroup, index };
+        return { groupId: target.groupId, subgroup: subgroup!, index };
       });
     },
     [commitWithResult],
@@ -1101,9 +1101,9 @@ export function useBoardStore() {
         const fromIndex = draft.spaces.findIndex((s) => s.id === sourceId);
         const toIndex = draft.spaces.findIndex((s) => s.id === targetId);
         if (fromIndex < 0 || toIndex < 0) return;
-        const [moved] = draft.spaces.splice(fromIndex, 1);
+        const moved = draft.spaces.splice(fromIndex, 1);
         const insertIndex = fromIndex < toIndex ? toIndex - 1 : toIndex;
-        draft.spaces.splice(insertIndex, 0, moved);
+        draft.spaces.splice(insertIndex, 0, ...moved);
       });
     },
     [commit],

@@ -195,7 +195,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
     const activeEngine =
       settings.searchEngines.find(
         (e) => e.id === settings.activeSearchEngineId,
-      ) ?? settings.searchEngines[0];
+      ) ?? settings.searchEngines[0]!;
 
     const history = settings.searchHistory ?? [];
     const openInNewTab = settings.openSearchInNewTab;
@@ -391,7 +391,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
 
     const handleBatchOpen = useCallback(async () => {
       const payload = prepareBatchSearch(
-        activeIndex >= 0 ? dropItems[activeIndex] : query,
+        activeIndex >= 0 ? dropItems[activeIndex] ?? query : query,
       );
       if (!payload) return;
 
@@ -425,7 +425,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
 
     const handleBatchGridOpen = useCallback(async () => {
       const payload = prepareBatchSearch(
-        activeIndex >= 0 ? dropItems[activeIndex] : query,
+        activeIndex >= 0 ? dropItems[activeIndex] ?? query : query,
       );
       if (!payload) return;
 
@@ -571,7 +571,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
 
         if (e.key === 'Enter') {
           e.preventDefault();
-          const q = activeIndex >= 0 ? dropItems[activeIndex] : query;
+          const q = activeIndex >= 0 ? dropItems[activeIndex] ?? query : query;
           performSearch(q, getSearchOpenMode(e));
         }
       },
@@ -728,7 +728,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
             type="button"
             onClick={(event) =>
               performSearch(
-                activeIndex >= 0 ? dropItems[activeIndex] : query,
+                activeIndex >= 0 ? dropItems[activeIndex] ?? query : query,
                 getSearchOpenMode(event),
               )
             }

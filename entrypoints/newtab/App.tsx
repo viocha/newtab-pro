@@ -37,9 +37,9 @@ import {
   useSensors,
   useDraggable,
   useDroppable,
-  DragStartEvent,
-  DragEndEvent,
-  DragMoveEvent,
+  type DragStartEvent,
+  type DragEndEvent,
+  type DragMoveEvent,
   DragOverlay,
   pointerWithin,
   type Modifier,
@@ -216,7 +216,7 @@ function resolveGroupDropTarget(
     row.items.push(item);
   }
 
-  let bestRow = rows[0];
+  let bestRow = rows[0]!;
   let bestRowDistance = getVerticalDistanceToRow(bestRow, pointer.y);
   let bestRowCenterDistance = Math.abs(
     pointer.y - (bestRow.top + bestRow.bottom) / 2,
@@ -235,7 +235,7 @@ function resolveGroupDropTarget(
     }
   }
 
-  let bestItem = bestRow.items[0];
+  let bestItem = bestRow.items[0]!;
   let bestItemDistance = Math.abs(
     pointer.x - (bestItem.rect.left + bestItem.rect.width / 2),
   );
@@ -1264,7 +1264,7 @@ export default function App() {
         const nextIndex = matchNext
           ? (currentIndex + 1) % spaces.length
           : (currentIndex - 1 + spaces.length) % spaces.length;
-        switchSpace(spaces[nextIndex].id);
+        switchSpace(spaces[nextIndex]!.id);
       }
     };
 
@@ -1356,7 +1356,7 @@ export default function App() {
         deltaX < 0
           ? (currentIndex + 1) % spaces.length
           : (currentIndex - 1 + spaces.length) % spaces.length;
-      switchSpace(spaces[nextIndex].id);
+      switchSpace(spaces[nextIndex]!.id);
       dragSwitchRef.current = null;
     },
     [spaces, activeSpaceId, switchSpace],
@@ -1566,7 +1566,7 @@ export default function App() {
 
             if (sameRow.length > 0) {
               // Find rightmost icon in this row
-              let rightmost = sameRow[0];
+              let rightmost = sameRow[0]!;
               for (const el of sameRow) {
                 if (
                   el.getBoundingClientRect().right >
@@ -1736,10 +1736,13 @@ export default function App() {
       let insertAtEnd: boolean;
 
       if (parts[0] === 'bookmark' && parts.length >= 4) {
-        [, indGroupId, rawSgId, indBookmarkId] = parts;
+        indGroupId = parts[1]!;
+        rawSgId = parts[2]!;
+        indBookmarkId = parts[3];
         insertAtEnd = false;
       } else if (parts[0] === 'bookmark-end' && parts.length >= 3) {
-        [, indGroupId, rawSgId] = parts;
+        indGroupId = parts[1]!;
+        rawSgId = parts[2]!;
         insertAtEnd = true;
       } else {
         return;
@@ -1794,7 +1797,7 @@ export default function App() {
         if (targetIndex === groups.length - 1) {
           moveGroupToEnd(activeData.groupId);
         } else {
-          moveGroupBefore(activeData.groupId, groups[targetIndex + 1].id);
+          moveGroupBefore(activeData.groupId, groups[targetIndex + 1]!.id);
         }
       } else {
         moveGroupBefore(activeData.groupId, targetGroupId);
@@ -1821,7 +1824,7 @@ export default function App() {
           } else {
             moveSubgroupBefore(source, {
               groupId: targetGroupId,
-              subgroupId: group.subgroups[targetIndex + 1].id,
+              subgroupId: group.subgroups[targetIndex + 1]!.id,
             });
           }
         }
@@ -1846,7 +1849,7 @@ export default function App() {
         if (targetIndex === spaces.length - 1) {
           moveSpaceToEnd(activeData.spaceId);
         } else {
-          moveSpaceBefore(activeData.spaceId, spaces[targetIndex + 1].id);
+          moveSpaceBefore(activeData.spaceId, spaces[targetIndex + 1]!.id);
         }
       } else {
         moveSpaceBefore(activeData.spaceId, overData.spaceId);
