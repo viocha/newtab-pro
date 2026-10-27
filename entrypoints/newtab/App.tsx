@@ -1876,7 +1876,7 @@ export default function App() {
         const snapshot = deleteSpace(spaceId);
         toast.add({
           title: '已删除 Space',
-          description: space.title,
+          description: <span className="block truncate">{space.title}</span>,
           actionProps: snapshot
             ? { children: '撤销', onClick: () => restoreSpace(snapshot) }
             : undefined,
@@ -2268,7 +2268,7 @@ export default function App() {
                                   if (snapshot) {
                                     toast.add({
                                       title: '已删除分组',
-                                      description: groupRef.title,
+                                      description: <span className="block truncate">{groupRef.title}</span>,
                                       actionProps: {
                                         children: '撤销',
                                         onClick: () => restoreGroup(snapshot),
@@ -2299,7 +2299,7 @@ export default function App() {
                                   if (snapshot) {
                                     toast.add({
                                       title: '已删除小组',
-                                      description: subgroup.title,
+                                      description: <span className="block truncate">{subgroup.title}</span>,
                                       actionProps: {
                                         children: '撤销',
                                         onClick: () =>
@@ -2393,7 +2393,7 @@ export default function App() {
                                 }
                                 toast.add({
                                   title: '书签已删除',
-                                  description: snapshot.bookmark.title,
+                                  description: <span className="block truncate">{snapshot.bookmark.title}</span>,
                                   actionProps: {
                                     children: '撤销',
                                     onClick: () => restoreBookmark(snapshot),
@@ -2712,7 +2712,7 @@ export default function App() {
               if (snapshot) {
                 toast.add({
                   title: '已删除分组',
-                  description: deleteState.title,
+                  description: <span className="block truncate">{deleteState.title}</span>,
                   actionProps: {
                     children: '撤销',
                     onClick: () => restoreGroup(snapshot),
@@ -2724,7 +2724,7 @@ export default function App() {
               if (snapshot) {
                 toast.add({
                   title: '已删除小组',
-                  description: deleteState.title,
+                  description: <span className="block truncate">{deleteState.title}</span>,
                   actionProps: {
                     children: '撤销',
                     onClick: () => restoreSubgroup(snapshot),
@@ -2755,7 +2755,7 @@ export default function App() {
             const snapshot = deleteSpace(deleteSpaceState.spaceId);
             toast.add({
               title: '已删除 Space',
-              description: deleteSpaceState.title,
+              description: <span className="block truncate">{deleteSpaceState.title}</span>,
               actionProps: snapshot
                 ? { children: '撤销', onClick: () => restoreSpace(snapshot) }
                 : undefined,
