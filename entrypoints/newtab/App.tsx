@@ -88,6 +88,7 @@ import { HelpDialog } from './components/HelpDialog';
 import { SettingsDialog } from './components/SettingsDialog';
 import { WebDavBackupDialog } from './components/WebDavBackupDialog';
 import { useDndUIStore } from './drag';
+import { useDragClickGuard } from './use-drag-click-guard';
 import type {
   BackupSettings,
   BookmarkContainerTarget,
@@ -1376,6 +1377,7 @@ export default function App() {
     [board.groups, treeDialogTarget],
   );
 
+  const guardDragClick = useDragClickGuard();
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -1406,6 +1408,7 @@ export default function App() {
   }, []);
 
   const handleDragStart = (event: DragStartEvent) => {
+    guardDragClick(event.activatorEvent);
     const data = event.active.data.current;
     let width: number | null = null;
     let activeDragData = data;
