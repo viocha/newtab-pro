@@ -998,6 +998,7 @@ export default function App() {
   const importInputRef = useRef<HTMLInputElement>(null);
   const searchBarInputRef = useRef<HTMLInputElement>(null);
   const dragSwitchRef = useRef<{
+    pointerId: number;
     startX: number;
     startY: number;
     switched: boolean;
@@ -1313,6 +1314,8 @@ export default function App() {
       if (e.button !== 0) return;
       if (spaces.length <= 1) return;
       const target = e.target as HTMLElement;
+      // Portal 遮罩也会沿 React 树冒泡，只允许画布自身的 DOM 启动拖动。
+      if (e.defaultPrevented || !e.currentTarget.contains(target)) return;
       // 输入框/可编辑元素内的指针按下不触发 Space 切换（防止选择文本时误触发）
       if (
         target.tagName === 'INPUT' ||
@@ -1326,12 +1329,15 @@ export default function App() {
       if (target.closest('[data-group-card]')) return;
       if (target.closest('[data-no-drag-switch]')) return;
       dragSwitchRef.current = {
+        pointerId: e.pointerId,
         startX: e.clientX,
         startY: e.clientY,
         switched: false,
       };
       // Prevent text selection as soon as drag intent begins
       document.body.style.userSelect = 'none';
+      // 鼠标经过 iframe 或移出画布时，仍能收到松开和取消事件。
+      e.currentTarget.setPointerCapture(e.pointerId);
     },
     [spaces.length],
   );
@@ -1340,6 +1346,12 @@ export default function App() {
     (e: React.PointerEvent<HTMLElement>) => {
       const state = dragSwitchRef.current;
       if (!state || state.switched) return;
+      if (e.pointerId !== state.pointerId) return;
+      if (!(e.buttons & 1)) {
+        dragSwitchRef.current = null;
+        document.body.style.userSelect = '';
+        return;
+      }
       const deltaX = e.clientX - state.startX;
       const deltaY = e.clientY - state.startY;
       // If vertical movement dominates, cancel — user is scrolling
@@ -1917,6 +1929,7 @@ export default function App() {
           onPointerMove={handleBoardPointerMove}
           onPointerUp={handleBoardPointerUp}
           onPointerCancel={handleBoardPointerUp}
+          onLostPointerCapture={handleBoardPointerUp}
         >
           <header
             data-no-drag-switch

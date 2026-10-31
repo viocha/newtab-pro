@@ -566,7 +566,7 @@ export function GroupCard({
 
           <div
             className={cn(
-              'flex shrink-0 items-center justify-end gap-0.5 transition-opacity',
+              'flex shrink-0 items-center justify-end transition-opacity',
               menuOpen
                 ? 'opacity-100'
                 : 'opacity-0 group-hover/header:opacity-100',
@@ -574,6 +574,19 @@ export function GroupCard({
           >
             {group.viewMode === 'iframe' && group.iframeUrl && (
               <>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="size-7 cursor-pointer rounded-md text-black/80 hover:bg-black/[0.06] hover:text-black"
+                  onClick={() => {
+                    void browser.tabs.create({ url: group.iframeUrl, active: true });
+                  }}
+                  title="在新标签页打开"
+                  aria-label="在新标签页打开"
+                >
+                  <ExternalLink />
+                </Button>
                 <Button
                   type="button"
                   size="icon"
