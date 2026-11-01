@@ -251,12 +251,10 @@ export function WebDavBackupDialog({
     });
     setEditing(false);
     setLastTestedSignature(null);
-    toast.add({ title: hasSavedAccount ? '账户已更新' : '账户已添加' });
   }, [
     backupSettings,
     connectionVerified,
     draft,
-    hasSavedAccount,
     onSaveAccount,
   ]);
 
