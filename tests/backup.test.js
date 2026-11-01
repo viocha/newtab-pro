@@ -1,6 +1,6 @@
-import { expect, mock, test } from 'bun:test';
+import { expect, mock, spyOn, test } from 'bun:test';
 mock.module('wxt/browser', () => ({ browser: {} }));
-const { createBackupPayload, parseBackupPayload } = await import('../entrypoints/newtab/backup');
+const { createBackupPayload, parseBackupPayload, testWebDavConnection } = await import('../entrypoints/newtab/backup');
 const { DEFAULT_SETTINGS } = await import('../entrypoints/newtab/constants');
 const { restoreSpaceStore } = await import('../entrypoints/newtab/use-board-store');
 const { restoreSettings } = await import('../entrypoints/newtab/use-settings-store');
@@ -17,6 +17,52 @@ const store = {
   }] } })),
 };
 const settings = { ...DEFAULT_SETTINGS, columns: 4, selectedBatchEngineIds: ['google'], searchHistory: ['本机搜索'] };
+
+const connectionConfig = {
+  ...DEFAULT_SETTINGS.backup,
+  webdavUrl: ' https://dav.example.com/dav ', username: 'user', password: 'password',
+  remotePath: '尚未创建的目录/backup.json',
+};
+
+test('连接测试仅查询服务自身属性，备份路径无需存在', async () => {
+  const request = spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 207 }));
+  try {
+    await testWebDavConnection(connectionConfig);
+    expect(request).toHaveBeenCalledTimes(1);
+    const [url, init] = request.mock.calls[0];
+    expect(url).toBe('https://dav.example.com/dav/');
+    expect(init.method).toBe('PROPFIND');
+    expect(init.headers.Depth).toBe('0');
+    expect(init.headers.Authorization).toBe('Basic ' + btoa('user:password'));
+    expect(init.body).toContain('<d:resourcetype/>');
+  } finally {
+    request.mockRestore();
+  }
+});
+
+test('连接被拒绝时直接报告状态码，普通网页响应不能视为 WebDAV 连接成功', async () => {
+  const request = spyOn(globalThis, 'fetch');
+  try {
+    for (const status of [401, 403, 404, 405, 500, 200]) {
+      request.mockResolvedValueOnce(new Response('', { status }));
+      await expect(testWebDavConnection(connectionConfig)).rejects.toThrow(String(status));
+    }
+    expect(request).toHaveBeenCalledTimes(6);
+  } finally {
+    request.mockRestore();
+  }
+});
+
+test('连接网络错误保留原因，配置不完整时不发出请求', async () => {
+  const request = spyOn(globalThis, 'fetch').mockRejectedValue(new Error('网络不可达'));
+  try {
+    await expect(testWebDavConnection(connectionConfig)).rejects.toThrow('网络不可达');
+    await expect(testWebDavConnection({ ...connectionConfig, webdavUrl: '' })).rejects.toThrow('请填写 WebDAV 地址');
+    expect(request).toHaveBeenCalledTimes(1);
+  } finally {
+    request.mockRestore();
+  }
+});
 
 test('备份包含内容和配置，排除本机状态及未知字段', () => {
   const payload = createBackupPayload(store, { ...settings, unexpectedSecret: 'secret' });

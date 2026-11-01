@@ -138,14 +138,6 @@ function buildRemoteUrl(baseUrl: string, remotePath: string, isDirectory = false
   return new URL(`${path}${suffix}`, base).toString();
 }
 
-function getConnectionTestPath(remotePath: string) {
-  const segments = splitRemotePath(remotePath);
-  const fileName = segments.pop() ?? 'backup.json';
-  const timestamp = Date.now();
-  segments.push(`${fileName}.connection-test-${timestamp}.json`);
-  return segments.join('/');
-}
-
 async function ensureRemoteFolders(config: BackupSettings) {
   const segments = splitRemotePath(config.remotePath);
   if (segments.length <= 1) {
@@ -257,30 +249,20 @@ export async function downloadBackupFromWebDav(config: BackupSettings) {
 
 export async function testWebDavConnection(config: BackupSettings) {
   assertBackupConfig(config);
-  await ensureRemoteFolders(config);
-
-  const testPath = getConnectionTestPath(config.remotePath);
-  const authHeaders = createAuthHeaders(config);
-
-  const putResponse = await fetch(buildRemoteUrl(config.webdavUrl, testPath), {
-    method: 'PUT',
+  // 只读取服务地址自身的属性，不创建备份目录或测试文件，也不枚举子项。
+  const response = await fetch(normalizeBaseUrl(config.webdavUrl), {
+    method: 'PROPFIND',
     headers: {
-      ...authHeaders,
-      'Content-Type': 'application/json; charset=utf-8',
+      ...createAuthHeaders(config),
+      Depth: '0',
+      'Content-Type': 'application/xml; charset=utf-8',
     },
-    body: JSON.stringify({ ok: true, testedAt: new Date().toISOString() }),
+    body: '<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:resourcetype/></d:prop></d:propfind>',
   });
-
-  if (!putResponse.ok) {
-    throw new Error(`测试写入失败（${putResponse.status}）`);
+  if (!response.ok) {
+    throw new Error(`连接测试失败（${response.status}）`);
   }
-
-  const deleteResponse = await fetch(buildRemoteUrl(config.webdavUrl, testPath), {
-    method: 'DELETE',
-    headers: authHeaders,
-  });
-
-  if (!deleteResponse.ok) {
-    throw new Error(`测试清理失败（${deleteResponse.status}）`);
+  if (response.status !== 207) {
+    throw new Error(`服务未返回有效的 WebDAV 响应（${response.status}）`);
   }
 }

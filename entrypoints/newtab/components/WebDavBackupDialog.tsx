@@ -5,7 +5,7 @@ import {
   InputGroupButton,
 } from '@/components/ui/input-group';
 import { Field, FieldLabel, FieldGroup } from '@/components/ui/field';
-import { useCallback, useEffect, useMemo, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import {
   Eye,
   EyeOff,
@@ -13,7 +13,9 @@ import {
   ChevronUp,
   CloudDownload,
   CloudUpload,
+  GitCompareArrows,
   Link2,
+  LoaderCircle,
   Pencil,
   Plus,
   Trash2,
@@ -36,7 +38,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -62,8 +63,8 @@ function SectionCard({
 }) {
   return (
     <Card className={cn('gap-0 py-0', className)}>
-      <CardHeader className="items-center gap-0 border-b border-border/50 bg-muted/15 px-4 py-2.5">
-        <CardTitle className="text-sm">{title}</CardTitle>
+      <CardHeader className="gap-0 bg-muted/15 px-4 py-2.5">
+        <CardTitle>{title}</CardTitle>
         {action ? <CardAction>{action}</CardAction> : null}
       </CardHeader>
       <CardContent className={cn('px-0', contentClassName)}>
@@ -89,7 +90,7 @@ function SwitchRow({
     <Label
       htmlFor={switchId}
       className={cn(
-        'w-full items-start justify-between gap-4 px-4 py-2.5',
+        'w-full items-start justify-between gap-4 px-4 py-2.5 font-normal text-foreground',
         disabled && 'opacity-55',
       )}
     >
@@ -112,20 +113,6 @@ function getEditableAccount(backup: BackupSettings) {
     password: backup.password,
     remotePath: backup.remotePath || DEFAULT_SETTINGS.backup.remotePath,
   };
-}
-
-function toSignature(account: {
-  webdavUrl: string;
-  username: string;
-  password: string;
-  remotePath: string;
-}) {
-  return [
-    account.webdavUrl.trim(),
-    account.username.trim(),
-    account.password,
-    account.remotePath.trim(),
-  ].join('||');
 }
 
 type WebDavBackupDialogProps = {
@@ -171,9 +158,6 @@ export function WebDavBackupDialog({
 
   const [editing, setEditing] = useState(!hasSavedAccount);
   const [draft, setDraft] = useState(() => getEditableAccount(backupSettings));
-  const [lastTestedSignature, setLastTestedSignature] = useState<string | null>(
-    null,
-  );
   const [testing, setTesting] = useState(false);
   const [workingAction, setWorkingAction] = useState<
     null | 'backup' | 'restore' | 'diff'
@@ -190,7 +174,6 @@ export function WebDavBackupDialog({
     if (!open) {
       setEditing(!hasSavedAccount);
       setDraft(getEditableAccount(backupSettings));
-      setLastTestedSignature(null);
       setDiffDialogOpen(false);
       setDiffResult(null);
     }
@@ -200,13 +183,20 @@ export function WebDavBackupDialog({
     setIntervalDraft(String(backupSettings.autoBackupIntervalHours));
   }, [backupSettings.autoBackupIntervalHours]);
 
-  const currentSignature = useMemo(() => toSignature(draft), [draft]);
-  const connectionVerified = currentSignature === lastTestedSignature;
+  const accountComplete = !!(
+    draft.webdavUrl.trim() && draft.username.trim() &&
+    draft.password && draft.remotePath.trim()
+  );
+  const accountChanged =
+    draft.webdavUrl.trim() !== backupSettings.webdavUrl.trim() ||
+    draft.username.trim() !== backupSettings.username.trim() ||
+    draft.password !== backupSettings.password ||
+    draft.remotePath.trim() !== backupSettings.remotePath.trim();
+  const canSaveAccount = accountComplete && accountChanged;
   const accountUsable = hasSavedAccount && !editing;
 
   const updateDraft = useCallback((partial: Partial<typeof draft>) => {
     setDraft((prev) => ({ ...prev, ...partial }));
-    setLastTestedSignature(null);
   }, []);
 
   const commitIntervalDraft = useCallback(() => {
@@ -222,13 +212,11 @@ export function WebDavBackupDialog({
         ...backupSettings,
         ...draft,
       });
-      setLastTestedSignature(currentSignature);
       toast.add({
         title: '连接测试成功',
-        description: '已通过读写校验，可以保存账户。',
+        description: '已通过只读连接检查。',
       });
     } catch (error) {
-      setLastTestedSignature(null);
       toast.add({
         title: '连接测试失败',
         description: error instanceof Error ? error.message : '测试连接失败',
@@ -236,10 +224,10 @@ export function WebDavBackupDialog({
     } finally {
       setTesting(false);
     }
-  }, [backupSettings, currentSignature, draft, onTestConnection]);
+  }, [backupSettings, draft, onTestConnection]);
 
   const handleSave = useCallback(() => {
-    if (!connectionVerified) {
+    if (!canSaveAccount) {
       return;
     }
     onSaveAccount({
@@ -250,10 +238,9 @@ export function WebDavBackupDialog({
       remotePath: draft.remotePath.trim(),
     });
     setEditing(false);
-    setLastTestedSignature(null);
   }, [
     backupSettings,
-    connectionVerified,
+    canSaveAccount,
     draft,
     onSaveAccount,
   ]);
@@ -309,7 +296,7 @@ export function WebDavBackupDialog({
                         key={label}
                         className="rounded-xl border border-border/60 bg-muted/15 p-3"
                       >
-                        <div className="text-xs font-medium text-muted-foreground">
+                        <div className="text-sm font-normal text-foreground">
                           {label}
                         </div>
                         <div className="mt-1 break-all text-sm text-foreground">
@@ -321,7 +308,7 @@ export function WebDavBackupDialog({
                 ) : (
                   <FieldGroup className="flex flex-col gap-2.5 px-4 py-2.5">
                     <Field>
-                      <FieldLabel htmlFor="webdavbackupdialog-field-1">
+                      <FieldLabel htmlFor="webdavbackupdialog-field-1" className="font-normal text-foreground">
                         WebDAV 地址
                       </FieldLabel>
                       <Input
@@ -336,7 +323,7 @@ export function WebDavBackupDialog({
 
                     <FieldGroup className="grid gap-3 sm:grid-cols-2">
                       <Field>
-                        <FieldLabel htmlFor="webdavbackupdialog-field-2">
+                        <FieldLabel htmlFor="webdavbackupdialog-field-2" className="font-normal text-foreground">
                           用户名
                         </FieldLabel>
                         <Input
@@ -349,7 +336,7 @@ export function WebDavBackupDialog({
                         />
                       </Field>
                       <Field>
-                        <FieldLabel htmlFor="webdavbackupdialog-field-3">
+                        <FieldLabel htmlFor="webdavbackupdialog-field-3" className="font-normal text-foreground">
                           密码
                         </FieldLabel>
                         <InputGroup>
@@ -380,7 +367,7 @@ export function WebDavBackupDialog({
                     </FieldGroup>
 
                     <Field>
-                      <FieldLabel htmlFor="webdavbackupdialog-field-4">
+                      <FieldLabel htmlFor="webdavbackupdialog-field-4" className="font-normal text-foreground">
                         远程备份路径
                       </FieldLabel>
                       <Input
@@ -402,7 +389,6 @@ export function WebDavBackupDialog({
                           onClick={() => {
                             setEditing(false);
                             setDraft(getEditableAccount(backupSettings));
-                            setLastTestedSignature(null);
                           }}
                         >
                           取消
@@ -412,22 +398,17 @@ export function WebDavBackupDialog({
                         type="button"
                         variant="outline"
                         size="sm"
-                        disabled={
-                          testing ||
-                          !draft.webdavUrl.trim() ||
-                          !draft.username.trim() ||
-                          !draft.password ||
-                          !draft.remotePath.trim()
-                        }
+                        disabled={testing || !accountComplete}
                         onClick={() => void handleTestConnection()}
+                        aria-busy={testing}
                       >
-                        <Link2 className="size-3.5" />
-                        {testing ? '测试中…' : '测试连接'}
+                        {testing ? <LoaderCircle className="size-3.5 animate-spin" /> : <Link2 className="size-3.5" />}
+                        测试连接
                       </Button>
                       <Button
                         type="button"
                         size="sm"
-                        disabled={!connectionVerified}
+                        disabled={!canSaveAccount}
                         onClick={handleSave}
                       >
                         保存账户
@@ -452,14 +433,13 @@ export function WebDavBackupDialog({
 
                 {backupSettings.autoBackupEnabled ? (
                   <>
-                    <Separator />
                     <div
                       className={cn(
                         'flex items-center justify-between gap-4 px-4 py-2.5',
                         !accountUsable && 'opacity-55',
                       )}
                     >
-                      <div className="text-sm font-medium text-foreground">
+                      <div className="text-sm font-normal text-foreground">
                         备份间隔
                       </div>
                       <div className="flex h-9 w-24 overflow-hidden rounded-lg border border-input bg-background shadow-xs transition-colors focus-within:ring-1 focus-within:ring-ring">
@@ -527,10 +507,11 @@ export function WebDavBackupDialog({
                   </>
                 ) : null}
 
-                <Separator />
-
-                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
-                  <div className="text-xs text-muted-foreground">
+                <div className="flex flex-col gap-3 px-4 py-2.5">
+                  <div
+                    className="min-w-0 truncate text-xs text-muted-foreground"
+                    title={backupSettings.lastBackupError ? `最近一次失败：${backupSettings.lastBackupError}` : undefined}
+                  >
                     最近成功备份：
                     {backupSettings.lastBackupAt
                       ? ` ${new Date(backupSettings.lastBackupAt).toLocaleString('zh-CN')}`
@@ -547,6 +528,7 @@ export function WebDavBackupDialog({
                       variant="outline"
                       size="sm"
                       disabled={!accountUsable || workingAction !== null}
+                      aria-busy={workingAction === 'diff'}
                       onClick={async () => {
                         setWorkingAction('diff');
                         try {
@@ -558,13 +540,15 @@ export function WebDavBackupDialog({
                         }
                       }}
                     >
-                      {workingAction === 'diff' ? '对比中…' : '查看与云端差异'}
+                      {workingAction === 'diff' ? <LoaderCircle className="size-3.5 animate-spin" /> : <GitCompareArrows className="size-3.5" />}
+                      查看差异
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       disabled={!accountUsable || workingAction !== null}
+                      aria-busy={workingAction === 'backup'}
                       onClick={async () => {
                         setWorkingAction('backup');
                         try {
@@ -574,16 +558,18 @@ export function WebDavBackupDialog({
                         }
                       }}
                     >
-                      <CloudUpload className="size-3.5" />
-                      {workingAction === 'backup' ? '备份中…' : '立即备份'}
+                      {workingAction === 'backup' ? <LoaderCircle className="size-3.5 animate-spin" /> : <CloudUpload className="size-3.5" />}
+                      立即备份
                     </Button>
                     <Button
                       type="button"
+                      variant="outline"
                       size="sm"
                       disabled={!accountUsable || workingAction !== null}
                       onClick={() => setRestoreConfirmOpen(true)}
                     >
-                      <CloudDownload className="size-3.5" />从 WebDAV 恢复
+                      <CloudDownload className="size-3.5" />
+                      恢复备份
                     </Button>
                   </div>
                 </div>
@@ -604,7 +590,6 @@ export function WebDavBackupDialog({
           onRemoveAccount();
           setEditing(true);
           setDraft(getEditableAccount(DEFAULT_SETTINGS.backup));
-          setLastTestedSignature(null);
           toast.add({ title: '已移除 WebDAV 账户' });
         }}
       />
@@ -614,7 +599,9 @@ export function WebDavBackupDialog({
         onOpenChange={setRestoreConfirmOpen}
         title="恢复远程备份"
         description="恢复会用 WebDAV 里的备份覆盖当前本地数据。此操作不可撤销，确认继续？"
-        confirmText={workingAction === 'restore' ? '恢复中…' : '确认恢复'}
+        confirmText="恢复"
+        closeOnConfirm={false}
+        confirming={workingAction === 'restore'}
         destructive
         onConfirm={() => {
           setWorkingAction('restore');

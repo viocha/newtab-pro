@@ -17,6 +17,8 @@ type ConfirmDialogProps = {
   confirmText?: string;
   cancelText?: string;
   destructive?: boolean;
+  closeOnConfirm?: boolean;
+  confirming?: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
 };
@@ -28,6 +30,8 @@ export function ConfirmDialog({
   confirmText = '确认',
   cancelText = '取消',
   destructive,
+  closeOnConfirm = true,
+  confirming = false,
   onOpenChange,
   onConfirm,
 }: ConfirmDialogProps) {
@@ -70,7 +74,13 @@ export function ConfirmDialog({
           </Button>
           <Button
             variant={destructive ? 'destructive' : 'default'}
+            disabled={confirming}
+            aria-busy={confirming}
             onClick={() => {
+              if (!closeOnConfirm) {
+                onConfirm();
+                return;
+              }
               confirmAfterClose.current = onConfirm;
               onOpenChange(false);
             }}

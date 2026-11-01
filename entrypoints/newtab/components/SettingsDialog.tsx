@@ -47,7 +47,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -73,8 +72,8 @@ function SettingsSection({
 }) {
   return (
     <Card className={cn('gap-0 py-0', className)}>
-      <CardHeader className="gap-0 border-b border-border/50 bg-muted/15 px-4 py-2.5">
-        <CardTitle className="text-sm">{title}</CardTitle>
+      <CardHeader className="gap-0 bg-muted/15 px-4 py-2.5">
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent className={cn('px-0', contentClassName)}>
         {children}
@@ -94,7 +93,7 @@ function SettingsSwitchRow({
 }) {
   const switchId = useId();
   return (
-    <Label htmlFor={switchId} className="w-full items-start justify-between gap-4 px-4 py-2.5">
+    <Label htmlFor={switchId} className="w-full items-start justify-between gap-4 px-4 py-2.5 font-normal text-foreground">
       <span className="min-w-0">{label}</span>
       <Switch
         id={switchId}
@@ -122,7 +121,7 @@ function SettingsActionRow({
       className="flex w-full items-center justify-between gap-4 px-4 py-2.5 text-left transition-colors hover:bg-muted/20"
     >
       <div className="min-w-0">
-        <div className="text-sm font-medium text-foreground">{label}</div>
+        <div className="text-sm font-normal text-foreground">{label}</div>
       </div>
       <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
         {value}
@@ -139,7 +138,7 @@ function BookmarkTitleLinesRow({ value, onChange }: {
   const labelId = useId();
   return (
     <Field orientation="horizontal" className="justify-between px-4 py-2.5">
-      <FieldLabel id={labelId}>名称显示行数</FieldLabel>
+      <FieldLabel id={labelId} className="font-normal text-foreground">名称显示行数</FieldLabel>
       <ToggleGroup value={[String(value)]} variant="outline" size="sm" spacing={0}
         aria-labelledby={labelId}
         onValueChange={(values) => {
@@ -237,7 +236,7 @@ function ShortcutInput({
           setLiveCombo('');
         }}
       >
-        <span className="text-sm font-medium text-foreground">{label}</span>
+        <span className="text-sm font-normal text-foreground">{label}</span>
         <span
           className={cn(
             'text-xs font-mono',
@@ -258,7 +257,7 @@ function ShortcutInput({
       onClick={() => setRecording(true)}
       className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/20"
     >
-      <span className="text-sm font-medium text-foreground">{label}</span>
+      <span className="text-sm font-normal text-foreground">{label}</span>
       <Kbd>{formatShortcut(value)}</Kbd>
     </button>
   );
@@ -316,7 +315,7 @@ function EngineFormDialog({ state, onClose, onSubmit }: EngineFormDialogProps) {
         <form onSubmit={handleSubmit} className="grid gap-3">
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="search-engine-name">名称</FieldLabel>
+              <FieldLabel htmlFor="search-engine-name" className="font-normal text-foreground">名称</FieldLabel>
               <Input
                 id="search-engine-name"
                 autoFocus
@@ -326,7 +325,7 @@ function EngineFormDialog({ state, onClose, onSubmit }: EngineFormDialogProps) {
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="search-engine-search-url">
+              <FieldLabel htmlFor="search-engine-search-url" className="font-normal text-foreground">
                 搜索 URL
               </FieldLabel>
               <Input
@@ -337,7 +336,7 @@ function EngineFormDialog({ state, onClose, onSubmit }: EngineFormDialogProps) {
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="search-engine-suggest-url">
+              <FieldLabel htmlFor="search-engine-suggest-url" className="font-normal text-foreground">
                 搜索建议 URL（可选）
               </FieldLabel>
               <Input
@@ -348,7 +347,7 @@ function EngineFormDialog({ state, onClose, onSubmit }: EngineFormDialogProps) {
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="search-engine-icon-url">
+              <FieldLabel htmlFor="search-engine-icon-url" className="font-normal text-foreground">
                 图标链接（可选）
               </FieldLabel>
               <Input
@@ -640,14 +639,12 @@ export function SettingsDialog({
                   <SettingsSection title="书签列表">
                     <BookmarkTitleLinesRow value={settings.listTitleLines}
                       onChange={(listTitleLines) => onUpdateSettings({ listTitleLines })} />
-                    <Separator />
                     <SettingsSwitchRow label="在名称下方显示 URL" checked={settings.listShowUrl}
                       onCheckedChange={(listShowUrl) => onUpdateSettings({ listShowUrl })} />
                   </SettingsSection>
                   <SettingsSection title="书签树">
                     <BookmarkTitleLinesRow value={settings.treeTitleLines}
                       onChange={(treeTitleLines) => onUpdateSettings({ treeTitleLines })} />
-                    <Separator />
                     <SettingsSwitchRow label="在名称下方显示 URL" checked={settings.treeShowUrl}
                       onCheckedChange={(treeShowUrl) => onUpdateSettings({ treeShowUrl })} />
                   </SettingsSection>
@@ -663,7 +660,6 @@ export function SettingsDialog({
                       }
                       label="显示搜索栏"
                     />
-                    <Separator />
                     <SettingsSwitchRow
                       checked={settings.openSearchInNewTab}
                       onCheckedChange={(next) =>
@@ -671,7 +667,6 @@ export function SettingsDialog({
                       }
                       label="在新标签页中打开搜索结果"
                     />
-                    <Separator />
                     <SettingsActionRow
                       label="管理搜索引擎"
                       value={`${settings.searchEngines.length} 个引擎`}
@@ -735,7 +730,6 @@ export function SettingsDialog({
                         onUpdateSettings({ spaceNextShortcut: next })
                       }
                     />
-                    <Separator />
                     <ShortcutInput
                       label="切换到上一个 Space"
                       value={settings.spacePrevShortcut}
@@ -758,8 +752,8 @@ export function SettingsDialog({
               ) : (
                 <>
                   <Card className="gap-0 py-0">
-                    <CardHeader className="items-center gap-0 border-b border-border/50 bg-muted/15 px-4 py-2.5">
-                      <CardTitle className="text-sm">已配置引擎</CardTitle>
+                    <CardHeader className="gap-0 bg-muted/15 px-4 py-2.5">
+                      <CardTitle>已配置引擎</CardTitle>
                       <CardAction>
                         <div className="flex items-center gap-2">
                           <Button

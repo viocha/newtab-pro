@@ -6,7 +6,6 @@ import {
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import type { AppSettings } from '../types';
 
@@ -41,8 +40,8 @@ function HelpSection({
 }) {
   return (
     <Card className="gap-0 py-0">
-      <CardHeader className="gap-0 border-b border-border/60 bg-muted/20 px-5 py-4">
-        <CardTitle className="text-sm">{title}</CardTitle>
+      <CardHeader className="gap-0 bg-muted/20 px-5 py-4">
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent className="px-0">{children}</CardContent>
     </Card>
@@ -53,7 +52,7 @@ function ShortcutRow({ label, shortcut }: { label: string; shortcut: string }) {
   const formatted = formatShortcut(shortcut);
   return (
     <div className="flex items-center justify-between gap-4 px-5 py-4">
-      <span className="text-sm text-foreground/85">{label}</span>
+      <span className="text-sm text-foreground">{label}</span>
       <div className="flex items-center gap-1">
         {formatted.split(' + ').map((key, index) => (
           <span
@@ -92,7 +91,6 @@ export function HelpDialog({ open, onOpenChange, settings }: HelpDialogProps) {
                 label="切换到下一个 Space"
                 shortcut={settings.spaceNextShortcut}
               />
-              <Separator />
               <ShortcutRow
                 label="切换到上一个 Space"
                 shortcut={settings.spacePrevShortcut}
@@ -101,20 +99,14 @@ export function HelpDialog({ open, onOpenChange, settings }: HelpDialogProps) {
 
             <HelpSection title="搜索栏快捷键">
               <ShortcutRow label="聚焦搜索框" shortcut="/" />
-              <Separator />
               <ShortcutRow label="按设置的方式搜索" shortcut="Enter" />
-              <Separator />
               <ShortcutRow label="强制当前标签搜索" shortcut="Alt + Enter" />
-              <Separator />
               <ShortcutRow label="后台新标签搜索" shortcut="Ctrl + Enter" />
-              <Separator />
               <ShortcutRow
                 label="前台新标签搜索"
                 shortcut="Ctrl + Shift + Enter"
               />
-              <Separator />
               <ShortcutRow label="选择历史或建议" shortcut="↑ / ↓" />
-              <Separator />
               <ShortcutRow label="关闭建议并退出搜索框" shortcut="Esc" />
             </HelpSection>
 
