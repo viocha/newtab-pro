@@ -64,7 +64,7 @@ function SectionCard({
   return (
     <Card className={cn('gap-0 py-0', className)}>
       <CardHeader className="gap-0 bg-muted/15 px-4 py-2.5">
-        <CardTitle>{title}</CardTitle>
+        <CardTitle className="text-[15px]">{title}</CardTitle>
         {action ? <CardAction>{action}</CardAction> : null}
       </CardHeader>
       <CardContent className={cn('px-0', contentClassName)}>
@@ -214,7 +214,6 @@ export function WebDavBackupDialog({
       });
       toast.add({
         title: '连接测试成功',
-        description: '已通过只读连接检查。',
       });
     } catch (error) {
       toast.add({

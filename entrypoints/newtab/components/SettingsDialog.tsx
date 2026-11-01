@@ -73,7 +73,7 @@ function SettingsSection({
   return (
     <Card className={cn('gap-0 py-0', className)}>
       <CardHeader className="gap-0 bg-muted/15 px-4 py-2.5">
-        <CardTitle>{title}</CardTitle>
+        <CardTitle className="text-[15px]">{title}</CardTitle>
       </CardHeader>
       <CardContent className={cn('px-0', contentClassName)}>
         {children}
@@ -753,7 +753,7 @@ export function SettingsDialog({
                 <>
                   <Card className="gap-0 py-0">
                     <CardHeader className="gap-0 bg-muted/15 px-4 py-2.5">
-                      <CardTitle>已配置引擎</CardTitle>
+                      <CardTitle className="text-[15px]">已配置引擎</CardTitle>
                       <CardAction>
                         <div className="flex items-center gap-2">
                           <Button

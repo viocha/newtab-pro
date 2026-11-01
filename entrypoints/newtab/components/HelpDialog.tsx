@@ -41,7 +41,7 @@ function HelpSection({
   return (
     <Card className="gap-0 py-0">
       <CardHeader className="gap-0 bg-muted/20 px-5 py-4">
-        <CardTitle>{title}</CardTitle>
+        <CardTitle className="text-[15px]">{title}</CardTitle>
       </CardHeader>
       <CardContent className="px-0">{children}</CardContent>
     </Card>

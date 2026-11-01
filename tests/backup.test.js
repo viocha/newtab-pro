@@ -1,6 +1,6 @@
 import { expect, mock, spyOn, test } from 'bun:test';
 mock.module('wxt/browser', () => ({ browser: {} }));
-const { createBackupPayload, parseBackupPayload, testWebDavConnection } = await import('../entrypoints/newtab/backup');
+const { createBackupPayload, parseBackupPayload, testWebDavConnection, uploadBackupToWebDav, downloadBackupFromWebDav } = await import('../entrypoints/newtab/backup');
 const { DEFAULT_SETTINGS } = await import('../entrypoints/newtab/constants');
 const { restoreSpaceStore } = await import('../entrypoints/newtab/use-board-store');
 const { restoreSettings } = await import('../entrypoints/newtab/use-settings-store');
@@ -59,6 +59,23 @@ test('连接网络错误保留原因，配置不完整时不发出请求', async
     await expect(testWebDavConnection(connectionConfig)).rejects.toThrow('网络不可达');
     await expect(testWebDavConnection({ ...connectionConfig, webdavUrl: '' })).rejects.toThrow('请填写 WebDAV 地址');
     expect(request).toHaveBeenCalledTimes(1);
+  } finally {
+    request.mockRestore();
+  }
+});
+
+test('连接、目录创建、上传和下载均报告服务端详细错误', async () => {
+  const request = spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('{"message":"Access denied by server"}', { status: 403 }));
+  try {
+    for (const [run, expected] of [
+      [() => testWebDavConnection(connectionConfig), 'PROPFIND'],
+      [() => uploadBackupToWebDav(connectionConfig, createBackupPayload(store, settings)), 'MKCOL'],
+      [() => uploadBackupToWebDav({ ...connectionConfig, remotePath: 'backup.json' }, createBackupPayload(store, settings)), 'PUT'],
+      [() => downloadBackupFromWebDav(connectionConfig), 'GET'],
+    ]) {
+      await expect(run()).rejects.toThrow(`${expected}，HTTP 403 Forbidden） — Access denied by server`);
+    }
+    expect(request).toHaveBeenCalledTimes(4);
   } finally {
     request.mockRestore();
   }

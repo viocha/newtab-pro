@@ -1,4 +1,5 @@
 import type { AppSettings, BackupSettings, SpaceStore, Space, BookmarkGroup, BookmarkSubgroup } from './types';
+import { createWebDavResponseError } from './webdav-error';
 
 export const BACKUP_PAYLOAD_VERSION = 3;
 export const AUTO_BACKUP_ALARM_NAME = 'newtab-pro:auto-backup';
@@ -156,7 +157,7 @@ async function ensureRemoteFolders(config: BackupSettings) {
       continue;
     }
 
-    throw new Error(`创建远程目录失败（${response.status}）`);
+    throw await createWebDavResponseError(response, '创建远程目录失败', 'MKCOL');
   }
 }
 
@@ -224,7 +225,7 @@ export async function uploadBackupToWebDav(config: BackupSettings, payload: Back
   });
 
   if (!response.ok) {
-    throw new Error(`备份上传失败（${response.status}）`);
+    throw await createWebDavResponseError(response, '备份上传失败', 'PUT');
   }
 
   return {
@@ -241,7 +242,7 @@ export async function downloadBackupFromWebDav(config: BackupSettings) {
   });
 
   if (!response.ok) {
-    throw new Error(`备份下载失败（${response.status}）`);
+    throw await createWebDavResponseError(response, '备份下载失败', 'GET');
   }
 
   return JSON.parse(await response.text()) as unknown;
@@ -260,9 +261,9 @@ export async function testWebDavConnection(config: BackupSettings) {
     body: '<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:resourcetype/></d:prop></d:propfind>',
   });
   if (!response.ok) {
-    throw new Error(`连接测试失败（${response.status}）`);
+    throw await createWebDavResponseError(response, '连接测试失败', 'PROPFIND');
   }
   if (response.status !== 207) {
-    throw new Error(`服务未返回有效的 WebDAV 响应（${response.status}）`);
+    throw await createWebDavResponseError(response, '服务未返回有效的 WebDAV 响应', 'PROPFIND');
   }
 }
