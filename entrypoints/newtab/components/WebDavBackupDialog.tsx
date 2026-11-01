@@ -509,15 +509,15 @@ export function WebDavBackupDialog({
                 <div className="flex flex-col gap-3 px-4 py-2.5">
                   <div
                     className="min-w-0 truncate text-xs text-muted-foreground"
-                    title={backupSettings.lastBackupError ? `最近一次失败：${backupSettings.lastBackupError}` : undefined}
+                    title={backupSettings.lastBackupError ? `最近失败：${backupSettings.lastBackupError}` : undefined}
                   >
-                    最近成功备份：
+                    最近备份：
                     {backupSettings.lastBackupAt
                       ? ` ${new Date(backupSettings.lastBackupAt).toLocaleString('zh-CN')}`
                       : ' 暂无'}
                     {backupSettings.lastBackupError ? (
                       <span className="ml-3 text-destructive">
-                        最近一次失败：{backupSettings.lastBackupError}
+                        最近失败：{backupSettings.lastBackupError}
                       </span>
                     ) : null}
                   </div>

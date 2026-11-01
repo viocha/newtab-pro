@@ -1030,12 +1030,6 @@ export default function App() {
 
       if (!response?.success) {
         const errorMessage = response?.error || '备份上传失败';
-        updateSettings({
-          backup: {
-            ...settings.backup,
-            lastBackupError: errorMessage,
-          },
-        });
         toast.add({ title: '备份失败', description: errorMessage });
         return;
       }
@@ -1044,19 +1038,12 @@ export default function App() {
         backup: {
           ...settings.backup,
           lastBackupAt: response.uploadedAt,
-          lastBackupError: undefined,
         },
       });
       toast.add({ title: '备份成功', description: settings.backup.remotePath });
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : '备份上传失败';
-      updateSettings({
-        backup: {
-          ...settings.backup,
-          lastBackupError: errorMessage,
-        },
-      });
       toast.add({ title: '备份失败', description: errorMessage });
     }
   }, [settings, spaceStore, updateSettings]);
@@ -1070,23 +1057,11 @@ export default function App() {
 
       if (!response?.success) {
         const errorMessage = response?.error || '备份下载失败';
-        updateSettings({
-          backup: {
-            ...settings.backup,
-            lastBackupError: errorMessage,
-          },
-        });
         toast.add({ title: '恢复失败', description: errorMessage });
         return;
       }
 
       const parsed = applyBackupData(response.payload);
-      updateSettings({
-        backup: {
-          ...settings.backup,
-          lastBackupError: undefined,
-        },
-      });
       toast.add({
         title: '恢复成功',
         description: parsed.exportedAt
@@ -1095,15 +1070,9 @@ export default function App() {
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '恢复失败';
-      updateSettings({
-        backup: {
-          ...settings.backup,
-          lastBackupError: errorMessage,
-        },
-      });
       toast.add({ title: '恢复失败', description: errorMessage });
     }
-  }, [applyBackupData, settings.backup, updateSettings]);
+  }, [applyBackupData, settings.backup]);
 
   const handleOpenRemoteBackupDiff = useCallback(async () => {
     try {
@@ -1119,27 +1088,14 @@ export default function App() {
       const localSnapshot = createLocalBackupDiffSnapshot(spaceStore, settings);
       const remoteSnapshot = parseBackupDiffSnapshot(response.payload);
 
-      updateSettings({
-        backup: {
-          ...settings.backup,
-          lastBackupError: undefined,
-        },
-      });
-
       return compareBackupSnapshots(localSnapshot, remoteSnapshot);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : '读取云端差异失败';
-      updateSettings({
-        backup: {
-          ...settings.backup,
-          lastBackupError: errorMessage,
-        },
-      });
       toast.add({ title: '读取云端差异失败', description: errorMessage });
       throw error;
     }
-  }, [settings, spaceStore, updateSettings]);
+  }, [settings, spaceStore]);
 
   const handleTestWebDavConnection = useCallback(
     async (config: BackupSettings) => {

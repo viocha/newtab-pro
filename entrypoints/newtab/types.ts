@@ -141,6 +141,7 @@ export type BackupSettings = {
   autoBackupIntervalHours: number;
   lastBackupAt?: string;
   lastBackupAttemptAt?: string;
+  /** 最近一次自动备份的错误，由后台任务维护。 */
   lastBackupError?: string;
 };
 
