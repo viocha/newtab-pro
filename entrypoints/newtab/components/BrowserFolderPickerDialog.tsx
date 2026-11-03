@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Check, ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { browser, type Browser } from 'wxt/browser';
 
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 
 import { cn } from '@/lib/utils';
+import { getDirectChildCounts } from '../bookmark-tree';
 
 type TreeNode = Browser.bookmarks.BookmarkTreeNode;
 
@@ -42,6 +43,8 @@ export function BrowserFolderPickerDialog({
   onConfirm,
 }: Props) {
   const [tree, setTree] = useState<TreeNode[]>([]);
+  const folders = useMemo(() => keepFolders(tree), [tree]);
+  const childCounts = useMemo(() => getDirectChildCounts(tree), [tree]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -66,7 +69,7 @@ export function BrowserFolderPickerDialog({
 
         const roots = payload.flatMap((n) => n.children ?? []);
         const folders = keepFolders(roots);
-        setTree(folders);
+        setTree(roots);
         // 默认展开第一层
         setExpandedIds(new Set(folders.map((f) => f.id)));
       } catch (e) {
@@ -101,7 +104,7 @@ export function BrowserFolderPickerDialog({
         <div key={node.id}>
           <div
             className={cn(
-              'flex cursor-pointer select-none items-center gap-1 rounded-md py-1 pr-2 text-xs transition-colors',
+              'flex cursor-pointer select-none items-center gap-1 rounded-md py-1 pr-3 text-xs transition-colors',
               isSelected
                 ? 'bg-primary/12 font-medium text-primary'
                 : 'hover:bg-accent',
@@ -111,32 +114,28 @@ export function BrowserFolderPickerDialog({
               setSelectedId(node.id);
               setSelectedTitle(node.title ?? '');
               // 点击行始终切换展开/折叠
-              if (hasChildren) toggleExpand(node.id);
+              toggleExpand(node.id);
             }}
           >
             {/* 展开/收起箭头 */}
             <span
               className="inline-flex size-4 shrink-0 items-center justify-center text-muted-foreground"
+              title={childCounts.get(node.id) === 0 ? '空文件夹' : undefined}
+              aria-expanded={isExpanded}
               onClick={(e) => {
                 e.stopPropagation();
-                if (hasChildren) toggleExpand(node.id);
+                toggleExpand(node.id);
               }}
             >
-              {hasChildren ? (
-                isExpanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />
-              ) : (
-                <span className="size-3" />
-              )}
-            </span>
-
-            {/* 文件夹图标 */}
-            <span className="inline-flex size-4 shrink-0 items-center justify-center">
               {isExpanded
-                ? <FolderOpen className="size-3.5 text-amber-500" />
-                : <Folder className="size-3.5 text-amber-500" />}
+                ? <ChevronDown className="size-3.5" />
+                : <ChevronRight className="size-3.5" />}
             </span>
 
             <span className="min-w-0 flex-1 truncate">{node.title || '未命名文件夹'}</span>
+            {!!childCounts.get(node.id) && (
+              <span className="shrink-0 text-muted-foreground tabular-nums">{childCounts.get(node.id)}</span>
+            )}
 
             {isSelected && <Check className="ml-1 size-3 shrink-0 text-primary" />}
           </div>
@@ -166,10 +165,10 @@ export function BrowserFolderPickerDialog({
           </div>
         ) : (
           <ScrollArea className="bookmark-scroll-area h-[420px] min-w-0 shrink-0 rounded-md border border-border/50">
-            <div className="px-2.5 py-1">
-              {!loading && tree.length === 0
+            <div className="py-1">
+              {!loading && folders.length === 0
                 ? <p className="px-2 py-3 text-xs text-muted-foreground">没有找到书签文件夹</p>
-                : renderFolders(tree, 0)}
+                : renderFolders(folders, 0)}
             </div>
           </ScrollArea>
         )}

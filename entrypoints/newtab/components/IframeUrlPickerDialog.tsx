@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronDown, ChevronRight, Folder, FolderOpen, Link2, Search } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Link2, Search } from 'lucide-react';
 import { browser, type Browser } from 'wxt/browser';
 
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
 import type { Space } from '../types';
+import { getDirectChildCounts } from '../bookmark-tree';
 import { FaviconImage } from './FaviconImage';
 
 const FILTER_QUERY_DEBOUNCE_MS = 300;
@@ -141,6 +142,7 @@ export function IframeUrlPickerDialog({ open, onOpenChange, initialUrl, onConfir
 
   // 应用书签树
   const appNodes = useMemo(() => (spaces?.length ? spacesToTreeNodes(spaces) : []), [spaces]);
+  const childCounts = useMemo(() => getDirectChildCounts([...tree, ...appNodes]), [tree, appNodes]);
   const visibleAppNodes = useMemo(() => filterTree(appNodes, normalizedQuery), [appNodes, normalizedQuery]);
 
   const hasMultiSection = visibleAppNodes.length > 0 && visibleTree.length > 0;
@@ -172,21 +174,23 @@ export function IframeUrlPickerDialog({ open, onOpenChange, initialUrl, onConfir
         return (
           <div key={key} className="select-none">
             <div
-              className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs hover:bg-accent"
+              className="flex cursor-pointer items-center gap-1 rounded-md py-1 pr-3 text-xs hover:bg-accent"
               style={{ paddingLeft: `${depth * 16 + 8}px` }}
-              onClick={() => node.id && hasChildren && toggleExpanded(node.id)}
+              onClick={() => node.id && toggleExpanded(node.id)}
             >
-              <span className="inline-flex size-4 items-center justify-center text-muted-foreground">
-                {hasChildren ? (
-                  isExpanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />
-                ) : null}
-              </span>
-              <span className="inline-flex size-4 items-center justify-center">
+              <span
+                className="inline-flex size-4 shrink-0 items-center justify-center text-muted-foreground"
+                title={childCounts.get(node.id) === 0 ? '空文件夹' : undefined}
+                aria-expanded={isExpanded}
+              >
                 {isExpanded
-                  ? <FolderOpen className="size-3.5 text-amber-500" />
-                  : <Folder className="size-3.5 text-amber-500" />}
+                  ? <ChevronDown className="size-3.5" />
+                  : <ChevronRight className="size-3.5" />}
               </span>
               <span className="min-w-0 flex-1 truncate">{node.title || '未命名文件夹'}</span>
+              {!!childCounts.get(node.id) && (
+                <span className="shrink-0 text-muted-foreground tabular-nums">{childCounts.get(node.id)}</span>
+              )}
             </div>
             {hasChildren && isExpanded ? renderNodes(node.children!, depth + 1) : null}
           </div>
@@ -218,7 +222,6 @@ export function IframeUrlPickerDialog({ open, onOpenChange, initialUrl, onConfir
               }
             }}
           >
-            <span className="inline-flex size-4 items-center justify-center" />
             <span className="inline-flex size-4 shrink-0 items-center justify-center">
               <FaviconImage url={node.url || ''} className="size-3.5 rounded-sm" loading="lazy" />
             </span>

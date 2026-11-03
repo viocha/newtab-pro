@@ -7,8 +7,6 @@ import {
   Copy,
   ExternalLink,
   EyeOff,
-  Folder,
-  FolderOpen,
   MapPin,
   PanelsTopLeft,
 } from 'lucide-react';
@@ -203,51 +201,45 @@ export function BrowserTreeView({
         const isFolder = !node.url;
         const hasChildren = !!node.children?.length;
         const isExpanded = expandedIds.has(node.id);
-        // 书签内容比文件夹多缩进一点，与展开箭头区域对齐
-        const indent = isFolder ? depth * 14 + 4 : depth * 14 + 4;
+        const indent = depth * 14 + 4;
 
         if (isFolder) {
           const folderUrls = collectNodeUrls(node);
           const folderRow = (
             <div
               className={cn(
-                'flex cursor-pointer select-none items-center gap-1 overflow-hidden rounded px-1 py-1 text-xs hover:bg-accent/60',
+                'flex cursor-pointer select-none items-center gap-1 overflow-hidden rounded py-1 pr-3 text-xs hover:bg-accent/60',
                 contextOpenId === node.id &&
                   !disableCustomContextMenu &&
                   'bg-accent/60',
               )}
               style={{ paddingLeft: `${indent}px` }}
-              onClick={() => hasChildren && toggleExpand(node.id)}
+              onClick={() => toggleExpand(node.id)}
             >
               <span
                 className="inline-flex size-4 shrink-0 items-center justify-center text-muted-foreground"
+                title={hasChildren ? undefined : '空文件夹'}
+                aria-expanded={isExpanded}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (hasChildren) toggleExpand(node.id);
+                  toggleExpand(node.id);
                 }}
               >
-                {hasChildren ? (
-                  isExpanded ? (
-                    <ChevronDown className="size-3" />
-                  ) : (
-                    <ChevronRight className="size-3" />
-                  )
-                ) : (
-                  <span className="size-3" />
-                )}
-              </span>
-
-              <span className="inline-flex size-4 shrink-0 items-center justify-center">
                 {isExpanded ? (
-                  <FolderOpen className="size-3.5 text-amber-500" />
+                  <ChevronDown className="size-3.5" />
                 ) : (
-                  <Folder className="size-3.5 text-amber-500" />
+                  <ChevronRight className="size-3.5" />
                 )}
               </span>
 
               <span className="min-w-0 flex-1 truncate text-foreground/90">
                 {node.title || '未命名文件夹'}
               </span>
+              {hasChildren && (
+                <span className="shrink-0 text-muted-foreground tabular-nums">
+                  {node.children!.length}
+                </span>
+              )}
             </div>
           );
 
@@ -361,13 +353,13 @@ export function BrowserTreeView({
             target="_self"
             title={node.url ? `${node.title}\n${node.url}` : node.title}
             className={cn(
-              'flex select-none items-center gap-1 overflow-hidden rounded px-1 py-1 text-xs hover:bg-accent/60',
+              'flex select-none items-center gap-1 overflow-hidden rounded py-1 pr-3 text-xs hover:bg-accent/60',
               contextOpenId === node.id &&
                 !disableCustomContextMenu &&
                 'bg-accent/60',
             )}
             style={{
-              paddingLeft: `${indent + 4}px`,
+              paddingLeft: `${indent}px`,
               textDecoration: 'none',
               color: 'inherit',
             }}
@@ -395,8 +387,6 @@ export function BrowserTreeView({
               void browser.tabs.create({ url, active: e.shiftKey });
             }}
           >
-            <span className="inline-flex size-4 shrink-0 items-center justify-center" />
-
             <span className="inline-flex size-4 shrink-0 items-center justify-center">
               <FaviconImage
                 url={node.url || ''}
@@ -507,7 +497,7 @@ export function BrowserTreeView({
         !fitParentHeight && '[&>[data-slot=scroll-area-viewport]]:h-auto',
       )}
     >
-      <div className="min-w-0 max-w-full overflow-x-hidden px-2.5 py-0.5">
+      <div className="min-w-0 max-w-full overflow-x-hidden py-0.5">
         {renderNodes(nodes, 0)}
       </div>
     </ScrollArea>
