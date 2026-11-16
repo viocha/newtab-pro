@@ -97,15 +97,8 @@
   background: var(--background);
 }
 
-/* 约束 ScrollArea 内容宽度，避免长标题撑开分组网格。 */
-.board-scroll-area [data-slot='scroll-area-viewport'] > div,
-.bookmark-scroll-area [data-slot='scroll-area-viewport'] > div {
-  display: block !important;
-  max-width: 100%;
-}
-
-.board-scroll-area [data-slot='scroll-area-viewport'] > div {
-  display: flex !important;
+.board-scroll-area > [data-slot='scroll-area-viewport'] > [data-slot='scroll-area-content'] {
+  display: flex;
   flex-direction: column;
   min-height: 100%;
 }
