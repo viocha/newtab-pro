@@ -1136,65 +1136,66 @@ export function GroupCard({
                     <Trash2 className="mr-2 size-3.5" />
                     删除分组
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    disabled={allUrls.length === 0}
-                    onClick={() => {
-                      for (const url of allUrls) browser.tabs.create({ url });
-                    }}
-                  >
-                    <ExternalLink className="mr-2 size-3.5" />
-                    打开全部书签
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={allUrls.length === 0}
-                    onClick={() => browser.windows.create({ url: allUrls })}
-                  >
-                    <AppWindow className="mr-2 size-3.5" />
-                    在新窗口打开全部
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={allUrls.length === 0}
-                    onClick={() =>
-                      browser.windows.create({ url: allUrls, incognito: true })
-                    }
-                  >
-                    <EyeOff className="mr-2 size-3.5" />
-                    在隐私窗口打开全部
-                  </DropdownMenuItem>
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger disabled={allUrls.length === 0}>
-                      <PanelsTopLeft className="mr-2 size-3.5" />
-                      多窗口网格打开
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent className="w-44">
-                      <DropdownMenuGroup>
-                        <DropdownMenuCheckboxItem
-                          checked={compactGridWindows}
-                          closeOnClick={false}
-                          onCheckedChange={(next) =>
-                            setCompactGridWindows(!!next)
-                          }
-                        >
-                          简化窗口
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuSeparator />
-                        {getGridOpenCounts(allUrls.length).map((count) => (
-                          <DropdownMenuItem
-                            key={count}
-                            onClick={() =>
-                              void openUrlsInGrid(
-                                allUrls.slice(0, count),
-                                compactGridWindows,
-                              )
-                            }
-                          >
-                            打开前 {count} 个
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuGroup>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
+                  {allUrls.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => {
+                          for (const url of allUrls) browser.tabs.create({ url });
+                        }}
+                      >
+                        <ExternalLink className="mr-2 size-3.5" />
+                        打开全部书签
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => browser.windows.create({ url: allUrls })}
+                      >
+                        <AppWindow className="mr-2 size-3.5" />
+                        在新窗口打开全部
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          browser.windows.create({ url: allUrls, incognito: true })
+                        }
+                      >
+                        <EyeOff className="mr-2 size-3.5" />
+                        在隐私窗口打开全部
+                      </DropdownMenuItem>
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <PanelsTopLeft className="mr-2 size-3.5" />
+                          多窗口网格打开
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent className="w-44">
+                          <DropdownMenuGroup>
+                            <DropdownMenuCheckboxItem
+                              checked={compactGridWindows}
+                              closeOnClick={false}
+                              onCheckedChange={(next) =>
+                                setCompactGridWindows(!!next)
+                              }
+                            >
+                              简化窗口
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuSeparator />
+                            {getGridOpenCounts(allUrls.length).map((count) => (
+                              <DropdownMenuItem
+                                key={count}
+                                onClick={() =>
+                                  void openUrlsInGrid(
+                                    allUrls.slice(0, count),
+                                    compactGridWindows,
+                                  )
+                                }
+                              >
+                                打开前 {count} 个
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuGroup>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+                    </>
+                  )}
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>

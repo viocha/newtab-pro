@@ -473,79 +473,78 @@ export function SubgroupPanel({
                     <Trash2 className="mr-2 size-3.5" />
                     删除小组
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    disabled={subgroup.bookmarks.length === 0}
-                    onClick={() => {
-                      for (const b of subgroup.bookmarks)
-                        browser.tabs.create({ url: b.url });
-                    }}
-                  >
-                    <ExternalLink className="mr-2 size-3.5" />
-                    打开全部书签
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={subgroup.bookmarks.length === 0}
-                    onClick={() =>
-                      browser.windows.create({
-                        url: subgroup.bookmarks.map((b) => b.url),
-                      })
-                    }
-                  >
-                    <AppWindow className="mr-2 size-3.5" />
-                    在新窗口打开全部
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={subgroup.bookmarks.length === 0}
-                    onClick={() =>
-                      browser.windows.create({
-                        url: subgroup.bookmarks.map((b) => b.url),
-                        incognito: true,
-                      })
-                    }
-                  >
-                    <EyeOff className="mr-2 size-3.5" />
-                    在隐私窗口打开全部
-                  </DropdownMenuItem>
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger
-                      disabled={subgroup.bookmarks.length === 0}
-                    >
-                      <PanelsTopLeft className="mr-2 size-3.5" />
-                      多窗口网格打开
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent className="w-44">
-                      <DropdownMenuGroup>
-                        <DropdownMenuCheckboxItem
-                          checked={compactGridWindows}
-                          closeOnClick={false}
-                          onCheckedChange={(next) =>
-                            setCompactGridWindows(!!next)
-                          }
-                        >
-                          简化窗口
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuSeparator />
-                        {getGridOpenCounts(subgroup.bookmarks.length).map(
-                          (count) => (
-                            <DropdownMenuItem
-                              key={count}
-                              onClick={() =>
-                                void openUrlsInGrid(
-                                  subgroup.bookmarks
-                                    .slice(0, count)
-                                    .map((bookmark) => bookmark.url),
-                                  compactGridWindows,
-                                )
+                  {subgroup.bookmarks.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => {
+                          for (const b of subgroup.bookmarks)
+                            browser.tabs.create({ url: b.url });
+                        }}
+                      >
+                        <ExternalLink className="mr-2 size-3.5" />
+                        打开全部书签
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          browser.windows.create({
+                            url: subgroup.bookmarks.map((b) => b.url),
+                          })
+                        }
+                      >
+                        <AppWindow className="mr-2 size-3.5" />
+                        在新窗口打开全部
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          browser.windows.create({
+                            url: subgroup.bookmarks.map((b) => b.url),
+                            incognito: true,
+                          })
+                        }
+                      >
+                        <EyeOff className="mr-2 size-3.5" />
+                        在隐私窗口打开全部
+                      </DropdownMenuItem>
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <PanelsTopLeft className="mr-2 size-3.5" />
+                          多窗口网格打开
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent className="w-44">
+                          <DropdownMenuGroup>
+                            <DropdownMenuCheckboxItem
+                              checked={compactGridWindows}
+                              closeOnClick={false}
+                              onCheckedChange={(next) =>
+                                setCompactGridWindows(!!next)
                               }
                             >
-                              打开前 {count} 个
-                            </DropdownMenuItem>
-                          ),
-                        )}
-                      </DropdownMenuGroup>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
+                              简化窗口
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuSeparator />
+                            {getGridOpenCounts(subgroup.bookmarks.length).map(
+                              (count) => (
+                                <DropdownMenuItem
+                                  key={count}
+                                  onClick={() =>
+                                    void openUrlsInGrid(
+                                      subgroup.bookmarks
+                                        .slice(0, count)
+                                        .map((bookmark) => bookmark.url),
+                                      compactGridWindows,
+                                    )
+                                  }
+                                >
+                                  打开前 {count} 个
+                                </DropdownMenuItem>
+                              ),
+                            )}
+                          </DropdownMenuGroup>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+                    </>
+                  )}
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
