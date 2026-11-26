@@ -97,6 +97,19 @@
   background: var(--background);
 }
 
+.board-layout {
+  --board-inset-left: calc(max(0px, (100% - 1680px) / 2) + 3.5rem);
+  --board-inset-right: calc(max(0px, (100% - 1680px) / 2) + var(--board-padding-right, 1.25rem));
+}
+
+.board-header {
+  margin-inline: var(--board-inset-left) var(--board-inset-right);
+}
+
+.board-content {
+  padding-inline: var(--board-inset-left) var(--board-inset-right);
+}
+
 .board-scroll-area > [data-slot='scroll-area-viewport'] > [data-slot='scroll-area-content'] {
   display: flex;
   flex-direction: column;

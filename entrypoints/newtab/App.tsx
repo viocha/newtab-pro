@@ -1283,7 +1283,7 @@ export default function App() {
       if (target.closest('[role="menu"]') || target.closest('[role="dialog"]'))
         return;
       if (target.closest('[data-group-card]')) return;
-      if (target.closest('[data-no-drag-switch]')) return;
+      if (target.closest('[data-no-drag-switch], [data-slot="scroll-area-scrollbar"]')) return;
       dragSwitchRef.current = {
         pointerId: e.pointerId,
         startX: e.clientX,
@@ -1878,9 +1878,7 @@ export default function App() {
         <TabsEdgeDrawer />
 
         <div
-          className={cn(
-            'mx-auto flex h-full max-w-[1680px] flex-col gap-3 px-5 py-4 pl-14 sm:px-6 sm:pl-14',
-          )}
+          className="board-layout flex h-full flex-col gap-3 py-4 sm:[--board-padding-right:1.5rem]"
           onPointerDown={handleBoardPointerDown}
           onPointerMove={handleBoardPointerMove}
           onPointerUp={handleBoardPointerUp}
@@ -1889,7 +1887,7 @@ export default function App() {
         >
           <header
             data-no-drag-switch
-            className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-card/85 px-4 py-2.5 shadow-sm"
+            className="board-header flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-card/85 px-4 py-2.5 shadow-sm"
           >
             {/* Space tabs */}
             <div className="flex min-w-0 items-center gap-1 overflow-x-auto pl-1">
@@ -2101,9 +2099,9 @@ export default function App() {
               }
             }}
           >
-            <ScrollArea className="board-scroll-area -mx-3 min-h-0 min-w-0 flex-1">
+            <ScrollArea className="board-scroll-area min-h-0 min-w-0 flex-1">
               <ContextMenuTrigger
-                render={<div className="min-w-0 max-w-full flex-1 px-3 pb-3" />}
+                render={<div className="board-content min-w-0 max-w-full flex-1 pb-3" />}
               >
                 {effectiveShowSearch && (
                   <div className="mt-3">
